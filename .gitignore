@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+.svelte-kit/
+build/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Data directory (runtime files)
+data/
+*.sqlite
+*.sqlite-journal
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Test
+coverage/
