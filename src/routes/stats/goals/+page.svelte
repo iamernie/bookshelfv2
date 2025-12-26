@@ -14,22 +14,55 @@
 		X,
 		ArrowUp,
 		ArrowDown,
-		Minus
+		Minus,
+		Layers,
+		Users,
+		Shapes,
+		FileText,
+		CalendarCheck,
+		Book
 	} from 'lucide-svelte';
 	import { enhance } from '$app/forms';
+	import type { ChallengeProgress } from '$lib/server/services/goalsService';
 
 	let { data } = $props();
 
 	const currentGoal = data.currentGoal;
 	const allGoals = data.allGoals;
-	const currentYear = new Date().getFullYear();
+	const challenges = data.challenges as ChallengeProgress[];
+	const challengeTypes = data.challengeTypes;
+	const currentYear = data.currentYear;
 
 	// UI state
 	let editingGoal: number | null = $state(null);
+	let editingChallenge: number | null = $state(null);
 	let showNewGoalForm = $state(false);
+	let showNewChallengeForm = $state(false);
 	let newGoalYear = $state(currentYear + 1);
 	let newGoalTarget = $state(12);
 	let editTarget = $state(12);
+	let newChallengeType = $state<string>('genres');
+	let newChallengeTarget = $state(6);
+
+	// Get icon component for challenge type
+	function getChallengeIcon(iconName: string) {
+		const icons: Record<string, typeof Book> = {
+			book: Book,
+			layers: Layers,
+			users: Users,
+			shapes: Shapes,
+			'file-text': FileText,
+			'calendar-check': CalendarCheck
+		};
+		return icons[iconName] || Target;
+	}
+
+	// Get available challenge types (ones not already created)
+	const availableChallengeTypes = $derived(
+		Object.entries(challengeTypes).filter(
+			([key]) => !challenges.some((c) => c.type === key)
+		)
+	);
 
 	// Calculate progress bar segments
 	function getProgressSegments(progress: number) {
@@ -184,7 +217,238 @@
 				</div>
 			</div>
 		</div>
-	{:else}
+	{/if}
+
+	<!-- Reading Challenges -->
+	<div class="card mb-8">
+		<div class="card-header flex items-center justify-between">
+			<div class="flex items-center gap-2">
+				<Trophy class="w-5 h-5" style="color: var(--accent);" />
+				<h3 class="font-semibold" style="color: var(--text-primary);">{currentYear} Reading Challenges</h3>
+			</div>
+			{#if availableChallengeTypes.length > 0}
+				<button
+					onclick={() => {
+						showNewChallengeForm = !showNewChallengeForm;
+						if (availableChallengeTypes.length > 0) {
+							const firstAvailable = availableChallengeTypes[0];
+							newChallengeType = firstAvailable[0];
+							newChallengeTarget = firstAvailable[1].defaultTarget;
+						}
+					}}
+					class="btn-secondary text-sm"
+				>
+					<Plus class="w-4 h-4" />
+					Add Challenge
+				</button>
+			{/if}
+		</div>
+
+		{#if showNewChallengeForm}
+			<form
+				method="POST"
+				action="?/createChallenge"
+				use:enhance={() => {
+					return async ({ result, update }) => {
+						if (result.type === 'success') {
+							showNewChallengeForm = false;
+						}
+						await update();
+					};
+				}}
+				class="p-4 border-b"
+				style="background-color: var(--bg-tertiary); border-color: var(--border-color);"
+			>
+				<input type="hidden" name="year" value={currentYear} />
+				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+					<div>
+						<label class="text-xs block mb-1" style="color: var(--text-muted);">Challenge Type</label>
+						<select
+							name="challengeType"
+							bind:value={newChallengeType}
+							onchange={(e) => {
+								const type = challengeTypes[e.currentTarget.value as keyof typeof challengeTypes];
+								if (type) newChallengeTarget = type.defaultTarget;
+							}}
+							class="input w-full"
+						>
+							{#each availableChallengeTypes as [key, type]}
+								<option value={key}>{type.name}</option>
+							{/each}
+						</select>
+					</div>
+					<div>
+						<label class="text-xs block mb-1" style="color: var(--text-muted);">Target</label>
+						<input
+							type="number"
+							name="target"
+							bind:value={newChallengeTarget}
+							min="1"
+							class="input w-full"
+						/>
+					</div>
+					<div>
+						<label class="text-xs block mb-1" style="color: var(--text-muted);">Name (optional)</label>
+						<input
+							type="text"
+							name="name"
+							placeholder="Custom name"
+							class="input w-full"
+						/>
+					</div>
+				</div>
+				{#if challengeTypes[newChallengeType as keyof typeof challengeTypes]}
+					<p class="text-sm mb-4" style="color: var(--text-muted);">
+						{challengeTypes[newChallengeType as keyof typeof challengeTypes].description}
+					</p>
+				{/if}
+				<div class="flex gap-2">
+					<button type="submit" class="btn-primary text-sm">
+						<Check class="w-4 h-4" />
+						Create Challenge
+					</button>
+					<button type="button" onclick={() => (showNewChallengeForm = false)} class="btn-secondary text-sm">
+						Cancel
+					</button>
+				</div>
+			</form>
+		{/if}
+
+		<div class="p-4">
+			{#if challenges.length === 0}
+				<div class="text-center py-8" style="color: var(--text-muted);">
+					<Target class="w-12 h-12 mx-auto mb-3 opacity-50" />
+					<p>No challenges set for {currentYear}</p>
+					<p class="text-sm mt-1">Add challenges to track different reading goals</p>
+				</div>
+			{:else}
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+					{#each challenges as challenge}
+						{@const IconComponent = getChallengeIcon(challenge.typeInfo.icon)}
+						<div
+							class="challenge-card p-4 rounded-lg relative"
+							class:complete={challenge.isComplete}
+							style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color);"
+						>
+							{#if challenge.isComplete}
+								<div class="absolute top-2 right-2">
+									<div class="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+										<Check class="w-4 h-4 text-white" />
+									</div>
+								</div>
+							{/if}
+
+							<div class="flex items-start gap-3 mb-3">
+								<div
+									class="w-10 h-10 rounded-lg flex items-center justify-center"
+									style="background-color: var(--accent); opacity: 0.15;"
+								>
+									<svelte:component this={IconComponent} class="w-5 h-5" style="color: var(--accent);" />
+								</div>
+								<div class="flex-1 min-w-0">
+									<h4 class="font-medium truncate" style="color: var(--text-primary);">
+										{challenge.challenge.name || challenge.typeInfo.name}
+									</h4>
+									<p class="text-xs" style="color: var(--text-muted);">
+										{challenge.typeInfo.description}
+									</p>
+								</div>
+							</div>
+
+							<div class="mb-2">
+								<div class="flex justify-between text-sm mb-1">
+									<span style="color: var(--text-muted);">
+										{challenge.current} / {challenge.target} {challenge.typeInfo.unit}
+									</span>
+									<span class="font-medium" style="color: {challenge.isComplete ? '#22c55e' : 'var(--accent)'};">
+										{challenge.progress}%
+									</span>
+								</div>
+								<div class="h-2 rounded-full overflow-hidden" style="background-color: var(--border-color);">
+									<div
+										class="h-full rounded-full transition-all duration-300"
+										style="width: {challenge.progress}%; background-color: {challenge.isComplete ? '#22c55e' : 'var(--accent)'};"
+									></div>
+								</div>
+							</div>
+
+							<div class="flex justify-between items-center">
+								<span class="text-xs" style="color: var(--text-muted);">
+									{challenge.remaining} remaining
+								</span>
+								<div class="flex gap-1">
+									<button
+										onclick={() => {
+											editingChallenge = challenge.challenge.id;
+											editTarget = challenge.target;
+										}}
+										class="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
+										style="color: var(--text-muted);"
+										title="Edit target"
+									>
+										<Pencil class="w-3.5 h-3.5" />
+									</button>
+									<form method="POST" action="?/deleteGoal" use:enhance class="inline">
+										<input type="hidden" name="id" value={challenge.challenge.id} />
+										<button
+											type="submit"
+											class="p-1 rounded hover:bg-red-500/20"
+											style="color: #ef4444;"
+											title="Delete challenge"
+											onclick={(e) => {
+												if (!confirm(`Delete ${challenge.typeInfo.name} challenge?`)) {
+													e.preventDefault();
+												}
+											}}
+										>
+											<Trash2 class="w-3.5 h-3.5" />
+										</button>
+									</form>
+								</div>
+							</div>
+
+							{#if editingChallenge === challenge.challenge.id}
+								<form
+									method="POST"
+									action="?/updateGoal"
+									use:enhance={() => {
+										return async ({ result, update }) => {
+											if (result.type === 'success') {
+												editingChallenge = null;
+											}
+											await update();
+										};
+									}}
+									class="mt-3 pt-3 border-t"
+									style="border-color: var(--border-color);"
+								>
+									<input type="hidden" name="id" value={challenge.challenge.id} />
+									<input type="hidden" name="challengeType" value={challenge.type} />
+									<div class="flex gap-2">
+										<input
+											type="number"
+											name="target"
+											bind:value={editTarget}
+											min="1"
+											class="input flex-1"
+										/>
+										<button type="submit" class="p-2 rounded-lg hover:bg-emerald-500/20" style="color: #22c55e;">
+											<Check class="w-4 h-4" />
+										</button>
+										<button type="button" onclick={() => (editingChallenge = null)} class="p-2 rounded-lg hover:bg-red-500/20" style="color: #ef4444;">
+											<X class="w-4 h-4" />
+										</button>
+									</div>
+								</form>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</div>
+	</div>
+
+	{#if !currentGoal}
 		<!-- No Goal Set -->
 		<div class="card mb-8 text-center py-12">
 			<Target class="w-16 h-16 mx-auto mb-4" style="color: var(--text-muted);" />
@@ -291,12 +555,13 @@
 							class="flex-1 flex items-center gap-4"
 						>
 							<input type="hidden" name="id" value={goal.id} />
+							<input type="hidden" name="challengeType" value={goal.challengeType || 'books'} />
 							<div class="flex-1 grid grid-cols-2 gap-4">
 								<div>
 									<label class="text-xs block mb-1" style="color: var(--text-muted);">Target Books</label>
 									<input
 										type="number"
-										name="targetBooks"
+										name="target"
 										bind:value={editTarget}
 										min="1"
 										class="input w-full"
@@ -447,5 +712,27 @@
 
 	.divide-y > * + * {
 		border-top: 1px solid var(--border-color);
+	}
+
+	.challenge-card {
+		transition: transform 0.2s, box-shadow 0.2s;
+	}
+
+	.challenge-card:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	}
+
+	.challenge-card.complete {
+		border-color: #22c55e !important;
+	}
+
+	select.input {
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+		background-position: right 0.5rem center;
+		background-repeat: no-repeat;
+		background-size: 1.5em 1.5em;
+		padding-right: 2.5rem;
 	}
 </style>

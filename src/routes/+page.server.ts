@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { db, books, authors, series, statuses } from '$lib/server/db';
 import { eq, desc, count, and, sql, or } from 'drizzle-orm';
 import { getBooksCardData } from '$lib/server/services/bookService';
+import { getGoalForDashboard } from '$lib/server/services/goalsService';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const userId = locals.user?.id;
@@ -52,10 +53,12 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.orderBy(desc(books.createdAt))
 		.limit(6);
 
-	// Fetch full BookCardData for both lists
-	const [currentlyReading, recentlyAdded] = await Promise.all([
+	// Fetch full BookCardData for both lists, statuses for quick edit, and reading goal
+	const [currentlyReading, recentlyAdded, allStatuses, goalData] = await Promise.all([
 		getBooksCardData(currentlyReadingIds.map((b) => b.id)),
-		getBooksCardData(recentlyAddedIds.map((b) => b.id))
+		getBooksCardData(recentlyAddedIds.map((b) => b.id)),
+		db.select().from(statuses).orderBy(statuses.sortOrder),
+		getGoalForDashboard(userId)
 	]);
 
 	return {
@@ -66,6 +69,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			readThisYear: readThisYearResult?.count ?? 0
 		},
 		currentlyReading,
-		recentlyAdded
+		recentlyAdded,
+		statuses: allStatuses,
+		goalData
 	};
 };

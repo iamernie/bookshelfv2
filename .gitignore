@@ -10,10 +10,23 @@ build/
 .env.*
 !.env.example
 
-# Data directory (runtime files)
-data/
+# Database files
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+data/
+
+# User content - covers and ebooks
+static/covers/
+!static/covers/.gitkeep
+!static/covers/placeholder.png
+static/ebooks/
+!static/ebooks/.gitkeep
+
+# Testing databases
+testing/databases/*.sqlite
+testing/databases/*.sqlite-*
 
 # IDE
 .vscode/
@@ -31,3 +44,7 @@ logs/
 
 # Test
 coverage/
+
+# Temporary files
+tmp/
+*.tmp

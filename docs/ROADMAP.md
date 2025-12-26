@@ -10,11 +10,23 @@ This document outlines planned features and implementation details for future ph
 |---------|------------|------------|--------|
 | Public Library | High | Medium | In Progress |
 | Sortable List Headers | High | Low | ✅ Completed |
-| Quick Edit on BookCard | High | Low | Planned |
-| Inline Series Notes | Medium | Low | Planned |
+| Quick Edit on BookCard | High | Low | ✅ Completed |
+| Date Formatting Standardization | Medium | Low | ✅ Completed |
+| Git Exclusions (covers/ebooks/db) | High | Low | ✅ Completed |
+| File Organization (covers/ebooks) | High | Medium | Planned |
+| Settings Review & Wiring | High | Medium | Planned |
+| Reading Goals (V1 parity) | High | Low | ✅ Completed |
+| Better Stats (V1 parity) | High | Medium | Planned |
+| Docker & GitHub Actions | High | Medium | ✅ Completed |
+| Setup Wizard | High | Medium | Planned |
+| Database Migration/Repair Tool | High | Medium | Planned |
+| Diagnostic Page | Medium | Low | Planned |
+| Better Login Page | Medium | Low | Planned |
+| User Signup Flow | Medium | Low | Planned |
+| Inline Series Notes | Medium | Low | ✅ Completed |
 | Multi-User Permissions | High | High | Planned |
 | OIDC Authentication | Medium | Medium | Planned |
-| Email Sharing | Medium | Low | Planned |
+| Email Notifications | Medium | Medium | Planned |
 | KOReader Sync | Medium | Medium | Planned |
 | Reading Sessions | Medium | Medium | Planned |
 | Real-Time (SSE) | Medium | Medium | Planned |
@@ -22,7 +34,32 @@ This document outlines planned features and implementation details for future ph
 
 ---
 
-## Phase 6: Public Library (Next Up)
+## Bugs & Issues
+
+| Issue | Priority | Status |
+|-------|----------|--------|
+| Public Library list view doesn't work | High | ✅ Fixed |
+| TypeScript errors in codebase | Medium | ✅ Fixed |
+| Menus need review for consistency | Low | Open |
+
+---
+
+## Pre-Release Checklist
+
+- [x] Fix Public Library list view
+- [x] Clean up TypeScript errors
+- [x] Standardize date formatting
+- [x] Ensure covers, database, ebooks excluded from git
+- [ ] Add logo
+- [ ] Prep README.md
+- [ ] Review menus for consistency
+- [x] Docker Compose setup
+- [x] GitHub Actions CI/CD
+- [ ] Review BookLore & V1 for feature parity
+
+---
+
+## Phase 6: Public Library (In Progress)
 
 Separate "Public Library" from personal collection for bulk ebook imports. Books in public library don't affect personal stats until explicitly added.
 
@@ -117,7 +154,7 @@ Enable quick editing of common fields directly from BookCard without opening ful
 
 ---
 
-## Phase 6.2: Inline Series Notes from Book Page (Planned)
+## Phase 6.2: Inline Series Notes from Book Page (✅ Completed)
 
 When viewing a book that belongs to a series, allow editing series notes inline.
 
@@ -128,11 +165,12 @@ When viewing a book that belongs to a series, allow editing series notes inline.
 - Updates series record via API
 - Useful for tracking series-level info while reviewing books
 
-### Implementation
+### Implementation (Completed)
 
-- Add series notes section to book detail page
-- Reuse existing inline edit pattern from author/series pages
-- API: `PATCH /api/series/:id` with notes field
+- ✅ Added `comments` field to series data in `bookService.ts`
+- ✅ Added inline editing state and functions in book detail page
+- ✅ Added series notes section with inline editing UI
+- ✅ Uses existing API: `PUT /api/series/:id` with comments field
 
 ---
 
@@ -628,6 +666,104 @@ function createRealtimeStore() {
 - Offline support (service worker)
 - Touch-optimized UI
 - Native app wrapper (Capacitor/Tauri)
+
+---
+
+## Phase 7: File Organization (Planned)
+
+Better organization of cover images and ebook files with structured folder hierarchy.
+
+### Proposed Structure
+
+**Public Library:**
+```
+/static/covers/public/{author}/{series}/{book-slug}.jpg
+/static/ebooks/public/{author}/{series}/{book-slug}.epub
+```
+
+**Personal Libraries:**
+```
+/static/covers/users/{userId}/{author}/{series}/{book-slug}.jpg
+/static/ebooks/users/{userId}/{author}/{series}/{book-slug}.epub
+```
+
+### Implementation
+
+- Slugify author, series, and book names for filesystem safety
+- Handle books without series (skip series folder)
+- Migration script to reorganize existing files
+- Update file path references in database
+- Settings for custom path patterns
+
+---
+
+## Phase 8: Settings System Overhaul (Planned)
+
+Review and wire up all settings, with distinction between personal and site-wide settings.
+
+### Settings Categories
+
+**Site-Wide (Admin Only):**
+- Storage paths (covers, ebooks, database)
+- OPDS configuration
+- Email/SMTP settings
+- Import defaults
+- Registration settings (open/invite-only/closed)
+
+**Personal (Per-User):**
+- Display preferences (books per page, default sort)
+- Theme preference
+- Email notification preferences
+- Default status for new books
+
+### Implementation
+
+- Separate `site_settings` and `user_settings` tables
+- Settings service with proper access control
+- Settings UI with tabs for different categories
+
+---
+
+## Phase 11: Setup Wizard (Planned)
+
+First-run setup wizard for initial installation.
+
+### Steps
+
+1. **Welcome** - Introduction and requirements check
+2. **Database** - Create or connect to database
+3. **Admin Account** - Create first admin user
+4. **Storage** - Configure paths for covers/ebooks
+5. **Optional** - SMTP, OPDS, other settings
+6. **Complete** - Summary and redirect to login
+
+### Implementation
+
+- Detect first run (no users in database)
+- Lock wizard after completion
+- Skip wizard if already configured
+
+---
+
+## Phase 14: Diagnostic & Admin Tools (Planned)
+
+Admin pages for system health and maintenance.
+
+### Diagnostic Page
+
+- Database connection status
+- Storage paths and disk usage
+- Migration status
+- Recent errors from logs
+- System info (Node version, dependencies)
+
+### Database Tools
+
+- Run pending migrations
+- Repair common schema issues
+- Orphaned file cleanup
+- Export/backup functionality
+- Import from V1 database
 
 ---
 

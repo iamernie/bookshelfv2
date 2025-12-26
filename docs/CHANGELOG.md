@@ -4,6 +4,255 @@ This document details all completed features with their implementation specifics
 
 ---
 
+## Reading Goals V1 Parity (Completed)
+
+Enhanced reading goals system with full challenge types support, matching V1 functionality.
+
+### Challenge Types
+
+Six challenge types to track diverse reading goals:
+
+| Type | Description | Unit | Default Target |
+|------|-------------|------|----------------|
+| Books | Read a target number of books | books | 12 |
+| Genres | Read books from different genres | genres | 6 |
+| Authors | Read books by different authors | authors | 12 |
+| Formats | Read books in different formats | formats | 3 |
+| Pages | Read a target number of pages | pages | 5000 |
+| Monthly | Read consistently every month | months | 2 books/month |
+
+### Goals Page Features
+
+- Hero section showing main book count goal progress
+- Monthly breakdown visualization (12-month grid)
+- Challenge cards grid with individual progress tracking
+- Add/edit/delete challenges with visual feedback
+- Challenge type selection with descriptions
+- Progress bars and completion badges
+
+### Dashboard Integration
+
+- Reading goal widget on dashboard homepage
+- Shows main book goal progress with pace status
+- Displays active challenges summary (up to 3)
+- Link to full goals page
+
+### Files Created/Modified
+
+**Service (`src/lib/server/services/goalsService.ts`):**
+- Added `CHALLENGE_TYPES` constant with all challenge definitions
+- Added `ChallengeType` and `ChallengeProgress` types
+- Added progress calculation functions for each challenge type:
+  - `calculateGenresProgress()` - distinct genres read
+  - `calculateAuthorsProgress()` - distinct authors read
+  - `calculateFormatsProgress()` - distinct formats read
+  - `calculatePagesProgress()` - total pages read
+  - `calculateMonthlyProgress()` - months meeting target
+- Added `getChallengesForYear()` - get all challenges with progress
+- Added `getGoalForDashboard()` - dashboard data formatter
+- Added `createChallenge()` - create new challenge with type
+
+**Server (`src/routes/stats/goals/+page.server.ts`):**
+- Added `challenges` and `challengeTypes` to page data
+- Added `createChallenge` form action
+- Updated `updateGoal` to handle all challenge target fields
+
+**UI (`src/routes/stats/goals/+page.svelte`):**
+- Added challenge cards section with progress visualization
+- Added "Add Challenge" form with type selection
+- Added inline editing for challenge targets
+- Added challenge-specific icons (Book, Layers, Users, Shapes, FileText, CalendarCheck)
+
+**Dashboard (`src/routes/+page.svelte` & `+page.server.ts`):**
+- Added `getGoalForDashboard()` call to load data
+- Added reading goal widget with main progress and challenges summary
+- Added pace status indicators (ahead/behind/on track)
+
+---
+
+## Docker & GitHub Actions (Completed)
+
+Added Docker containerization and GitHub Actions CI/CD pipeline for automated builds and deployment.
+
+### Docker Setup
+
+**Multi-stage Dockerfile:**
+- Builder stage compiles SvelteKit application
+- Production stage uses minimal Alpine image with only production dependencies
+- PUID/PGID support for proper file ownership in containers
+- Uses `su-exec` for running as non-root user
+- Health check endpoint at `/health`
+
+**docker-compose.yml (Production):**
+- Pulls from GitHub Container Registry
+- Named volumes for data persistence:
+  - `bookshelf_data` - SQLite database
+  - `bookshelf_logs` - Application logs
+  - `bookshelf_covers` - Book cover images
+  - `bookshelf_ebooks` - Ebook files
+- Configurable via environment variables
+- Health check with 30s interval
+
+**docker-compose.test.yml (Development):**
+- Builds from local source
+- Uses bind mounts for easy testing
+- Runs on port 6465 to avoid conflicts
+- Debug logging enabled
+
+### GitHub Actions
+
+**docker-publish.yml Workflow:**
+- Triggers on version tags (`v*.*.*`), releases, and manual dispatch
+- Builds and pushes to GitHub Container Registry (GHCR)
+- Semantic versioning tags (major, minor, patch, latest)
+- GitHub Actions cache for faster builds
+
+### Files Created
+
+- `Dockerfile` - Multi-stage build for production
+- `docker-compose.yml` - Production deployment config
+- `docker-compose.test.yml` - Local testing config
+- `docker-entrypoint.sh` - Permission handling entrypoint
+- `.dockerignore` - Excludes unnecessary files from image
+- `.github/workflows/docker-publish.yml` - CI/CD workflow
+- `src/routes/health/+server.ts` - Health check endpoint
+- `testing/docker/` - Local testing volume directories
+
+### Files Modified
+
+- `.env.example` - Added Docker-related variables (PUID, PGID, ORIGIN)
+
+### Usage
+
+**Production (from GHCR):**
+```bash
+docker-compose up -d
+```
+
+**Local Testing:**
+```bash
+docker-compose -f docker-compose.test.yml up --build
+```
+
+---
+
+## Phase 6.2: Inline Series Notes from Book Page (Completed)
+
+Added inline editable series notes to the book detail page. When viewing a book that belongs to a series, users can now view and edit series notes directly without navigating away.
+
+### Features
+
+- Series notes section appears below the series link on book detail page
+- Click to edit notes inline with textarea
+- Save/Cancel buttons for confirmation
+- Updates the series record via existing API
+
+### Implementation
+
+**Files Modified:**
+- `src/lib/server/services/bookService.ts`
+  - Added `comments` field to series type in `BookWithRelations` interface
+  - Added `comments: series.comments` to series query in both `getBooks()` and `getBookById()` functions
+
+- `src/routes/books/[id]/+page.svelte`
+  - Added `editingSeriesNotes`, `savingSeriesNotes`, `editSeriesNotesValue` state variables
+  - Added `startEditSeriesNotes()`, `saveSeriesNotes()`, `cancelSeriesNotesEdit()` functions
+  - Added series notes section UI with inline editing pattern (matches existing summary/notes pattern)
+  - Notes displayed below each series link, indented to align with series content
+
+### API Used
+
+- `PUT /api/series/{id}` with `{ comments: "..." }` body
+
+---
+
+## Phase 5.3: Quick Edit, Date Formatting & Git Cleanup (Completed)
+
+Improved UX with quick edit functionality, standardized date handling, and proper git exclusions.
+
+### Quick Edit on BookCard
+
+Hover over any book card to reveal a quick edit button. Click it to open an overlay for rapid rating and status changes without leaving the page.
+
+**Features:**
+- Pencil icon appears on hover (top-right of cover)
+- Click to open overlay with:
+  - 5-star rating picker (click to rate, hover preview)
+  - Status buttons for quick status changes
+  - Current rating and status highlighted
+- Works on Dashboard and Books pages
+- API updates via PATCH to `/api/books/{id}`
+- Automatic page refresh after changes
+
+**Files Created:**
+- `src/lib/components/book/QuickEditOverlay.svelte` - Overlay component with rating and status controls
+
+**Files Modified:**
+- `src/lib/components/book/BookCard.svelte` - Added quickEdit prop, overlay integration
+- `src/routes/books/+page.svelte` - Enabled quick edit with handleQuickEdit function
+- `src/routes/+page.svelte` - Enabled quick edit on Dashboard
+- `src/routes/+page.server.ts` - Added statuses to Dashboard data
+
+### Date Formatting Standardization
+
+Created centralized date utilities to ensure consistent date handling across the application.
+
+**Utility Functions (`src/lib/utils/date.ts`):**
+- `formatDate(dateStr, format)` - Display dates consistently ("December 12, 2023" by default)
+- `toInputDate(dateStr)` - Convert DB format to HTML input format (YYYY-MM-DD)
+- `fromInputDate(inputDate)` - Convert HTML input back to ISO for DB storage
+- `formatRelativeDate(dateStr)` - "2 days ago" style formatting
+- `getCurrentInputDate()` / `getCurrentISODate()` - Current date helpers
+
+**Files Updated to Use Utility:**
+- `src/routes/books/[id]/+page.svelte`
+- `src/routes/authors/[id]/+page.svelte`
+- `src/routes/authors/[id]/edit/+page.svelte`
+- `src/lib/components/author/AuthorModal.svelte`
+- `src/lib/components/book/BookModal.svelte`
+- `src/routes/books/[id]/edit/+page.svelte`
+- `src/routes/stats/+page.svelte`
+
+### TypeScript Error Fixes
+
+Fixed all 11 TypeScript errors across 8 files:
+- `loggerService.ts` - Cast winston info fields to proper types
+- `fileWatcherService.ts` - Handle unknown error type properly
+- `AuthorModal.svelte` - Cast e.currentTarget to HTMLImageElement
+- `DynamicIcon.svelte` - Added color prop
+- `BulkActionBar` usage - Added missing totalCount and onClearSelection props
+- `searchService.ts` - Added icon field to status type
+- `shelves/[id]/+page.svelte` - Added default values for sortField/sortOrder
+
+### Git Exclusions
+
+Updated `.gitignore` to properly exclude user content:
+
+```gitignore
+# Database files
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# User content
+static/covers/
+!static/covers/.gitkeep
+!static/covers/placeholder.png
+static/ebooks/
+!static/ebooks/.gitkeep
+
+# Testing databases
+testing/databases/*.sqlite
+testing/databases/*.sqlite-*
+```
+
+**Cleanup:**
+- Removed tracked covers, ebooks, and database files from git history
+- Added `.gitkeep` files to maintain empty directories
+
+---
+
 ## Phase 5.2: Dashboard & List View Consistency (Completed)
 
 Standardized book display components across the application for consistent UI.
