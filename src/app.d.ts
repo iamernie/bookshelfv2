@@ -11,7 +11,9 @@ declare global {
 				id: number;
 				username: string;
 				email: string;
-				role: 'admin' | 'editor' | 'user';
+				role: string;
+				firstName: string | null;
+				lastName: string | null;
 			} | null;
 		}
 		interface PageData {

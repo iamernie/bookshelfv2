@@ -39,6 +39,8 @@ export const books = sqliteTable('books', {
 	ebookFormat: text('ebookFormat'),
 	readingProgress: text('readingProgress'), // JSON
 	lastReadAt: text('lastReadAt'),
+	// Library type: 'personal' or 'public'
+	libraryType: text('libraryType').default('personal'),
 	// Foreign keys
 	statusId: integer('statusId').references(() => statuses.id),
 	genreId: integer('genreId').references(() => genres.id),
@@ -185,11 +187,73 @@ export const readingGoals = sqliteTable('readinggoals', {
 	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
 });
 
-export const sessions = sqliteTable('sessions', {
+export const sessions = sqliteTable('Sessions', {
 	sid: text('sid').primaryKey(),
 	expires: text('expires'),
 	data: text('data'),
-	createdAt: text('createdAt').default('CURRENT_TIMESTAMP')
+	createdAt: text('createdAt').notNull().default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').notNull().default('CURRENT_TIMESTAMP')
+});
+
+export const magicShelves = sqliteTable('magicshelves', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	name: text('name').notNull(),
+	description: text('description'),
+	icon: text('icon').default('bookmark'),
+	iconColor: text('iconColor').default('#6c757d'),
+	filterJson: text('filterJson').notNull(), // JSON-encoded filter rules
+	sortField: text('sortField').default('title'),
+	sortOrder: text('sortOrder').default('asc'),
+	isPublic: integer('isPublic', { mode: 'boolean' }).default(false),
+	userId: integer('userId').references(() => users.id),
+	displayOrder: integer('displayOrder').default(0),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+// ============================================
+// BookDrop Tables
+// ============================================
+
+export const bookdropQueue = sqliteTable('bookdrop_queue', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: integer('userId').references(() => users.id),
+	filename: text('filename').notNull(),
+	filePath: text('filePath').notNull(),
+	fileSize: integer('fileSize'),
+	fileHash: text('fileHash'), // For duplicate detection
+	source: text('source').default('upload'), // upload, watched_folder
+	status: text('status').default('pending'), // pending, processing, imported, failed, skipped
+	bookId: integer('bookId').references(() => books.id), // Link to created book after import
+	// Extracted metadata (JSON)
+	metadata: text('metadata'),
+	// Cover image (stored as base64 or path)
+	coverData: text('coverData'),
+	// Error info
+	errorMessage: text('errorMessage'),
+	// Processing timestamps
+	processedAt: text('processedAt'),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+export const bookdropSettings = sqliteTable('bookdrop_settings', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: integer('userId').references(() => users.id), // Per-user settings (null = global default)
+	folderPath: text('folderPath'),
+	enabled: integer('enabled', { mode: 'boolean' }).default(true),
+	autoImport: integer('autoImport', { mode: 'boolean' }).default(false), // Preview mode by default
+	// After import action: keep, move, delete
+	afterImport: text('afterImport').default('move'), // keep, move, delete
+	processedFolder: text('processedFolder'), // Where to move after import
+	// After skip action: keep, move, delete
+	afterSkip: text('afterSkip').default('keep'),
+	skippedFolder: text('skippedFolder'),
+	// Defaults for imported books
+	defaultStatusId: integer('defaultStatusId').references(() => statuses.id),
+	defaultFormatId: integer('defaultFormatId').references(() => formats.id),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
 });
 
 // ============================================
@@ -202,7 +266,9 @@ export const bookAuthors = sqliteTable('bookauthors', {
 	authorId: integer('authorId').notNull().references(() => authors.id, { onDelete: 'cascade' }),
 	role: text('role').default('Author'), // Author, Co-Author, Editor, Translator, Illustrator
 	isPrimary: integer('isPrimary', { mode: 'boolean' }).default(false),
-	displayOrder: integer('displayOrder').default(0)
+	displayOrder: integer('displayOrder').default(0),
+	createdAt: text('createdAt').notNull(),
+	updatedAt: text('updatedAt').notNull()
 });
 
 export const bookSeries = sqliteTable('bookseries', {
@@ -212,22 +278,84 @@ export const bookSeries = sqliteTable('bookseries', {
 	bookNum: real('bookNum'), // Support decimals like 2.5
 	bookNumEnd: integer('bookNumEnd'),
 	isPrimary: integer('isPrimary', { mode: 'boolean' }).default(false),
-	displayOrder: integer('displayOrder').default(0)
+	displayOrder: integer('displayOrder').default(0),
+	createdAt: text('createdAt').notNull(),
+	updatedAt: text('updatedAt').notNull()
 });
 
 export const bookTags = sqliteTable('booktags', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
 	bookId: integer('bookId').notNull().references(() => books.id, { onDelete: 'cascade' }),
-	tagId: integer('tagId').notNull().references(() => tags.id, { onDelete: 'cascade' })
-}, (table) => ({
-	pk: primaryKey({ columns: [table.bookId, table.tagId] })
-}));
+	tagId: integer('tagId').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+	createdAt: text('createdAt').notNull(),
+	updatedAt: text('updatedAt').notNull()
+});
 
 export const seriesTags = sqliteTable('seriestags', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
 	seriesId: integer('seriesId').notNull().references(() => series.id, { onDelete: 'cascade' }),
-	tagId: integer('tagId').notNull().references(() => tags.id, { onDelete: 'cascade' })
-}, (table) => ({
-	pk: primaryKey({ columns: [table.seriesId, table.tagId] })
-}));
+	tagId: integer('tagId').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+	createdAt: text('createdAt').notNull(),
+	updatedAt: text('updatedAt').notNull()
+});
+
+// ============================================
+// User-Specific Book Data (Public Library Feature)
+// ============================================
+
+// User's personal reading data for a book
+export const userBooks = sqliteTable('user_books', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	bookId: integer('bookId').notNull().references(() => books.id, { onDelete: 'cascade' }),
+	// Reading status (user-specific)
+	statusId: integer('statusId').references(() => statuses.id),
+	rating: real('rating'),
+	// Reading dates
+	startReadingDate: text('startReadingDate'),
+	completedDate: text('completedDate'),
+	// Personal notes
+	comments: text('comments'),
+	// Reading progress
+	readingProgress: real('readingProgress').default(0),
+	readingPosition: text('readingPosition'),
+	lastReadAt: text('lastReadAt'),
+	// DNF tracking
+	dnfPage: integer('dnfPage'),
+	dnfPercent: integer('dnfPercent'),
+	dnfReason: text('dnfReason'),
+	dnfDate: text('dnfDate'),
+	// When user added book to their library
+	addedAt: text('addedAt').default('CURRENT_TIMESTAMP'),
+	// Timestamps
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+// User's personal tags on a book
+export const userBookTags = sqliteTable('user_book_tags', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	bookId: integer('bookId').notNull().references(() => books.id, { onDelete: 'cascade' }),
+	tagId: integer('tagId').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP')
+});
+
+// Metadata edit suggestions queue
+export const metadataSuggestions = sqliteTable('metadata_suggestions', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	bookId: integer('bookId').notNull().references(() => books.id, { onDelete: 'cascade' }),
+	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	field: text('field').notNull(), // Which field to change
+	oldValue: text('oldValue'),
+	newValue: text('newValue'),
+	status: text('status').default('pending'), // pending, approved, rejected
+	reviewedBy: integer('reviewedBy').references(() => users.id),
+	reviewedAt: text('reviewedAt'),
+	reviewNotes: text('reviewNotes'),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
 
 // ============================================
 // Relations
@@ -240,7 +368,10 @@ export const booksRelations = relations(books, ({ one, many }) => ({
 	narrator: one(narrators, { fields: [books.narratorId], references: [narrators.id] }),
 	bookAuthors: many(bookAuthors),
 	bookSeries: many(bookSeries),
-	bookTags: many(bookTags)
+	bookTags: many(bookTags),
+	userBooks: many(userBooks),
+	userBookTags: many(userBookTags),
+	metadataSuggestions: many(metadataSuggestions)
 }));
 
 export const authorsRelations = relations(authors, ({ many }) => ({
@@ -276,7 +407,32 @@ export const seriesTagsRelations = relations(seriesTags, ({ one }) => ({
 
 export const tagsRelations = relations(tags, ({ many }) => ({
 	bookTags: many(bookTags),
-	seriesTags: many(seriesTags)
+	seriesTags: many(seriesTags),
+	userBookTags: many(userBookTags)
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+	userBooks: many(userBooks),
+	userBookTags: many(userBookTags),
+	metadataSuggestions: many(metadataSuggestions)
+}));
+
+export const userBooksRelations = relations(userBooks, ({ one }) => ({
+	user: one(users, { fields: [userBooks.userId], references: [users.id] }),
+	book: one(books, { fields: [userBooks.bookId], references: [books.id] }),
+	status: one(statuses, { fields: [userBooks.statusId], references: [statuses.id] })
+}));
+
+export const userBookTagsRelations = relations(userBookTags, ({ one }) => ({
+	user: one(users, { fields: [userBookTags.userId], references: [users.id] }),
+	book: one(books, { fields: [userBookTags.bookId], references: [books.id] }),
+	tag: one(tags, { fields: [userBookTags.tagId], references: [tags.id] })
+}));
+
+export const metadataSuggestionsRelations = relations(metadataSuggestions, ({ one }) => ({
+	book: one(books, { fields: [metadataSuggestions.bookId], references: [books.id] }),
+	user: one(users, { fields: [metadataSuggestions.userId], references: [users.id] }),
+	reviewer: one(users, { fields: [metadataSuggestions.reviewedBy], references: [users.id] })
 }));
 
 // ============================================
@@ -290,7 +446,33 @@ export type NewAuthor = typeof authors.$inferInsert;
 export type Series = typeof series.$inferSelect;
 export type NewSeries = typeof series.$inferInsert;
 export type Genre = typeof genres.$inferSelect;
+export type NewGenre = typeof genres.$inferInsert;
 export type Status = typeof statuses.$inferSelect;
+export type Format = typeof formats.$inferSelect;
+export type NewFormat = typeof formats.$inferInsert;
+export type Narrator = typeof narrators.$inferSelect;
+export type NewNarrator = typeof narrators.$inferInsert;
 export type Tag = typeof tags.$inferSelect;
+export type NewTag = typeof tags.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
+export type MagicShelf = typeof magicShelves.$inferSelect;
+export type NewMagicShelf = typeof magicShelves.$inferInsert;
+export type ReadingGoal = typeof readingGoals.$inferSelect;
+export type NewReadingGoal = typeof readingGoals.$inferInsert;
+export type BookdropQueueItem = typeof bookdropQueue.$inferSelect;
+export type NewBookdropQueueItem = typeof bookdropQueue.$inferInsert;
+export type BookdropSettings = typeof bookdropSettings.$inferSelect;
+export type NewBookdropSettings = typeof bookdropSettings.$inferInsert;
+export type UserBook = typeof userBooks.$inferSelect;
+export type NewUserBook = typeof userBooks.$inferInsert;
+export type UserBookTag = typeof userBookTags.$inferSelect;
+export type NewUserBookTag = typeof userBookTags.$inferInsert;
+export type MetadataSuggestion = typeof metadataSuggestions.$inferSelect;
+export type NewMetadataSuggestion = typeof metadataSuggestions.$inferInsert;
+
+// Library type values
+export type LibraryType = 'personal' | 'public';
+
+// User roles
+export type UserRole = 'admin' | 'librarian' | 'member' | 'viewer' | 'guest';

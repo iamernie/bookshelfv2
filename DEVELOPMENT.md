@@ -1,5 +1,17 @@
 # BookShelf V2 - Development Standards Guide
 
+## Documentation Index
+
+This project uses split documentation for better organization:
+
+| Document | Purpose |
+|----------|---------|
+| **DEVELOPMENT.md** (this file) | Coding standards, patterns, project structure |
+| **[docs/CHANGELOG.md](docs/CHANGELOG.md)** | Completed features with implementation details |
+| **[docs/ROADMAP.md](docs/ROADMAP.md)** | Future phases and planned features |
+
+---
+
 ## Project Overview
 
 BookShelf V2 is a complete rewrite of the BookShelf book library management application.
@@ -25,121 +37,37 @@ BookShelfV2/
 │   │   │   │   ├── index.ts     # Database connection
 │   │   │   │   └── migrations/  # Migration files
 │   │   │   ├── services/        # Business logic
-│   │   │   │   ├── bookService.ts
-│   │   │   │   ├── authorService.ts
-│   │   │   │   ├── seriesService.ts
-│   │   │   │   ├── authService.ts
-│   │   │   │   ├── lookupService.ts    # ISBN lookup
-│   │   │   │   ├── importService.ts
-│   │   │   │   ├── exportService.ts
-│   │   │   │   ├── epubService.ts
-│   │   │   │   ├── settingsService.ts
-│   │   │   │   └── statsService.ts
-│   │   │   └── utils/
-│   │   │       ├── auth.ts      # Auth helpers
-│   │   │       ├── validation.ts
-│   │   │       └── files.ts     # File handling
+│   │   │   └── utils/           # Server utilities
 │   │   ├── components/          # Svelte components
 │   │   │   ├── ui/              # Generic UI components
-│   │   │   │   ├── Modal.svelte
-│   │   │   │   ├── Toast.svelte
-│   │   │   │   ├── Button.svelte
-│   │   │   │   ├── Input.svelte
-│   │   │   │   ├── Select.svelte
-│   │   │   │   ├── Pagination.svelte
-│   │   │   │   ├── Skeleton.svelte
-│   │   │   │   ├── ConfirmDialog.svelte
-│   │   │   │   └── EmptyState.svelte
 │   │   │   ├── book/            # Book-specific components
-│   │   │   │   ├── BookCard.svelte
-│   │   │   │   ├── BookRow.svelte
-│   │   │   │   ├── BookModal.svelte
-│   │   │   │   ├── BookForm.svelte
-│   │   │   │   ├── BookFilters.svelte
-│   │   │   │   ├── BookGrid.svelte
-│   │   │   │   ├── Rating.svelte
-│   │   │   │   └── CoverUpload.svelte
 │   │   │   ├── bulk/            # Bulk operation components
-│   │   │   │   ├── BulkActionBar.svelte
-│   │   │   │   ├── BulkTagModal.svelte
-│   │   │   │   └── BulkAuthorModal.svelte
+│   │   │   ├── shelves/         # Magic shelf components
 │   │   │   ├── layout/          # Layout components
-│   │   │   │   ├── Navbar.svelte
-│   │   │   │   ├── Sidebar.svelte
-│   │   │   │   └── Breadcrumbs.svelte
 │   │   │   ├── pickers/         # Selection components
-│   │   │   │   ├── AuthorPicker.svelte
-│   │   │   │   ├── SeriesPicker.svelte
-│   │   │   │   └── TagPicker.svelte
 │   │   │   ├── stats/           # Statistics components
-│   │   │   │   ├── StatsCard.svelte
-│   │   │   │   ├── GoalProgress.svelte
-│   │   │   │   └── Timeline.svelte
 │   │   │   └── reader/          # Ebook reader components
-│   │   │       ├── EpubReader.svelte
-│   │   │       └── ReaderControls.svelte
 │   │   ├── stores/              # Svelte stores (global state)
-│   │   │   ├── auth.ts
-│   │   │   ├── toast.ts
-│   │   │   ├── selection.ts     # Multi-select state
-│   │   │   └── settings.ts
 │   │   ├── types/               # TypeScript types
-│   │   │   ├── book.ts
-│   │   │   ├── author.ts
-│   │   │   ├── series.ts
-│   │   │   └── index.ts
 │   │   └── utils/               # Shared utilities
-│   │       ├── format.ts        # Date/number formatting
-│   │       ├── search.ts        # Search helpers
-│   │       └── api.ts           # Fetch wrapper
 │   ├── routes/
 │   │   ├── +layout.svelte       # Root layout
-│   │   ├── +layout.server.ts    # Auth check, load settings
 │   │   ├── +page.svelte         # Dashboard
-│   │   ├── +page.server.ts
-│   │   ├── login/
-│   │   ├── books/
-│   │   │   ├── +page.svelte     # Book list
-│   │   │   ├── +page.server.ts
-│   │   │   └── [id]/
-│   │   │       ├── +page.svelte # Book detail
-│   │   │       └── +page.server.ts
-│   │   ├── authors/
-│   │   ├── series/
-│   │   ├── genres/
-│   │   ├── tags/
-│   │   ├── stats/
-│   │   ├── reader/[id]/
-│   │   ├── import/
-│   │   ├── settings/
-│   │   ├── admin/
+│   │   ├── books/               # Book pages
+│   │   ├── authors/             # Author pages
+│   │   ├── series/              # Series pages
+│   │   ├── shelves/             # Magic shelves
+│   │   ├── stats/               # Statistics
+│   │   ├── admin/               # Admin pages
+│   │   ├── opds/                # OPDS catalog
 │   │   └── api/                 # API routes
-│   │       ├── books/
-│   │       │   ├── +server.ts   # GET all, POST new
-│   │       │   └── [id]/
-│   │       │       └── +server.ts # GET, PUT, DELETE one
-│   │       ├── authors/
-│   │       ├── series/
-│   │       ├── search/
-│   │       ├── lookup/
-│   │       └── auth/
-│   └── app.html
+│   └── docs/                    # Swagger UI page
 ├── static/
-│   ├── placeholder.png
-│   └── favicon.ico
-├── data/                        # Runtime data (gitignored)
-│   ├── database.sqlite
-│   ├── covers/
-│   ├── ebooks/
-│   └── backups/
-├── drizzle/                     # Drizzle migrations
-├── tests/
-├── SPEC.md                      # Full feature specification
-├── DEVELOPMENT.md               # This file
-├── drizzle.config.ts
-├── svelte.config.js
-├── tailwind.config.js
-├── tsconfig.json
+│   ├── covers/                  # Book cover images
+│   └── ebooks/                  # Ebook files
+├── docs/                        # Documentation
+│   ├── CHANGELOG.md             # Completed features
+│   └── ROADMAP.md               # Future plans
 └── package.json
 ```
 
@@ -154,7 +82,6 @@ BookShelfV2/
 3. **Use interfaces** for object shapes, types for unions/primitives
 
 ```typescript
-// Good
 interface Book {
   id: number;
   title: string;
@@ -162,11 +89,6 @@ interface Book {
 }
 
 export function getBook(id: number): Promise<Book | null> {
-  // ...
-}
-
-// Bad
-export function getBook(id: any) {
   // ...
 }
 ```
@@ -182,17 +104,13 @@ export function getBook(id: any) {
 <script lang="ts">
   import type { Book } from '$lib/types';
 
-  // Props first
   let { book, onEdit, onDelete }: {
     book: Book;
     onEdit: (book: Book) => void;
     onDelete: (id: number) => void;
   } = $props();
 
-  // Derived state
   let displayTitle = $derived(book.title || 'Untitled');
-
-  // Local state
   let isHovered = $state(false);
 </script>
 ```
@@ -205,16 +123,12 @@ export function getBook(id: any) {
 4. **Use appropriate HTTP methods and status codes**
 
 ```typescript
-// src/routes/api/books/+server.ts
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getBooks, createBook } from '$lib/server/services/bookService';
 
 export const GET: RequestHandler = async ({ url }) => {
   const page = parseInt(url.searchParams.get('page') || '1');
-  const limit = parseInt(url.searchParams.get('limit') || '24');
-
-  const result = await getBooks({ page, limit });
+  const result = await getBooks({ page });
   return json(result);
 };
 
@@ -222,14 +136,10 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   if (!locals.user) {
     throw error(401, 'Unauthorized');
   }
-
   const data = await request.json();
-
-  // Validate
   if (!data.title?.trim()) {
     throw error(400, { message: 'Title is required' });
   }
-
   const book = await createBook(data);
   return json(book, { status: 201 });
 };
@@ -242,7 +152,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 3. **Handle relations explicitly**
 
 ```typescript
-// src/lib/server/services/bookService.ts
 import { db } from '$lib/server/db';
 import { books, bookAuthors, authors } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -255,17 +164,9 @@ export async function getBookWithAuthors(id: number) {
     .leftJoin(authors, eq(bookAuthors.authorId, authors.id))
     .where(eq(books.id, id));
 
-  // Transform result...
   return transformBookWithAuthors(result);
 }
 ```
-
-### File Organization
-
-1. **Server-only code** in `$lib/server/` - never imported client-side
-2. **Shared types** in `$lib/types/`
-3. **Components** organized by feature, not by type
-4. **One export per file** where possible
 
 ### Naming Conventions
 
@@ -279,13 +180,10 @@ export async function getBookWithAuthors(id: number) {
 | Types/Interfaces | PascalCase | `interface Book` |
 | Database tables | camelCase (plural) | `books`, `bookAuthors` |
 | Database columns | camelCase | `coverImageUrl` |
-| CSS classes | Tailwind utilities | `class="flex items-center"` |
 
 ---
 
 ## State Management
-
-### When to Use What
 
 | State Type | Use Case | Example |
 |------------|----------|---------|
@@ -308,11 +206,8 @@ function createSelectionStore() {
     subscribe,
     toggle: (id: number) => update(set => {
       const newSet = new Set(set);
-      if (newSet.has(id)) {
-        newSet.delete(id);
-      } else {
-        newSet.add(id);
-      }
+      if (newSet.has(id)) newSet.delete(id);
+      else newSet.add(id);
       return newSet;
     }),
     clear: () => set(new Set()),
@@ -321,8 +216,6 @@ function createSelectionStore() {
 }
 
 export const selectedBooks = createSelectionStore();
-export const hasSelection = derived(selectedBooks, $s => $s.size > 0);
-export const selectionCount = derived(selectedBooks, $s => $s.size);
 ```
 
 ---
@@ -358,163 +251,97 @@ GET /api/books?page=1&limit=24&sort=title&order=asc&status=1&genre=5&q=search
 
 ---
 
-## Component Patterns
+## Entity Detail Page Pattern (DEFAULT STANDARD)
 
-### Modal Pattern
+This is the **standard layout pattern** for all entity detail pages (authors, series, genres, tags, shelves, etc.). New detail pages MUST follow this format for consistency.
 
-Single modal component handles both view and edit modes:
-
-```svelte
-<!-- BookModal.svelte -->
-<script lang="ts">
-  let {
-    book,
-    mode = 'view',
-    onClose,
-    onSave
-  }: {
-    book: Book | null;
-    mode: 'view' | 'edit' | 'add';
-    onClose: () => void;
-    onSave: (data: BookFormData) => Promise<void>;
-  } = $props();
-
-  let currentMode = $state(mode);
-</script>
-
-{#if book || currentMode === 'add'}
-  <Modal onClose={onClose}>
-    {#if currentMode === 'view'}
-      <BookDetails {book} onEdit={() => currentMode = 'edit'} />
-    {:else}
-      <BookForm {book} onSave={onSave} onCancel={() => currentMode = 'view'} />
-    {/if}
-  </Modal>
-{/if}
-```
-
-### List + Detail Pattern
-
-```svelte
-<!-- +page.svelte (books list) -->
-<script lang="ts">
-  let { data } = $props();
-  let selectedBook = $state<Book | null>(null);
-  let modalMode = $state<'view' | 'edit' | 'add' | null>(null);
-</script>
-
-<BookGrid
-  books={data.books}
-  onBookClick={(book) => { selectedBook = book; modalMode = 'view'; }}
-/>
-
-{#if modalMode}
-  <BookModal
-    book={selectedBook}
-    mode={modalMode}
-    onClose={() => { selectedBook = null; modalMode = null; }}
-  />
-{/if}
-```
-
----
-
-## Testing Strategy
-
-1. **Unit tests** for services and utilities
-2. **Component tests** for complex components
-3. **E2E tests** for critical user flows
+### Layout Structure
 
 ```
-tests/
-├── unit/
-│   ├── services/
-│   │   └── bookService.test.ts
-│   └── utils/
-│       └── format.test.ts
-├── components/
-│   └── BookCard.test.ts
-└── e2e/
-    ├── auth.test.ts
-    ├── books.test.ts
-    └── import.test.ts
+┌─────────────────────────────────────────────────────────────────┐
+│ ← Back to [Entity List]                                         │
+├─────────────────────────────────────────────────────────────────┤
+│ [Icon/Photo]  Entity Name                     [Edit] [Delete]   │
+│               Subtitle/meta info                                │
+│               Links (external URLs)                             │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─ Compact Stats Bar ─────────────────────────────────────────┐ │
+│ │  X/Y read    ★ 4.2    N series/items              XX%       │ │
+│ │  ═══════════════════════════════════════════════════        │ │
+│ │  Status: Complete! / X left to read                         │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─ Details Grid (3 columns, responsive) ────────────────────┐   │
+│ │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐          │   │
+│ │ │ DESCRIPTION │ │ NOTES       │ │ TAGS/SERIES │          │   │
+│ │ │ [✏️]        │ │ [✏️]        │ │ [+]         │          │   │
+│ │ │             │ │             │ │             │          │   │
+│ │ │ Click to    │ │ Click to    │ │ Badge list  │          │   │
+│ │ │ add...      │ │ add...      │ │ + picker    │          │   │
+│ │ └─────────────┘ └─────────────┘ └─────────────┘          │   │
+│ └───────────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─ Related Items (Books Grid) ────────────────────────────────┐ │
+│ │  📚 Books (N)                              [+ Add Book]     │ │
+│ │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                   │ │
+│ │  │Cover│ │Cover│ │Cover│ │Cover│ │Cover│ ...               │ │
+│ │  └─────┘ └─────┘ └─────┘ └─────┘ └─────┘                   │ │
+│ │  Title   Title   Title   Title   Title                     │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Key Design Principles
 
-## Migration from V1
+1. **Compact Stats Bar** - Single row with inline stats (not individual stat cards)
+   - Format: `X/Y read` | `★ rating` | `additional stats` | `percentage%`
+   - Thin progress bar below
+   - Status row for completion/next items
 
-### Database Migration
+2. **Details Grid** - 3-column responsive grid (2-col at 900px, 1-col at 600px)
+   - Each card has uppercase label header with edit icon
+   - Content is click-to-edit (entire content area is clickable)
+   - Inline editing with textarea + Save/Cancel buttons
+   - Empty state shows "Click to add..." placeholder
 
-1. V2 uses same SQLite database format
-2. Drizzle introspection can generate schema from existing DB
-3. New tables/columns added via Drizzle migrations
+3. **Inline Editing** - Quick edits without navigation
+   - Pencil icon in header triggers edit mode
+   - Save updates via PATCH/PUT API
+   - `invalidateAll()` refreshes data after save
+   - Cancel reverts without saving
 
-### Data Compatibility
+4. **Tag/Relation Picker** - Toggle-style picker
+   - Plus button toggles picker visibility
+   - Selected items shown as badges
+   - Picker shows all available items with checkmarks
 
-- Keep same table names where possible
-- Keep same column names
-- Junction tables (bookAuthors, bookSeries) unchanged
-- Settings table compatible
+5. **BookCard Grid** - Universal book display
+   - Use `<BookCard>` component for consistency
+   - `onClick` prop for navigation
+   - Responsive grid with auto-fill columns
 
-### Migration Script
+### Standard CSS Classes
 
-```typescript
-// scripts/migrate-v1-data.ts
-// - Copy database file
-// - Run any necessary transformations
-// - Verify data integrity
+```css
+.page-container { max-width: 1400px; padding: 1rem 1rem 2rem; }
+.back-link { font-size: 0.8rem; color: var(--text-muted); }
+.stats-bar { background: var(--bg-secondary); border-radius: 0.5rem; padding: 0.75rem 1rem; }
+.progress-row { display: flex; justify-content: space-between; }
+.stat-inline { font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.25rem; }
+.progress-bar { height: 6px; background: var(--bg-tertiary); border-radius: 3px; }
+.details-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+.detail-card { background: var(--bg-secondary); border: 1px solid var(--border-color); padding: 0.75rem; }
+.detail-title { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); }
+.books-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; }
 ```
 
----
+### Edit Page Pattern
 
-## Environment Variables
-
-```env
-# .env
-DATABASE_PATH=./data/database.sqlite
-COVERS_PATH=./data/covers
-EBOOKS_PATH=./data/ebooks
-SESSION_SECRET=your-secret-here
-
-# Optional
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=user
-SMTP_PASS=pass
-```
-
----
-
-## Git Workflow
-
-1. **Main branch**: Production-ready code
-2. **Feature branches**: `feature/book-modal`, `feature/ebook-reader`
-3. **Commits**: Conventional commits (`feat:`, `fix:`, `refactor:`)
-
----
-
-## Performance Guidelines
-
-1. **Lazy load** heavy components (reader, charts)
-2. **Pagination** for all lists
-3. **Debounce** search inputs
-4. **Skeleton loaders** during data fetching
-5. **Image optimization** for covers
-6. **Cache** expensive computations
-
----
-
-## Security Checklist
-
-- [ ] All routes check authentication
-- [ ] Input validation on all endpoints
-- [ ] Password hashing with bcrypt
-- [ ] Session management with secure cookies
-- [ ] CSRF protection
-- [ ] Rate limiting on auth endpoints
-- [ ] File upload validation
-- [ ] SQL injection prevention (Drizzle handles this)
+For comprehensive editing, use a dedicated route:
+- Route: `/[entity]/[id]/edit`
+- Full form with all editable fields
+- Cancel returns to detail page
+- Save via API then redirect to detail page
 
 ---
 
@@ -546,3 +373,65 @@ SMTP_PASS=pass
 1. Add schema in `src/lib/server/db/schema.ts`
 2. Run `npx drizzle-kit generate`
 3. Run `npx drizzle-kit migrate`
+
+---
+
+## API Testing
+
+### Swagger UI (Web Browser)
+
+Visit **http://localhost:5173/docs** to explore the API interactively.
+
+### REST Client (VS Code)
+
+The `api.http` file contains example requests for testing with the REST Client extension.
+
+---
+
+## Environment Variables
+
+```env
+DATABASE_PATH=./data/database.sqlite
+COVERS_PATH=./data/covers
+EBOOKS_PATH=./data/ebooks
+SESSION_SECRET=your-secret-here
+
+# Optional
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=user
+SMTP_PASS=pass
+LOG_LEVEL=debug
+LOG_DIR=./logs
+```
+
+---
+
+## Git Workflow
+
+1. **Main branch**: Production-ready code
+2. **Feature branches**: `feature/book-modal`, `feature/ebook-reader`
+3. **Commits**: Conventional commits (`feat:`, `fix:`, `refactor:`)
+
+---
+
+## Performance Guidelines
+
+1. **Lazy load** heavy components (reader, charts)
+2. **Pagination** for all lists
+3. **Debounce** search inputs
+4. **Skeleton loaders** during data fetching
+5. **Image optimization** for covers
+
+---
+
+## Security Checklist
+
+- [ ] All routes check authentication
+- [ ] Input validation on all endpoints
+- [ ] Password hashing with bcrypt
+- [ ] Session management with secure cookies
+- [ ] CSRF protection
+- [ ] Rate limiting on auth endpoints
+- [ ] File upload validation
+- [ ] SQL injection prevention (Drizzle handles this)

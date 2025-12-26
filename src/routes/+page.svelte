@@ -1,7 +1,14 @@
 <script lang="ts">
-	import { BookOpen, Users, Library, TrendingUp } from 'lucide-svelte';
+	import { Users, Library, TrendingUp, BookOpen } from 'lucide-svelte';
+	import { goto } from '$app/navigation';
+	import BookCard from '$lib/components/book/BookCard.svelte';
+	import type { BookCardData } from '$lib/types';
 
 	let { data } = $props();
+
+	function handleBookClick(book: BookCardData) {
+		goto(`/books/${book.id}`);
+	}
 </script>
 
 <svelte:head>
@@ -9,7 +16,7 @@
 </svelte:head>
 
 <div class="container mx-auto px-4 py-8">
-	<h1 class="text-3xl font-bold text-gray-900 mb-8">Dashboard</h1>
+	<h1 class="text-3xl font-bold mb-8" style="color: var(--text-primary);">Dashboard</h1>
 
 	<!-- Stats Grid -->
 	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -19,8 +26,8 @@
 					<BookOpen class="w-6 h-6 text-primary-600" />
 				</div>
 				<div>
-					<p class="text-sm text-gray-500">Total Books</p>
-					<p class="text-2xl font-bold text-gray-900">{data.stats.totalBooks}</p>
+					<p class="text-sm" style="color: var(--text-secondary);">Total Books</p>
+					<p class="text-2xl font-bold" style="color: var(--text-primary);">{data.stats.totalBooks}</p>
 				</div>
 			</div>
 		</div>
@@ -31,8 +38,8 @@
 					<TrendingUp class="w-6 h-6 text-green-600" />
 				</div>
 				<div>
-					<p class="text-sm text-gray-500">Read This Year</p>
-					<p class="text-2xl font-bold text-gray-900">{data.stats.readThisYear}</p>
+					<p class="text-sm" style="color: var(--text-secondary);">Read This Year</p>
+					<p class="text-2xl font-bold" style="color: var(--text-primary);">{data.stats.readThisYear}</p>
 				</div>
 			</div>
 		</div>
@@ -43,8 +50,8 @@
 					<Users class="w-6 h-6 text-purple-600" />
 				</div>
 				<div>
-					<p class="text-sm text-gray-500">Authors</p>
-					<p class="text-2xl font-bold text-gray-900">{data.stats.totalAuthors}</p>
+					<p class="text-sm" style="color: var(--text-secondary);">Authors</p>
+					<p class="text-2xl font-bold" style="color: var(--text-primary);">{data.stats.totalAuthors}</p>
 				</div>
 			</div>
 		</div>
@@ -55,8 +62,8 @@
 					<Library class="w-6 h-6 text-orange-600" />
 				</div>
 				<div>
-					<p class="text-sm text-gray-500">Series</p>
-					<p class="text-2xl font-bold text-gray-900">{data.stats.totalSeries}</p>
+					<p class="text-sm" style="color: var(--text-secondary);">Series</p>
+					<p class="text-2xl font-bold" style="color: var(--text-primary);">{data.stats.totalSeries}</p>
 				</div>
 			</div>
 		</div>
@@ -65,29 +72,10 @@
 	<!-- Currently Reading -->
 	{#if data.currentlyReading.length > 0}
 		<section class="mb-8">
-			<h2 class="text-xl font-semibold text-gray-900 mb-4">Currently Reading</h2>
+			<h2 class="text-xl font-semibold mb-4" style="color: var(--text-primary);">Currently Reading</h2>
 			<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
 				{#each data.currentlyReading as book}
-					<a href="/books/{book.id}" class="card group hover:shadow-md transition-shadow">
-						<div class="aspect-[2/3] bg-gray-100">
-							{#if book.coverImageUrl}
-								<img
-									src={book.coverImageUrl}
-									alt={book.title}
-									class="w-full h-full object-cover"
-								/>
-							{:else}
-								<div class="w-full h-full flex items-center justify-center text-gray-400">
-									<BookOpen class="w-12 h-12" />
-								</div>
-							{/if}
-						</div>
-						<div class="p-3">
-							<h3 class="font-medium text-gray-900 text-sm truncate group-hover:text-primary-600">
-								{book.title}
-							</h3>
-						</div>
-					</a>
+					<BookCard {book} onClick={handleBookClick} showStatus={false} />
 				{/each}
 			</div>
 		</section>
@@ -96,29 +84,10 @@
 	<!-- Recently Added -->
 	{#if data.recentlyAdded.length > 0}
 		<section>
-			<h2 class="text-xl font-semibold text-gray-900 mb-4">Recently Added</h2>
+			<h2 class="text-xl font-semibold mb-4" style="color: var(--text-primary);">Recently Added</h2>
 			<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
 				{#each data.recentlyAdded as book}
-					<a href="/books/{book.id}" class="card group hover:shadow-md transition-shadow">
-						<div class="aspect-[2/3] bg-gray-100">
-							{#if book.coverImageUrl}
-								<img
-									src={book.coverImageUrl}
-									alt={book.title}
-									class="w-full h-full object-cover"
-								/>
-							{:else}
-								<div class="w-full h-full flex items-center justify-center text-gray-400">
-									<BookOpen class="w-12 h-12" />
-								</div>
-							{/if}
-						</div>
-						<div class="p-3">
-							<h3 class="font-medium text-gray-900 text-sm truncate group-hover:text-primary-600">
-								{book.title}
-							</h3>
-						</div>
-					</a>
+					<BookCard {book} onClick={handleBookClick} />
 				{/each}
 			</div>
 		</section>

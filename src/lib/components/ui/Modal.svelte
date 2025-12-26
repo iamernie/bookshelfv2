@@ -36,24 +36,28 @@
 
 {#if open}
 	<div
-		class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+		class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
 		transition:fade={{ duration: 150 }}
 		onclick={onClose}
 		role="dialog"
 		aria-modal="true"
 	>
 		<div
-			class="bg-white rounded-xl shadow-2xl w-full {sizeClasses[size]} max-h-[90vh] flex flex-col"
+			class="rounded-xl shadow-2xl w-full {sizeClasses[size]} max-h-[90vh] flex flex-col"
+			style="background-color: var(--bg-secondary);"
 			transition:scale={{ duration: 150, start: 0.95 }}
 			onclick={(e) => e.stopPropagation()}
 			role="document"
 		>
 			{#if title}
-				<div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-					<h2 class="text-xl font-semibold text-gray-900">{title}</h2>
+				<div class="flex items-center justify-between px-6 py-4 border-b" style="border-color: var(--border-color);">
+					<h2 class="text-xl font-semibold" style="color: var(--text-primary);">{title}</h2>
 					<button
 						type="button"
-						class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+						class="p-2 rounded-lg transition-colors"
+						style="color: var(--text-muted);"
+						onmouseenter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+						onmouseleave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
 						onclick={onClose}
 					>
 						<X class="w-5 h-5" />
@@ -62,7 +66,10 @@
 			{:else}
 				<button
 					type="button"
-					class="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+					class="absolute top-4 right-4 p-2 rounded-lg transition-colors"
+					style="color: var(--text-muted);"
+					onmouseenter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+					onmouseleave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
 					onclick={onClose}
 				>
 					<X class="w-5 h-5" />

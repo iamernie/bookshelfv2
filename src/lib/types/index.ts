@@ -13,6 +13,27 @@ export interface BookCardData {
 	authorName?: string | null;
 	seriesName?: string | null;
 	summary?: string | null;
+	status?: {
+		id: number;
+		name: string;
+		color: string | null;
+		icon: string | null;
+	} | null;
+	genre?: {
+		id: number;
+		name: string;
+	} | null;
+	format?: {
+		id: number;
+		name: string;
+	} | null;
+	tags?: {
+		id: number;
+		name: string;
+		color: string | null;
+		icon: string | null;
+	}[];
+	completedDate?: string | null;
 }
 
 /**

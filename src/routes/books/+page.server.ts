@@ -1,43 +1,51 @@
 import type { PageServerLoad } from './$types';
-import { db, books, authors, series, bookAuthors, bookSeries } from '$lib/server/db';
-import { eq, desc, sql, asc } from 'drizzle-orm';
+import { getBooks, getStatuses, getGenres, getFormats, getNarrators, getTags, getAllAuthors, getAllSeries } from '$lib/server/services/bookService';
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, locals }) => {
 	const page = parseInt(url.searchParams.get('page') || '1');
-	const limit = parseInt(url.searchParams.get('limit') || '24');
-	const offset = (page - 1) * limit;
+	const search = url.searchParams.get('search') || undefined;
+	const statusId = url.searchParams.get('status') ? parseInt(url.searchParams.get('status')!) : undefined;
+	const genreId = url.searchParams.get('genre') ? parseInt(url.searchParams.get('genre')!) : undefined;
+	const formatId = url.searchParams.get('format') ? parseInt(url.searchParams.get('format')!) : undefined;
+	const tagId = url.searchParams.get('tag') ? parseInt(url.searchParams.get('tag')!) : undefined;
+	const authorId = url.searchParams.get('author') ? parseInt(url.searchParams.get('author')!) : undefined;
+	const seriesId = url.searchParams.get('series') ? parseInt(url.searchParams.get('series')!) : undefined;
+	const sort = (url.searchParams.get('sort') as 'title' | 'createdAt' | 'rating' | 'completedDate' | 'series' | 'status' | 'format' | 'genre') || 'createdAt';
+	const order = (url.searchParams.get('order') as 'asc' | 'desc') || 'desc';
 
-	// Get books with author names
-	const booksWithAuthors = await db
-		.select({
-			id: books.id,
-			title: books.title,
-			coverImageUrl: books.coverImageUrl,
-			rating: books.rating,
-			bookNum: books.bookNum,
-			ebookPath: books.ebookPath,
-			summary: books.summary,
-			authorName: authors.name,
-			seriesName: series.title
-		})
-		.from(books)
-		.leftJoin(bookAuthors, eq(books.id, bookAuthors.bookId))
-		.leftJoin(authors, eq(bookAuthors.authorId, authors.id))
-		.leftJoin(bookSeries, eq(books.id, bookSeries.bookId))
-		.leftJoin(series, eq(bookSeries.seriesId, series.id))
-		.orderBy(asc(books.title))
-		.limit(limit)
-		.offset(offset);
+	// Pass userId to include books from public library that user has added to their library
+	const userId = locals.user?.id;
 
-	// Get total count
-	const [{ count: totalBooks }] = await db
-		.select({ count: sql<number>`count(*)` })
-		.from(books);
+	const [booksResult, statuses, genres, formats, narrators, tags, authors, series] = await Promise.all([
+		getBooks({ page, limit: 24, search, statusId, genreId, formatId, tagId, authorId, seriesId, sort, order, userId }),
+		getStatuses(),
+		getGenres(),
+		getFormats(),
+		getNarrators(),
+		getTags(),
+		getAllAuthors(),
+		getAllSeries()
+	]);
 
 	return {
-		books: booksWithAuthors,
-		currentPage: page,
-		totalPages: Math.ceil(totalBooks / limit),
-		totalBooks
+		...booksResult,
+		search: search || '',
+		sort,
+		order,
+		statusId,
+		genreId,
+		formatId,
+		tagId,
+		authorId,
+		seriesId,
+		options: {
+			statuses,
+			genres,
+			formats,
+			narrators,
+			tags,
+			authors,
+			series
+		}
 	};
 };

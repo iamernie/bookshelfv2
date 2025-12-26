@@ -11,22 +11,38 @@
 		Menu,
 		X,
 		ChevronDown,
-		LogOut
+		LogOut,
+		Upload,
+		Wand2
 	} from 'lucide-svelte';
+	import GlobalSearch from '$lib/components/search/GlobalSearch.svelte';
 
 	let { user }: { user: App.Locals['user'] } = $props();
 
 	let mobileMenuOpen = $state(false);
 	let userMenuOpen = $state(false);
+	let searchOpen = $state(false);
 
 	const navItems = [
 		{ href: '/books', label: 'Books', icon: BookOpen },
 		{ href: '/authors', label: 'Authors', icon: Users },
 		{ href: '/series', label: 'Series', icon: Library },
+		{ href: '/shelves', label: 'Collections', icon: Wand2 },
 		{ href: '/tags', label: 'Tags', icon: Tag },
-		{ href: '/stats', label: 'Stats', icon: BarChart3 }
+		{ href: '/stats', label: 'Stats', icon: BarChart3 },
+		{ href: '/import', label: 'Import', icon: Upload }
 	];
+
+	// Global keyboard shortcut for search
+	function handleKeydown(e: KeyboardEvent) {
+		if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+			e.preventDefault();
+			searchOpen = true;
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
 	<div class="container mx-auto px-4">
@@ -53,12 +69,15 @@
 			<!-- Right side -->
 			<div class="flex items-center gap-2">
 				<!-- Search -->
-				<a
-					href="/search"
-					class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+				<button
+					type="button"
+					class="flex items-center gap-2 px-3 py-1.5 text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+					onclick={() => searchOpen = true}
 				>
-					<Search class="w-5 h-5" />
-				</a>
+					<Search class="w-4 h-4" />
+					<span class="hidden sm:inline text-sm">Search</span>
+					<kbd class="hidden md:inline text-xs bg-white px-1.5 py-0.5 rounded border text-gray-400">⌘K</kbd>
+				</button>
 
 				<!-- Add Book -->
 				<a href="/books?add=true" class="btn-primary btn-sm hidden sm:flex">
@@ -166,4 +185,9 @@
 		onclick={() => (userMenuOpen = false)}
 		aria-label="Close menu"
 	></button>
+{/if}
+
+<!-- Global Search Modal -->
+{#if searchOpen}
+	<GlobalSearch onClose={() => searchOpen = false} />
 {/if}
