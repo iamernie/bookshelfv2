@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { Search, Plus, Disc } from 'lucide-svelte';
 	import FormatCard from '$lib/components/format/FormatCard.svelte';
 	import FormatModal from '$lib/components/format/FormatModal.svelte';
@@ -20,11 +22,8 @@
 	let search = $state('');
 	let total = $state(0);
 
-	// Modal state
-	let showModal = $state(false);
-	let selectedFormat = $state<FormatWithCount | null>(null);
-	let modalMode = $state<'view' | 'edit' | 'add'>('view');
-	let formatBooks = $state<{ id: number; title: string; coverImageUrl: string | null }[]>([]);
+	// Modal state - only for adding new formats
+	let showAddModal = $state(false);
 
 	async function loadFormats() {
 		loading = true;
@@ -46,36 +45,19 @@
 		}
 	}
 
-	async function openFormat(format: FormatWithCount) {
-		try {
-			const response = await fetch(`/api/formats/${format.id}`);
-			if (!response.ok) throw new Error('Failed to load format');
-
-			const data = await response.json();
-			selectedFormat = data.format;
-			formatBooks = data.books;
-			modalMode = 'view';
-			showModal = true;
-		} catch (err) {
-			console.error('Error loading format:', err);
-			toasts.error('Failed to load format details');
-		}
+	function openFormat(format: FormatWithCount) {
+		// Navigate to the edit page instead of modal
+		const returnUrl = encodeURIComponent($page.url.pathname + $page.url.search);
+		goto(`/formats/${format.id}/edit?returnTo=${returnUrl}`);
 	}
 
 	function openAddModal() {
-		selectedFormat = null;
-		formatBooks = [];
-		modalMode = 'add';
-		showModal = true;
+		showAddModal = true;
 	}
 
-	async function saveFormat(data: { name: string; icon?: string; color?: string }) {
-		const isNew = modalMode === 'add';
-		const url = isNew ? '/api/formats' : `/api/formats/${selectedFormat?.id}`;
-		const method = isNew ? 'POST' : 'PUT';
-
-		const response = await fetch(url, {
-			method,
+	async function saveNewFormat(data: { name: string; icon?: string; color?: string }) {
+		const response = await fetch('/api/formats', {
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(data)
 		});
@@ -85,26 +67,8 @@
 			throw new Error(error.message || 'Failed to save format');
 		}
 
-		toasts.success(isNew ? 'Format created' : 'Format updated');
-		await loadFormats();
-	}
-
-	async function deleteFormat(reassignTo: number | null) {
-		if (!selectedFormat) return;
-
-		const response = await fetch(`/api/formats/${selectedFormat.id}`, {
-			method: 'DELETE',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ reassignTo })
-		});
-
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.message || 'Failed to delete format');
-		}
-
-		toasts.success('Format deleted');
-		showModal = false;
+		toasts.success('Format created');
+		showAddModal = false;
 		await loadFormats();
 	}
 
@@ -195,15 +159,14 @@
 	{/if}
 </div>
 
-<!-- Format Modal -->
-{#if showModal}
+<!-- Format Modal - only for adding -->
+{#if showAddModal}
 	<FormatModal
-		format={selectedFormat}
-		books={formatBooks}
+		format={null}
+		books={[]}
 		allFormats={formats}
-		mode={modalMode}
-		onClose={() => showModal = false}
-		onSave={saveFormat}
-		onDelete={deleteFormat}
+		mode="add"
+		onClose={() => showAddModal = false}
+		onSave={saveNewFormat}
 	/>
 {/if}

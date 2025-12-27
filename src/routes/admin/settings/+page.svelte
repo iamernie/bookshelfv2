@@ -184,14 +184,14 @@
 </script>
 
 <svelte:head>
-	<title>Settings - BookShelf</title>
+	<title>System Settings - Admin - BookShelf</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto px-4 py-8">
 	<div class="flex items-center justify-between mb-8">
 		<div>
-			<h1 class="text-3xl font-bold" style="color: var(--text-primary);">Settings</h1>
-			<p class="mt-1" style="color: var(--text-secondary);">Configure your BookShelf installation</p>
+			<h1 class="text-3xl font-bold" style="color: var(--text-primary);">System Settings</h1>
+			<p class="mt-1" style="color: var(--text-secondary);">Configure application-wide settings for all users</p>
 		</div>
 
 		{#if data.isAdmin}

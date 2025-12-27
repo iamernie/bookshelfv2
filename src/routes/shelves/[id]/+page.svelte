@@ -43,14 +43,15 @@
 <div class="container mx-auto px-4 py-6">
 	<!-- Header -->
 	<div class="mb-6">
-		<a
-			href="/shelves"
-			class="inline-flex items-center gap-1 text-sm mb-4 transition-colors hover:opacity-80"
+		<button
+			type="button"
+			onclick={() => history.back()}
+			class="inline-flex items-center gap-1 text-sm mb-4 transition-colors hover:opacity-80 bg-transparent border-none cursor-pointer p-0"
 			style="color: var(--text-muted);"
 		>
 			<ArrowLeft class="w-4 h-4" />
-			Back to Shelves
-		</a>
+			Back
+		</button>
 
 		<div class="flex items-start justify-between">
 			<div class="flex items-center gap-4">

@@ -4,7 +4,7 @@ import { runDiagnostics } from '$lib/server/services/diagnosticService';
 
 export const GET: RequestHandler = async ({ locals }) => {
 	// Admin-only access
-	if (!locals.user?.isAdmin) {
+	if (locals.user?.role !== 'admin') {
 		throw error(403, 'Admin access required');
 	}
 

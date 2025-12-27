@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { BookOpen, Plus, Grid, List, Search, ChevronLeft, ChevronRight, SlidersHorizontal, SquareCheck } from 'lucide-svelte';
+	import { BookOpen, Plus, Grid, List, Search, ChevronLeft, ChevronRight, SlidersHorizontal, SquareCheck, Library } from 'lucide-svelte';
 	import BookCard from '$lib/components/book/BookCard.svelte';
 	import BookRow from '$lib/components/book/BookRow.svelte';
 	import BookListHeader from '$lib/components/book/BookListHeader.svelte';
@@ -36,7 +36,7 @@
 
 	let { data } = $props();
 
-	let viewMode = $state<'grid' | 'list'>('grid');
+	let viewMode = $state<'grid' | 'list' | 'series'>('grid');
 	let searchInput = $state('');
 	let showAddModal = $state(false);
 	let showFilters = $state(false);
@@ -84,6 +84,62 @@
 			.filter(b => $selectedIds.includes(b.id))
 			.map(b => b.title)
 	);
+
+	// Group books by series for series view
+	interface SeriesGroup {
+		id: number | null;
+		title: string;
+		books: BookWithRelations[];
+	}
+
+	let booksBySeries = $derived(() => {
+		const groups: SeriesGroup[] = [];
+		const seriesMap = new Map<number, SeriesGroup>();
+		const standalone: BookWithRelations[] = [];
+
+		for (const book of data.items) {
+			const primarySeries = book.series[0];
+			if (primarySeries) {
+				if (!seriesMap.has(primarySeries.id)) {
+					seriesMap.set(primarySeries.id, {
+						id: primarySeries.id,
+						title: primarySeries.title,
+						books: []
+					});
+				}
+				seriesMap.get(primarySeries.id)!.books.push(book);
+			} else {
+				standalone.push(book);
+			}
+		}
+
+		// Sort series by name and add to groups
+		const sortedSeries = Array.from(seriesMap.values()).sort((a, b) =>
+			a.title.localeCompare(b.title)
+		);
+
+		// Sort books within each series by bookNum
+		for (const group of sortedSeries) {
+			group.books.sort((a, b) => {
+				const numA = a.series[0]?.bookNum ?? 999;
+				const numB = b.series[0]?.bookNum ?? 999;
+				return numA - numB;
+			});
+		}
+
+		groups.push(...sortedSeries);
+
+		// Add standalone books at the end
+		if (standalone.length > 0) {
+			groups.push({
+				id: null,
+				title: 'Standalone Books',
+				books: standalone
+			});
+		}
+
+		return groups;
+	});
 
 	function handleSearch() {
 		const params = new URLSearchParams($page.url.searchParams);
@@ -223,6 +279,7 @@
 			selectedTag={data.tagId}
 			selectedAuthor={data.authorId}
 			selectedSeries={data.seriesId}
+			filterMode={data.filterMode}
 		/>
 	{/if}
 
@@ -316,14 +373,25 @@
 							class="p-2 rounded transition-colors"
 							style="background-color: {viewMode === 'grid' ? 'var(--bg-secondary)' : 'transparent'}; color: {viewMode === 'grid' ? 'var(--text-primary)' : 'var(--text-muted)'};"
 							onclick={() => viewMode = 'grid'}
+							title="Grid view"
 						>
 							<Grid class="w-4 h-4" />
 						</button>
 						<button
 							type="button"
 							class="p-2 rounded transition-colors"
+							style="background-color: {viewMode === 'series' ? 'var(--bg-secondary)' : 'transparent'}; color: {viewMode === 'series' ? 'var(--text-primary)' : 'var(--text-muted)'};"
+							onclick={() => viewMode = 'series'}
+							title="Series view"
+						>
+							<Library class="w-4 h-4" />
+						</button>
+						<button
+							type="button"
+							class="p-2 rounded transition-colors"
 							style="background-color: {viewMode === 'list' ? 'var(--bg-secondary)' : 'transparent'}; color: {viewMode === 'list' ? 'var(--text-primary)' : 'var(--text-muted)'};"
 							onclick={() => viewMode = 'list'}
+							title="List view"
 						>
 							<List class="w-4 h-4" />
 						</button>
@@ -339,7 +407,7 @@
 				{/if}
 			</p>
 
-			<!-- Books Grid/List -->
+			<!-- Books Grid/List/Series -->
 			{#if data.items.length > 0}
 				{#if viewMode === 'grid'}
 					<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
@@ -354,6 +422,48 @@
 								onClick={() => openBook(book)}
 								onQuickEdit={handleQuickEdit}
 							/>
+						{/each}
+					</div>
+				{:else if viewMode === 'series'}
+					<!-- Series View -->
+					<div class="space-y-8">
+						{#each booksBySeries() as group (group.id ?? 'standalone')}
+							<div>
+								<!-- Series Header -->
+								<div class="flex items-center gap-3 mb-4">
+									{#if group.id}
+										<a
+											href="/series/{group.id}"
+											class="text-lg font-semibold hover:underline"
+											style="color: var(--text-primary);"
+										>
+											{group.title}
+										</a>
+									{:else}
+										<span class="text-lg font-semibold" style="color: var(--text-muted);">
+											{group.title}
+										</span>
+									{/if}
+									<span class="text-sm px-2 py-0.5 rounded-full" style="background-color: var(--bg-tertiary); color: var(--text-muted);">
+										{group.books.length} {group.books.length === 1 ? 'book' : 'books'}
+									</span>
+								</div>
+								<!-- Series Books Grid -->
+								<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
+									{#each group.books as book (book.id)}
+										<BookCard
+											book={toBookCardData(book)}
+											selectable={selectMode}
+											selected={$selectedBooks.has(book.id)}
+											quickEdit={!selectMode}
+											statuses={data.options.statuses}
+											onSelect={(id) => selectedBooks.toggle(id)}
+											onClick={() => openBook(book)}
+											onQuickEdit={handleQuickEdit}
+										/>
+									{/each}
+								</div>
+							</div>
 						{/each}
 					</div>
 				{:else}
@@ -438,6 +548,12 @@
 	onDelete={() => showDeleteModal = true}
 	onSelectAll={handleSelectAll}
 	onClearSelection={handleClearSelection}
+	onComplete={handleBulkComplete}
+	authors={data.options.authors}
+	narrators={data.options.narrators}
+	series={data.options.series}
+	formats={data.options.formats}
+	genres={data.options.genres}
 />
 
 <!-- Add Book Modal -->

@@ -183,10 +183,10 @@
 
 <div class="page-container">
 	<!-- Back navigation -->
-	<a href="/authors" class="back-link">
+	<button type="button" onclick={() => history.back()} class="back-link">
 		<ArrowLeft class="w-4 h-4" />
-		Back to Authors
-	</a>
+		Back
+	</button>
 
 	<!-- Header section -->
 	<div class="author-header">
@@ -500,6 +500,12 @@
 	onAddTags={() => showTagModal = true}
 	onChangeStatus={() => showStatusModal = true}
 	onDelete={() => showDeleteModal = true}
+	onComplete={() => invalidateAll()}
+	authors={data.options.authors}
+	narrators={data.options.narrators}
+	series={data.options.series}
+	formats={data.options.formats}
+	genres={data.options.genres}
 />
 
 <!-- Bulk Modals -->
@@ -540,7 +546,6 @@
 	/>
 {/if}
 
-
 <style>
 	.page-container {
 		max-width: 1400px;
@@ -557,6 +562,10 @@
 		font-size: 0.8rem;
 		margin-bottom: 0.75rem;
 		transition: color 0.2s;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
 	}
 
 	.back-link:hover {

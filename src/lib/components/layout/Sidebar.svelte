@@ -29,7 +29,8 @@
 		Wand2,
 		Lightbulb,
 		PanelLeftClose,
-		PanelLeft
+		PanelLeft,
+		Database
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { APP_CONFIG } from '$lib/config/app';
@@ -241,6 +242,10 @@
 		<div class="mt-6">
 			<div class="sidebar-section">Manage</div>
 			<div class="mt-1 space-y-1">
+				<a href="/catalog" class="sidebar-item text-sm" class:active={isActive('/catalog')} style="color: var(--accent);">
+					<Database class="w-4 h-4" />
+					<span>Catalog Manager</span>
+				</a>
 				<a href="/authors" class="sidebar-item text-sm" class:active={isActive('/authors')}>
 					<Users class="w-4 h-4" />
 					<span>Authors</span>
@@ -314,9 +319,9 @@
 
 	<!-- Bottom section -->
 	<div class="p-3 border-t" style="border-color: var(--border-color);">
-		<a href="/settings" class="sidebar-item text-sm" class:active={isActive('/settings')} class:collapsed title={collapsed ? 'Settings' : undefined}>
+		<a href="/admin/settings" class="sidebar-item text-sm" class:active={isActive('/admin/settings')} class:collapsed title={collapsed ? 'System Settings' : undefined}>
 			<Settings class="w-4 h-4 flex-shrink-0" />
-			{#if !collapsed}<span>Settings</span>{/if}
+			{#if !collapsed}<span>System Settings</span>{/if}
 		</a>
 
 		<!-- Collapse toggle button -->

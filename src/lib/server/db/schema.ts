@@ -360,6 +360,35 @@ export const metadataSuggestions = sqliteTable('metadata_suggestions', {
 	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
 });
 
+// User preferences (personal settings per user)
+export const userPreferences = sqliteTable('user_preferences', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+	// Display preferences
+	theme: text('theme').default('system'), // light, dark, system
+	accentColor: text('accentColor').default('#3b82f6'),
+	// Dashboard preferences (JSON)
+	dashboardWidgets: text('dashboardWidgets'), // JSON array of widget config
+	// Default view preferences
+	defaultBooksView: text('defaultBooksView').default('grid'), // grid, list, table
+	defaultBooksSort: text('defaultBooksSort').default('title'),
+	defaultBooksSortOrder: text('defaultBooksSortOrder').default('asc'),
+	booksPerPage: integer('booksPerPage').default(24),
+	// Reader preferences
+	readerFontFamily: text('readerFontFamily').default('system'),
+	readerFontSize: integer('readerFontSize').default(16),
+	readerLineHeight: real('readerLineHeight').default(1.6),
+	readerTheme: text('readerTheme').default('auto'), // auto, light, dark, sepia
+	// Notification preferences
+	emailNotifications: integer('emailNotifications', { mode: 'boolean' }).default(false),
+	goalReminders: integer('goalReminders', { mode: 'boolean' }).default(true),
+	// Sidebar state
+	sidebarCollapsed: integer('sidebarCollapsed', { mode: 'boolean' }).default(false),
+	// Timestamps
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
 // Reading sessions for heatmap tracking
 export const readingSessions = sqliteTable('reading_sessions', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
@@ -429,11 +458,16 @@ export const tagsRelations = relations(tags, ({ many }) => ({
 	userBookTags: many(userBookTags)
 }));
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
 	userBooks: many(userBooks),
 	userBookTags: many(userBookTags),
 	metadataSuggestions: many(metadataSuggestions),
-	readingSessions: many(readingSessions)
+	readingSessions: many(readingSessions),
+	preferences: one(userPreferences, { fields: [users.id], references: [userPreferences.userId] })
+}));
+
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+	user: one(users, { fields: [userPreferences.userId], references: [users.id] })
 }));
 
 export const readingSessionsRelations = relations(readingSessions, ({ one }) => ({
@@ -496,6 +530,8 @@ export type MetadataSuggestion = typeof metadataSuggestions.$inferSelect;
 export type NewMetadataSuggestion = typeof metadataSuggestions.$inferInsert;
 export type ReadingSession = typeof readingSessions.$inferSelect;
 export type NewReadingSession = typeof readingSessions.$inferInsert;
+export type UserPreference = typeof userPreferences.$inferSelect;
+export type NewUserPreference = typeof userPreferences.$inferInsert;
 
 // Library type values
 export type LibraryType = 'personal' | 'public';

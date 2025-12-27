@@ -178,13 +178,7 @@
 	<!-- Message -->
 	{#if message}
 		<div
-			class="mb-6 p-4 rounded-lg flex items-center gap-3"
-			class:bg-green-500/10={message.type === 'success'}
-			class:border-green-500/30={message.type === 'success'}
-			class:text-green-400={message.type === 'success'}
-			class:bg-red-500/10={message.type === 'error'}
-			class:border-red-500/30={message.type === 'error'}
-			class:text-red-400={message.type === 'error'}
+			class="mb-6 p-4 rounded-lg flex items-center gap-3 {message.type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}"
 			style="border-width: 1px;"
 		>
 			{#if message.type === 'success'}

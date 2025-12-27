@@ -26,6 +26,7 @@ export interface GetBooksOptions {
 	order?: 'asc' | 'desc';
 	libraryType?: 'personal' | 'public' | 'all';
 	userId?: number; // When provided with libraryType='personal', includes books user added from public library
+	filterMode?: 'and' | 'or'; // How to combine filter conditions (default: 'and')
 }
 
 export async function getBooks(options: GetBooksOptions = {}): Promise<{
@@ -34,38 +35,44 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 	page: number;
 	limit: number;
 }> {
-	const { page = 1, limit = 24, search, statusId, genreId, formatId, tagId, authorId, seriesId, sort = 'createdAt', order = 'desc', libraryType = 'personal', userId } = options;
+	const { page = 1, limit = 24, search, statusId, genreId, formatId, tagId, authorId, seriesId, sort = 'createdAt', order = 'desc', libraryType = 'personal', userId, filterMode = 'and' } = options;
 	const offset = (page - 1) * limit;
 
 	// Build where conditions
-	const conditions = [];
+	// Base conditions always use AND (library type, search)
+	const baseConditions = [];
+	// Filter conditions can use AND or OR based on filterMode
+	const filterConditions = [];
 
-	// Filter by library type
+	// Filter by library type (always AND)
 	// When libraryType='personal' and userId is provided, show:
 	//   - Books with libraryType='personal'
 	//   - OR books that are in the user's library (user_books table)
 	if (libraryType === 'personal' && userId) {
-		conditions.push(
+		baseConditions.push(
 			or(
 				eq(books.libraryType, 'personal'),
 				sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
 			)
 		);
 	} else if (libraryType !== 'all') {
-		conditions.push(eq(books.libraryType, libraryType));
+		baseConditions.push(eq(books.libraryType, libraryType));
 	}
 
+	// Search always uses AND with other filters
 	if (search) {
-		conditions.push(like(books.title, `%${search}%`));
+		baseConditions.push(like(books.title, `%${search}%`));
 	}
+
+	// These are the filterable conditions that can be combined with AND or OR
 	if (statusId) {
-		conditions.push(eq(books.statusId, statusId));
+		filterConditions.push(eq(books.statusId, statusId));
 	}
 	if (genreId) {
-		conditions.push(eq(books.genreId, genreId));
+		filterConditions.push(eq(books.genreId, genreId));
 	}
 	if (formatId) {
-		conditions.push(eq(books.formatId, formatId));
+		filterConditions.push(eq(books.formatId, formatId));
 	}
 	if (tagId) {
 		const bookIds = await db
@@ -73,10 +80,12 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 			.from(bookTags)
 			.where(eq(bookTags.tagId, tagId));
 		if (bookIds.length > 0) {
-			conditions.push(inArray(books.id, bookIds.map(b => b.bookId)));
-		} else {
+			filterConditions.push(inArray(books.id, bookIds.map(b => b.bookId)));
+		} else if (filterMode === 'and') {
+			// In AND mode, if tag has no books, return empty
 			return { items: [], total: 0, page, limit };
 		}
+		// In OR mode, we just skip this filter if no matches
 	}
 	if (authorId) {
 		const bookIds = await db
@@ -84,8 +93,8 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 			.from(bookAuthors)
 			.where(eq(bookAuthors.authorId, authorId));
 		if (bookIds.length > 0) {
-			conditions.push(inArray(books.id, bookIds.map(b => b.bookId)));
-		} else {
+			filterConditions.push(inArray(books.id, bookIds.map(b => b.bookId)));
+		} else if (filterMode === 'and') {
 			return { items: [], total: 0, page, limit };
 		}
 	}
@@ -95,13 +104,20 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 			.from(bookSeries)
 			.where(eq(bookSeries.seriesId, seriesId));
 		if (bookIds.length > 0) {
-			conditions.push(inArray(books.id, bookIds.map(b => b.bookId)));
-		} else {
+			filterConditions.push(inArray(books.id, bookIds.map(b => b.bookId)));
+		} else if (filterMode === 'and') {
 			return { items: [], total: 0, page, limit };
 		}
 	}
 
-	const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+	// Combine conditions: base conditions AND (filter conditions with AND/OR)
+	let whereClause;
+	if (filterConditions.length > 0) {
+		const filterClause = filterMode === 'or' ? or(...filterConditions) : and(...filterConditions);
+		whereClause = baseConditions.length > 0 ? and(...baseConditions, filterClause) : filterClause;
+	} else {
+		whereClause = baseConditions.length > 0 ? and(...baseConditions) : undefined;
+	}
 
 	// Get total count
 	const countResult = await db

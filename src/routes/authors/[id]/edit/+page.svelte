@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { tick } from 'svelte';
 	import {
 		ArrowLeft,
@@ -36,6 +37,9 @@
 
 	let { data } = $props();
 	const author = data.author;
+
+	// Get return URL from query params
+	let returnTo = $derived($page.url.searchParams.get('returnTo') || `/authors/${author.id}`);
 
 	let saving = $state(false);
 
@@ -87,7 +91,7 @@
 
 			toasts.success('Author saved');
 			await tick();
-			goto(`/authors/${author.id}`);
+			goto(decodeURIComponent(returnTo));
 		} finally {
 			saving = false;
 		}
@@ -187,7 +191,7 @@
 					type="button"
 					class="flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"
 					style="color: var(--text-secondary);"
-					onclick={() => goto(`/authors/${author.id}`)}
+					onclick={() => goto(decodeURIComponent(returnTo))}
 				>
 					<ArrowLeft class="w-4 h-4" />
 					<span class="hidden sm:inline">Back</span>
@@ -202,7 +206,7 @@
 						type="button"
 						class="px-3 py-1.5 text-sm rounded-lg transition-colors"
 						style="color: var(--text-muted);"
-						onclick={() => goto(`/authors/${author.id}`)}
+						onclick={() => goto(decodeURIComponent(returnTo))}
 					>
 						Cancel
 					</button>

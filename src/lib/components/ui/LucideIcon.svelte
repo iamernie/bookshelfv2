@@ -32,7 +32,8 @@
 	const IconComponent = $derived(() => {
 		if (!name) return icons.BookOpen;
 		const pascalName = toPascalCase(name);
-		return (icons as Record<string, typeof icons.BookOpen>)[pascalName] || icons.BookOpen;
+		const iconMap = icons as unknown as Record<string, typeof icons.BookOpen>;
+		return iconMap[pascalName] || icons.BookOpen;
 	});
 </script>
 

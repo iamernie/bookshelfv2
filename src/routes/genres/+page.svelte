@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { Search, Plus, Folder } from 'lucide-svelte';
 	import GenreCard from '$lib/components/genre/GenreCard.svelte';
 	import GenreModal from '$lib/components/genre/GenreModal.svelte';
@@ -24,11 +26,8 @@
 	let search = $state('');
 	let total = $state(0);
 
-	// Modal state
-	let showModal = $state(false);
-	let selectedGenre = $state<GenreWithStats | null>(null);
-	let modalMode = $state<'view' | 'edit' | 'add'>('view');
-	let genreBooks = $state<{ id: number; title: string; coverImageUrl: string | null; rating: number | null }[]>([]);
+	// Modal state - only for adding new genres
+	let showAddModal = $state(false);
 
 	async function loadGenres() {
 		loading = true;
@@ -50,36 +49,19 @@
 		}
 	}
 
-	async function openGenre(genre: GenreWithStats) {
-		try {
-			const response = await fetch(`/api/genres/${genre.id}`);
-			if (!response.ok) throw new Error('Failed to load genre');
-
-			const data = await response.json();
-			selectedGenre = data.genre;
-			genreBooks = data.books;
-			modalMode = 'view';
-			showModal = true;
-		} catch (err) {
-			console.error('Error loading genre:', err);
-			toasts.error('Failed to load genre details');
-		}
+	function openGenre(genre: GenreWithStats) {
+		// Navigate to the edit page instead of modal
+		const returnUrl = encodeURIComponent($page.url.pathname + $page.url.search);
+		goto(`/genres/${genre.id}/edit?returnTo=${returnUrl}`);
 	}
 
 	function openAddModal() {
-		selectedGenre = null;
-		genreBooks = [];
-		modalMode = 'add';
-		showModal = true;
+		showAddModal = true;
 	}
 
-	async function saveGenre(data: { name: string; description?: string | null; color?: string | null; icon?: string | null; displayOrder?: number }) {
-		const isNew = modalMode === 'add';
-		const url = isNew ? '/api/genres' : `/api/genres/${selectedGenre?.id}`;
-		const method = isNew ? 'POST' : 'PUT';
-
-		const response = await fetch(url, {
-			method,
+	async function saveNewGenre(data: { name: string; description?: string | null; color?: string | null; icon?: string | null; displayOrder?: number }) {
+		const response = await fetch('/api/genres', {
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(data)
 		});
@@ -89,22 +71,8 @@
 			throw new Error(error.message || 'Failed to save genre');
 		}
 
-		toasts.success(isNew ? 'Genre created' : 'Genre updated');
-		await loadGenres();
-	}
-
-	async function deleteGenre() {
-		if (!selectedGenre) return;
-
-		const response = await fetch(`/api/genres/${selectedGenre.id}`, { method: 'DELETE' });
-
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.message || 'Failed to delete genre');
-		}
-
-		toasts.success('Genre deleted');
-		showModal = false;
+		toasts.success('Genre created');
+		showAddModal = false;
 		await loadGenres();
 	}
 
@@ -195,14 +163,13 @@
 	{/if}
 </div>
 
-<!-- Genre Modal -->
-{#if showModal}
+<!-- Genre Modal - only for adding -->
+{#if showAddModal}
 	<GenreModal
-		genre={selectedGenre}
-		books={genreBooks}
-		mode={modalMode}
-		onClose={() => showModal = false}
-		onSave={saveGenre}
-		onDelete={deleteGenre}
+		genre={null}
+		books={[]}
+		mode="add"
+		onClose={() => showAddModal = false}
+		onSave={saveNewGenre}
 	/>
 {/if}

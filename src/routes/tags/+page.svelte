@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { Search, Plus, Tag } from 'lucide-svelte';
 	import TagCard from '$lib/components/tag/TagCard.svelte';
 	import TagModal from '$lib/components/tag/TagModal.svelte';
@@ -28,12 +30,8 @@
 	let search = $state('');
 	let total = $state(0);
 
-	// Modal state
-	let showModal = $state(false);
-	let selectedTag = $state<TagWithCount | null>(null);
-	let modalMode = $state<'view' | 'edit' | 'add'>('view');
-	let tagBooks = $state<{ id: number; title: string; coverImageUrl: string | null }[]>([]);
-	let tagSeries = $state<{ id: number; title: string }[]>([]);
+	// Modal state - only for adding new tags
+	let showAddModal = $state(false);
 
 	async function loadTags() {
 		loading = true;
@@ -56,39 +54,19 @@
 		}
 	}
 
-	async function openTag(tag: TagWithCount) {
-		try {
-			const response = await fetch(`/api/tags/${tag.id}`);
-			if (!response.ok) throw new Error('Failed to load tag');
-
-			const data = await response.json();
-			selectedTag = data.tag;
-			tagBooks = data.books;
-			tagSeries = data.series;
-			colors = data.colors;
-			modalMode = 'view';
-			showModal = true;
-		} catch (err) {
-			console.error('Error loading tag:', err);
-			toasts.error('Failed to load tag details');
-		}
+	function openTag(tag: TagWithCount) {
+		// Navigate to the edit page instead of modal
+		const returnUrl = encodeURIComponent($page.url.pathname + $page.url.search);
+		goto(`/tags/${tag.id}/edit?returnTo=${returnUrl}`);
 	}
 
 	function openAddModal() {
-		selectedTag = null;
-		tagBooks = [];
-		tagSeries = [];
-		modalMode = 'add';
-		showModal = true;
+		showAddModal = true;
 	}
 
-	async function saveTag(data: { name?: string; color?: string; icon?: string | null }) {
-		const isNew = modalMode === 'add';
-		const url = isNew ? '/api/tags' : `/api/tags/${selectedTag?.id}`;
-		const method = isNew ? 'POST' : 'PUT';
-
-		const response = await fetch(url, {
-			method,
+	async function saveNewTag(data: { name?: string; color?: string; icon?: string | null }) {
+		const response = await fetch('/api/tags', {
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(data)
 		});
@@ -98,21 +76,8 @@
 			throw new Error(error.message || 'Failed to save tag');
 		}
 
-		toasts.success(isNew ? 'Tag created' : 'Tag updated');
-		await loadTags();
-	}
-
-	async function deleteTag() {
-		if (!selectedTag) return;
-
-		const response = await fetch(`/api/tags/${selectedTag.id}`, { method: 'DELETE' });
-
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.message || 'Failed to delete tag');
-		}
-
-		toasts.success('Tag deleted');
+		toasts.success('Tag created');
+		showAddModal = false;
 		await loadTags();
 	}
 
@@ -203,16 +168,15 @@
 	{/if}
 </div>
 
-<!-- Tag Modal -->
-{#if showModal}
+<!-- Tag Modal - only for adding -->
+{#if showAddModal}
 	<TagModal
-		tag={selectedTag}
-		books={tagBooks}
-		series={tagSeries}
+		tag={null}
+		books={[]}
+		series={[]}
 		{colors}
-		mode={modalMode}
-		onClose={() => showModal = false}
-		onSave={saveTag}
-		onDelete={deleteTag}
+		mode="add"
+		onClose={() => showAddModal = false}
+		onSave={saveNewTag}
 	/>
 {/if}

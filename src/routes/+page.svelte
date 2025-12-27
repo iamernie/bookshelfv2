@@ -1,7 +1,29 @@
 <script lang="ts">
-	import { Users, Library, TrendingUp, BookOpen, Target, Trophy, ArrowRight, ArrowUp, ArrowDown, Minus } from 'lucide-svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import {
+		BookOpen,
+		TrendingUp,
+		Users,
+		Library,
+		Target,
+		Trophy,
+		ArrowUp,
+		ArrowDown,
+		Minus,
+		BookMarked,
+		Clock,
+		Star,
+		BarChart3,
+		PieChart,
+		Shuffle,
+		Layers,
+		Settings,
+		ChevronRight,
+		CheckCircle2,
+		Hash
+	} from 'lucide-svelte';
 	import BookCard from '$lib/components/book/BookCard.svelte';
+	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
 	import type { BookCardData } from '$lib/types';
 	import { toasts } from '$lib/stores/toast';
 
@@ -28,168 +50,177 @@
 
 	function getPaceColor(status: string) {
 		switch (status) {
-			case 'ahead':
-				return '#22c55e';
-			case 'behind':
-				return '#ef4444';
-			default:
-				return '#eab308';
+			case 'ahead': return '#22c55e';
+			case 'behind': return '#ef4444';
+			default: return '#eab308';
 		}
 	}
+
+	async function refreshRandomPick() {
+		await invalidateAll();
+		toasts.success('New random pick!');
+	}
+
+	// Calculate max for bar chart
+	const maxMonthlyCount = $derived(Math.max(...data.monthlyReading.map(m => m.count), 1));
 </script>
 
 <svelte:head>
 	<title>Dashboard | BookShelf</title>
 </svelte:head>
 
-<div class="container mx-auto px-4 py-8">
-	<h1 class="text-3xl font-bold mb-8" style="color: var(--text-primary);">Dashboard</h1>
+<div class="container mx-auto px-4 py-6">
+	<!-- Header -->
+	<div class="flex items-center justify-between mb-6">
+		<h1 class="text-2xl font-bold" style="color: var(--text-primary);">Dashboard</h1>
+		<a href="/admin/settings" class="btn-ghost btn-sm flex items-center gap-1.5">
+			<Settings class="w-4 h-4" />
+			<span class="hidden sm:inline">Settings</span>
+		</a>
+	</div>
 
-	<!-- Stats Grid -->
-	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-		<div class="card p-6">
-			<div class="flex items-center gap-4">
-				<div class="p-3 bg-primary-100 rounded-lg">
-					<BookOpen class="w-6 h-6 text-primary-600" />
-				</div>
-				<div>
-					<p class="text-sm" style="color: var(--text-secondary);">Total Books</p>
-					<p class="text-2xl font-bold" style="color: var(--text-primary);">{data.stats.totalBooks}</p>
-				</div>
+	<!-- Primary Stats (larger cards) -->
+	<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+		<div class="stat-card-lg">
+			<div class="stat-icon-lg" style="background-color: rgba(59, 130, 246, 0.1);">
+				<BookOpen class="w-6 h-6" style="color: #3b82f6;" />
+			</div>
+			<div class="stat-content-lg">
+				<p class="stat-value-lg">{data.stats.totalBooks}</p>
+				<p class="stat-label-lg">Total Books</p>
 			</div>
 		</div>
 
-		<div class="card p-6">
-			<div class="flex items-center gap-4">
-				<div class="p-3 bg-green-100 rounded-lg">
-					<TrendingUp class="w-6 h-6 text-green-600" />
-				</div>
-				<div>
-					<p class="text-sm" style="color: var(--text-secondary);">Read This Year</p>
-					<p class="text-2xl font-bold" style="color: var(--text-primary);">{data.stats.readThisYear}</p>
-				</div>
+		<div class="stat-card-lg">
+			<div class="stat-icon-lg" style="background-color: rgba(34, 197, 94, 0.1);">
+				<TrendingUp class="w-6 h-6" style="color: #22c55e;" />
+			</div>
+			<div class="stat-content-lg">
+				<p class="stat-value-lg">{data.stats.readThisYear}</p>
+				<p class="stat-label-lg">Read This Year</p>
 			</div>
 		</div>
 
-		<div class="card p-6">
-			<div class="flex items-center gap-4">
-				<div class="p-3 bg-purple-100 rounded-lg">
-					<Users class="w-6 h-6 text-purple-600" />
-				</div>
-				<div>
-					<p class="text-sm" style="color: var(--text-secondary);">Authors</p>
-					<p class="text-2xl font-bold" style="color: var(--text-primary);">{data.stats.totalAuthors}</p>
-				</div>
+		<div class="stat-card-lg">
+			<div class="stat-icon-lg" style="background-color: rgba(168, 85, 247, 0.1);">
+				<BookMarked class="w-6 h-6" style="color: #a855f7;" />
+			</div>
+			<div class="stat-content-lg">
+				<p class="stat-value-lg">{data.stats.currentlyReading}</p>
+				<p class="stat-label-lg">Currently Reading</p>
 			</div>
 		</div>
 
-		<div class="card p-6">
-			<div class="flex items-center gap-4">
-				<div class="p-3 bg-orange-100 rounded-lg">
-					<Library class="w-6 h-6 text-orange-600" />
-				</div>
-				<div>
-					<p class="text-sm" style="color: var(--text-secondary);">Series</p>
-					<p class="text-2xl font-bold" style="color: var(--text-primary);">{data.stats.totalSeries}</p>
-				</div>
+		<div class="stat-card-lg">
+			<div class="stat-icon-lg" style="background-color: rgba(249, 115, 22, 0.1);">
+				<Layers class="w-6 h-6" style="color: #f97316;" />
+			</div>
+			<div class="stat-content-lg">
+				<p class="stat-value-lg">{data.stats.toBeRead}</p>
+				<p class="stat-label-lg">To Be Read</p>
 			</div>
 		</div>
 	</div>
 
-	<!-- Reading Goal Widget -->
-	{#if data.goalData}
-		<section class="mb-8">
-			<div class="flex items-center justify-between mb-4">
-				<h2 class="text-xl font-semibold" style="color: var(--text-primary);">
-					{data.goalData.year} Reading Goal
-				</h2>
-				<a href="/stats/goals" class="flex items-center gap-1 text-sm hover:underline" style="color: var(--accent);">
-					View all goals
-					<ArrowRight class="w-4 h-4" />
-				</a>
-			</div>
-			<div class="card p-6">
-				<div class="flex flex-col lg:flex-row lg:items-center gap-6">
-					<!-- Main Progress -->
-					<div class="flex-1">
-						<div class="flex items-center gap-4 mb-4">
-							<div class="p-3 rounded-lg" style="background-color: var(--accent); opacity: 0.15;">
-								<Target class="w-8 h-8" style="color: var(--accent);" />
-							</div>
-							<div>
-								<div class="flex items-baseline gap-2">
-									<span class="text-4xl font-bold" style="color: var(--text-primary);">{data.goalData.booksRead}</span>
-									<span class="text-lg" style="color: var(--text-muted);">/ {data.goalData.targetBooks} books</span>
-								</div>
-								<div class="flex items-center gap-2 mt-1">
-									{#if data.goalData.progress >= 100}
-										<Trophy class="w-4 h-4 text-yellow-500" />
-										<span class="text-sm font-medium text-yellow-600">Goal achieved!</span>
-									{:else}
-										<span class="text-sm" style="color: var(--text-muted);">{data.goalData.remaining} more to reach your goal</span>
-									{/if}
-								</div>
-							</div>
-						</div>
+	<!-- Secondary Stats (smaller row) -->
+	<div class="grid grid-cols-4 gap-3 mb-6">
+		<div class="stat-card-sm">
+			<Users class="w-4 h-4" style="color: #ec4899;" />
+			<span class="stat-value-sm">{data.stats.totalAuthors}</span>
+			<span class="stat-label-sm">Authors</span>
+		</div>
 
-						<!-- Progress Bar -->
-						<div class="mb-4">
-							<div class="h-3 rounded-full overflow-hidden" style="background-color: var(--border-color);">
-								<div
-									class="h-full rounded-full transition-all duration-500"
-									style="width: {data.goalData.progress}%; background-color: {data.goalData.progress >= 100 ? '#22c55e' : 'var(--accent)'};"
-								></div>
-							</div>
-							<div class="flex justify-between text-xs mt-1" style="color: var(--text-muted);">
-								<span>{data.goalData.progress}% complete</span>
-								<span>Target: {data.goalData.targetBooks}</span>
-							</div>
-						</div>
+		<div class="stat-card-sm">
+			<Library class="w-4 h-4" style="color: #0ea5e9;" />
+			<span class="stat-value-sm">{data.stats.totalSeries}</span>
+			<span class="stat-label-sm">Series</span>
+		</div>
 
-						<!-- Pace Status -->
-						<div class="flex items-center gap-2">
+		<div class="stat-card-sm">
+			<Star class="w-4 h-4" style="color: #eab308;" />
+			<span class="stat-value-sm">{data.stats.avgRating?.toFixed(1) || '-'}</span>
+			<span class="stat-label-sm">Avg Rating</span>
+		</div>
+
+		<div class="stat-card-sm">
+			<BarChart3 class="w-4 h-4" style="color: #6366f1;" />
+			<span class="stat-value-sm">{(data.stats.pagesThisYear / 1000).toFixed(1)}k</span>
+			<span class="stat-label-sm">Pages Read</span>
+		</div>
+	</div>
+
+	<!-- Main Grid -->
+	<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+		<!-- Left Column (2/3) -->
+		<div class="lg:col-span-2 space-y-6">
+			<!-- Reading Goal Widget -->
+			{#if data.goalData}
+				<section class="card p-4">
+					<div class="flex items-center justify-between mb-3">
+						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+							<Target class="w-5 h-5" style="color: var(--accent);" />
+							{data.goalData.year} Reading Goal
+						</h2>
+						<a href="/stats/goals" class="text-sm flex items-center gap-1 hover:underline" style="color: var(--accent);">
+							View all
+							<ChevronRight class="w-4 h-4" />
+						</a>
+					</div>
+
+					<div class="flex items-center gap-4 mb-3">
+						<div class="flex items-baseline gap-2">
+							<span class="text-3xl font-bold" style="color: var(--text-primary);">{data.goalData.booksRead}</span>
+							<span class="text-lg" style="color: var(--text-muted);">/ {data.goalData.targetBooks}</span>
+						</div>
+						{#if data.goalData.progress >= 100}
+							<div class="flex items-center gap-1">
+								<Trophy class="w-5 h-5 text-yellow-500" />
+								<span class="text-sm font-medium text-yellow-600">Goal achieved!</span>
+							</div>
+						{:else}
+							<span class="text-sm" style="color: var(--text-muted);">{data.goalData.remaining} to go</span>
+						{/if}
+					</div>
+
+					<div class="mb-3">
+						<div class="h-2.5 rounded-full overflow-hidden" style="background-color: var(--border-color);">
 							<div
-								class="w-6 h-6 rounded-full flex items-center justify-center"
-								style="background-color: {getPaceColor(data.goalData.paceStatus)}20;"
-							>
+								class="h-full rounded-full transition-all duration-500"
+								style="width: {Math.min(data.goalData.progress, 100)}%; background-color: {data.goalData.progress >= 100 ? '#22c55e' : 'var(--accent)'};"
+							></div>
+						</div>
+						<div class="flex justify-between text-xs mt-1" style="color: var(--text-muted);">
+							<span>{data.goalData.progress}% complete</span>
+							<div class="flex items-center gap-1">
 								{#if data.goalData.paceStatus === 'ahead'}
-									<ArrowUp class="w-3.5 h-3.5" style="color: {getPaceColor(data.goalData.paceStatus)};" />
+									<ArrowUp class="w-3 h-3" style="color: #22c55e;" />
+									<span style="color: #22c55e;">{data.goalData.paceDiff} ahead</span>
 								{:else if data.goalData.paceStatus === 'behind'}
-									<ArrowDown class="w-3.5 h-3.5" style="color: {getPaceColor(data.goalData.paceStatus)};" />
+									<ArrowDown class="w-3 h-3" style="color: #ef4444;" />
+									<span style="color: #ef4444;">{data.goalData.paceDiff} behind</span>
 								{:else}
-									<Minus class="w-3.5 h-3.5" style="color: {getPaceColor(data.goalData.paceStatus)};" />
+									<Minus class="w-3 h-3" style="color: #eab308;" />
+									<span style="color: #eab308;">On track</span>
 								{/if}
 							</div>
-							<span class="text-sm" style="color: {getPaceColor(data.goalData.paceStatus)};">
-								{#if data.goalData.paceStatus === 'ahead'}
-									{data.goalData.paceDiff} books ahead
-								{:else if data.goalData.paceStatus === 'behind'}
-									{data.goalData.paceDiff} books behind
-								{:else}
-									On track
-								{/if}
-							</span>
-							<span class="text-xs" style="color: var(--text-muted);">
-								(Expected: {data.goalData.expectedByNow} by now)
-							</span>
 						</div>
 					</div>
 
 					<!-- Challenge Summary -->
 					{#if data.goalData.challenges && data.goalData.challenges.length > 1}
-						<div class="lg:w-64 lg:border-l lg:pl-6" style="border-color: var(--border-color);">
-							<h3 class="text-sm font-medium mb-3" style="color: var(--text-muted);">Active Challenges</h3>
-							<div class="space-y-3">
+						<div class="pt-3 border-t" style="border-color: var(--border-color);">
+							<p class="text-xs font-medium mb-2" style="color: var(--text-muted);">Active Challenges</p>
+							<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
 								{#each data.goalData.challenges.filter(c => c.type !== 'books').slice(0, 3) as challenge}
-									<div class="flex items-center gap-3">
+									<div class="flex items-center gap-2 p-2 rounded" style="background-color: var(--bg-tertiary);">
 										<div class="flex-1 min-w-0">
-											<div class="flex items-center justify-between text-xs mb-1">
+											<div class="flex items-center justify-between text-xs mb-0.5">
 												<span class="truncate" style="color: var(--text-primary);">{challenge.typeInfo.name}</span>
 												<span style="color: {challenge.isComplete ? '#22c55e' : 'var(--text-muted)'};">
 													{challenge.current}/{challenge.target}
 												</span>
 											</div>
-											<div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--border-color);">
+											<div class="h-1 rounded-full overflow-hidden" style="background-color: var(--border-color);">
 												<div
 													class="h-full rounded-full"
 													style="width: {challenge.progress}%; background-color: {challenge.isComplete ? '#22c55e' : 'var(--accent)'};"
@@ -201,45 +232,402 @@
 							</div>
 						</div>
 					{/if}
+				</section>
+			{/if}
+
+			<!-- Continue Reading -->
+			{#if data.continueReading.length > 0}
+				<section>
+					<div class="flex items-center justify-between mb-3">
+						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+							<BookMarked class="w-5 h-5" style="color: var(--accent);" />
+							Continue Reading
+						</h2>
+						<a href="/books?status=CURRENT" class="text-sm flex items-center gap-1 hover:underline" style="color: var(--accent);">
+							View all
+							<ChevronRight class="w-4 h-4" />
+						</a>
+					</div>
+					<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+						{#each data.continueReading as book}
+							<BookCard
+								{book}
+								onClick={handleBookClick}
+								showStatus={false}
+								quickEdit={true}
+								statuses={data.statuses}
+								onQuickEdit={handleQuickEdit}
+							/>
+						{/each}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Up Next in Series -->
+			{#if data.upNextInSeries.length > 0}
+				<section>
+					<div class="flex items-center justify-between mb-3">
+						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+							<Hash class="w-5 h-5" style="color: var(--accent);" />
+							Up Next in Series
+						</h2>
+						<a href="/series" class="text-sm flex items-center gap-1 hover:underline" style="color: var(--accent);">
+							All series
+							<ChevronRight class="w-4 h-4" />
+						</a>
+					</div>
+					<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+						{#each data.upNextInSeries.slice(0, 6) as item}
+							<a
+								href="/books/{item.book.id}"
+								class="card p-3 flex gap-3 hover:shadow-md transition-shadow group"
+							>
+								<div class="w-12 h-18 flex-shrink-0 rounded overflow-hidden" style="background-color: var(--bg-tertiary);">
+									<img
+										src={item.book.coverImageUrl || '/placeholder.png'}
+										alt={item.book.title}
+										class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+									/>
+								</div>
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium line-clamp-2 mb-1" style="color: var(--text-primary);">{item.book.title}</p>
+									<p class="text-xs mb-1" style="color: var(--accent);">
+										{item.seriesTitle}
+										{#if item.bookNum} #{item.bookNum}{/if}
+									</p>
+									<div class="flex items-center gap-1 text-xs" style="color: var(--text-muted);">
+										<CheckCircle2 class="w-3 h-3" />
+										<span>{item.seriesProgress.read}/{item.seriesProgress.total} read</span>
+									</div>
+								</div>
+							</a>
+						{/each}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Recently Added -->
+			{#if data.recentlyAdded.length > 0}
+				<section>
+					<div class="flex items-center justify-between mb-3">
+						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+							<Clock class="w-5 h-5" style="color: var(--accent);" />
+							Recently Added
+						</h2>
+						<a href="/books?sort=createdAt&order=desc" class="text-sm flex items-center gap-1 hover:underline" style="color: var(--accent);">
+							View all
+							<ChevronRight class="w-4 h-4" />
+						</a>
+					</div>
+					<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+						{#each data.recentlyAdded.slice(0, 12) as book}
+							<BookCard
+								{book}
+								onClick={handleBookClick}
+								quickEdit={true}
+								statuses={data.statuses}
+								onQuickEdit={handleQuickEdit}
+							/>
+						{/each}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Recently Completed -->
+			{#if data.recentlyCompleted.length > 0}
+				<section>
+					<div class="flex items-center justify-between mb-3">
+						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+							<CheckCircle2 class="w-5 h-5" style="color: var(--accent);" />
+							Recently Completed
+						</h2>
+						<a href="/books?status=READ&sort=completedDate&order=desc" class="text-sm flex items-center gap-1 hover:underline" style="color: var(--accent);">
+							View all
+							<ChevronRight class="w-4 h-4" />
+						</a>
+					</div>
+					<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+						{#each data.recentlyCompleted as book}
+							<BookCard
+								{book}
+								onClick={handleBookClick}
+								showStatus={false}
+								quickEdit={true}
+								statuses={data.statuses}
+								onQuickEdit={handleQuickEdit}
+							/>
+						{/each}
+					</div>
+				</section>
+			{/if}
+		</div>
+
+		<!-- Right Column (1/3) -->
+		<div class="space-y-6">
+			<!-- Monthly Reading Chart -->
+			<section class="card p-4">
+				<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+					<BarChart3 class="w-4 h-4" style="color: var(--accent);" />
+					Books Read This Year
+				</h3>
+				<div class="flex items-end gap-1 h-24">
+					{#each data.monthlyReading as month, i}
+						{@const height = maxMonthlyCount > 0 ? (month.count / maxMonthlyCount) * 100 : 0}
+						{@const isCurrentMonth = i === new Date().getMonth()}
+						<div class="flex-1 flex flex-col items-center gap-1">
+							<div
+								class="w-full rounded-t transition-all hover:opacity-80"
+								style="height: {Math.max(height, 2)}%; background-color: {isCurrentMonth ? 'var(--accent)' : 'var(--border-color)'};"
+								title="{month.month}: {month.count} books"
+							></div>
+							<span class="text-[10px]" style="color: var(--text-muted);">{month.shortMonth}</span>
+						</div>
+					{/each}
 				</div>
-			</div>
-		</section>
-	{/if}
+				<div class="text-center mt-2">
+					<span class="text-xs" style="color: var(--text-muted);">
+						Total: {data.monthlyReading.reduce((sum, m) => sum + m.count, 0)} books
+					</span>
+				</div>
+			</section>
 
-	<!-- Currently Reading -->
-	{#if data.currentlyReading.length > 0}
-		<section class="mb-8">
-			<h2 class="text-xl font-semibold mb-4" style="color: var(--text-primary);">Currently Reading</h2>
-			<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-				{#each data.currentlyReading as book}
-					<BookCard
-						{book}
-						onClick={handleBookClick}
-						showStatus={false}
-						quickEdit={true}
-						statuses={data.statuses}
-						onQuickEdit={handleQuickEdit}
-					/>
-				{/each}
-			</div>
-		</section>
-	{/if}
+			<!-- Format Breakdown -->
+			{#if data.formatBreakdown.length > 0}
+				<section class="card p-4">
+					<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+						<PieChart class="w-4 h-4" style="color: var(--accent);" />
+						Format Breakdown
+					</h3>
+					<div class="space-y-2">
+						{#each data.formatBreakdown as format}
+							<div class="flex items-center gap-2">
+								<div
+									class="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
+									style="background-color: {format.color || 'var(--bg-tertiary)'};"
+								>
+									{#if format.icon}
+										<LucideIcon name={format.icon} size={14} color="white" />
+									{/if}
+								</div>
+								<div class="flex-1 min-w-0">
+									<div class="flex justify-between text-xs mb-0.5">
+										<span style="color: var(--text-primary);">{format.name}</span>
+										<span style="color: var(--text-muted);">{format.count}</span>
+									</div>
+									<div class="h-1.5 rounded-full overflow-hidden" style="background-color: var(--border-color);">
+										<div
+											class="h-full rounded-full"
+											style="width: {format.percentage}%; background-color: {format.color || 'var(--accent)'};"
+										></div>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</section>
+			{/if}
 
-	<!-- Recently Added -->
-	{#if data.recentlyAdded.length > 0}
-		<section>
-			<h2 class="text-xl font-semibold mb-4" style="color: var(--text-primary);">Recently Added</h2>
-			<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-				{#each data.recentlyAdded as book}
-					<BookCard
-						{book}
-						onClick={handleBookClick}
-						quickEdit={true}
-						statuses={data.statuses}
-						onQuickEdit={handleQuickEdit}
-					/>
-				{/each}
-			</div>
-		</section>
-	{/if}
+			<!-- Genre Distribution -->
+			{#if data.genreDistribution.length > 0}
+				<section class="card p-4">
+					<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+						<Layers class="w-4 h-4" style="color: var(--accent);" />
+						Top Genres
+					</h3>
+					<div class="flex flex-wrap gap-1.5">
+						{#each data.genreDistribution as genre}
+							<a
+								href="/books?genre={genre.id}"
+								class="px-2 py-1 rounded text-xs font-medium transition-opacity hover:opacity-80"
+								style="background-color: {genre.color || 'var(--bg-tertiary)'}; color: {genre.color ? 'white' : 'var(--text-secondary)'};"
+							>
+								{genre.name} ({genre.count})
+							</a>
+						{/each}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Top Authors -->
+			{#if data.topAuthors.length > 0}
+				<section class="card p-4">
+					<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+						<Users class="w-4 h-4" style="color: var(--accent);" />
+						Top Authors
+					</h3>
+					<div class="space-y-2">
+						{#each data.topAuthors as author}
+							<a
+								href="/authors/{author.id}"
+								class="flex items-center gap-2 p-2 rounded hover:bg-opacity-50 transition-colors"
+								style="background-color: var(--bg-tertiary);"
+							>
+								{#if author.photoUrl}
+									<img src={author.photoUrl} alt={author.name} class="w-8 h-8 rounded-full object-cover" />
+								{:else}
+									<div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: var(--border-color);">
+										<Users class="w-4 h-4" style="color: var(--text-muted);" />
+									</div>
+								{/if}
+								<div class="flex-1 min-w-0">
+									<p class="text-sm truncate" style="color: var(--text-primary);">{author.name}</p>
+									<p class="text-xs" style="color: var(--text-muted);">
+										{author.bookCount} books · {author.readCount} read
+									</p>
+								</div>
+							</a>
+						{/each}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Random TBR Pick -->
+			{#if data.randomTbrPick}
+				<section class="card p-4">
+					<div class="flex items-center justify-between mb-3">
+						<h3 class="text-sm font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+							<Shuffle class="w-4 h-4" style="color: var(--accent);" />
+							Random TBR Pick
+						</h3>
+						<button
+							type="button"
+							class="text-xs px-2 py-1 rounded transition-colors hover:opacity-80"
+							style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
+							onclick={refreshRandomPick}
+						>
+							Shuffle
+						</button>
+					</div>
+					<a
+						href="/books/{data.randomTbrPick.id}"
+						class="block group"
+					>
+						<div class="flex gap-3">
+							<div class="w-16 h-24 flex-shrink-0 rounded overflow-hidden" style="background-color: var(--bg-tertiary);">
+								<img
+									src={data.randomTbrPick.coverImageUrl || '/placeholder.png'}
+									alt={data.randomTbrPick.title}
+									class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+								/>
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="font-medium line-clamp-2 mb-1 group-hover:underline" style="color: var(--text-primary);">
+									{data.randomTbrPick.title}
+								</p>
+								{#if data.randomTbrPick.authorName}
+									<p class="text-sm mb-1" style="color: var(--text-secondary);">{data.randomTbrPick.authorName}</p>
+								{/if}
+								{#if data.randomTbrPick.seriesName}
+									<p class="text-xs" style="color: var(--accent);">
+										{data.randomTbrPick.seriesName}
+										{#if data.randomTbrPick.bookNum} #{data.randomTbrPick.bookNum}{/if}
+									</p>
+								{/if}
+							</div>
+						</div>
+					</a>
+				</section>
+			{/if}
+		</div>
+	</div>
 </div>
+
+<style>
+	/* Primary stat cards (larger) */
+	.stat-card-lg {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 1.25rem;
+		border-radius: 0.75rem;
+		background-color: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+	}
+
+	.stat-icon-lg {
+		width: 3rem;
+		height: 3rem;
+		border-radius: 0.75rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.stat-content-lg {
+		min-width: 0;
+	}
+
+	.stat-value-lg {
+		font-size: 1.75rem;
+		font-weight: 700;
+		color: var(--text-primary);
+		line-height: 1.2;
+	}
+
+	.stat-label-lg {
+		font-size: 0.8125rem;
+		color: var(--text-muted);
+		margin-top: 0.125rem;
+	}
+
+	/* Secondary stat cards (smaller, compact row) */
+	.stat-card-sm {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.625rem 0.875rem;
+		border-radius: 0.5rem;
+		background-color: var(--bg-secondary);
+		border: 1px solid var(--border-color);
+	}
+
+	.stat-value-sm {
+		font-size: 1rem;
+		font-weight: 600;
+		color: var(--text-primary);
+	}
+
+	.stat-label-sm {
+		font-size: 0.75rem;
+		color: var(--text-muted);
+	}
+
+	/* Responsive adjustments */
+	@media (max-width: 768px) {
+		.stat-card-lg {
+			flex-direction: column;
+			text-align: center;
+			gap: 0.5rem;
+			padding: 1rem;
+		}
+
+		.stat-icon-lg {
+			width: 2.5rem;
+			height: 2.5rem;
+		}
+
+		.stat-value-lg {
+			font-size: 1.5rem;
+		}
+
+		.stat-label-lg {
+			font-size: 0.75rem;
+		}
+
+		.stat-card-sm {
+			flex-direction: column;
+			text-align: center;
+			gap: 0.25rem;
+			padding: 0.5rem;
+		}
+
+		.stat-value-sm {
+			font-size: 0.875rem;
+		}
+
+		.stat-label-sm {
+			font-size: 0.625rem;
+		}
+	}
+</style>

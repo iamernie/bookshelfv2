@@ -12,12 +12,13 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const seriesId = url.searchParams.get('series') ? parseInt(url.searchParams.get('series')!) : undefined;
 	const sort = (url.searchParams.get('sort') as 'title' | 'createdAt' | 'rating' | 'completedDate' | 'series' | 'status' | 'format' | 'genre') || 'createdAt';
 	const order = (url.searchParams.get('order') as 'asc' | 'desc') || 'desc';
+	const filterMode = (url.searchParams.get('filterMode') as 'and' | 'or') || 'and';
 
 	// Pass userId to include books from public library that user has added to their library
 	const userId = locals.user?.id;
 
 	const [booksResult, statuses, genres, formats, narrators, tags, authors, series] = await Promise.all([
-		getBooks({ page, limit: 24, search, statusId, genreId, formatId, tagId, authorId, seriesId, sort, order, userId }),
+		getBooks({ page, limit: 24, search, statusId, genreId, formatId, tagId, authorId, seriesId, sort, order, userId, filterMode }),
 		getStatuses(),
 		getGenres(),
 		getFormats(),
@@ -32,6 +33,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		search: search || '',
 		sort,
 		order,
+		filterMode,
 		statusId,
 		genreId,
 		formatId,

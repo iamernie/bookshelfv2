@@ -8,7 +8,7 @@ import {
 } from '$lib/server/services/widgetService';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
-	if (!locals.user?.isAdmin) {
+	if (locals.user?.role !== 'admin') {
 		throw redirect(303, '/');
 	}
 
@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 export const actions: Actions = {
 	toggleEnabled: async ({ locals, request }) => {
-		if (!locals.user?.isAdmin) {
+		if (locals.user?.role !== 'admin') {
 			throw error(403, 'Admin access required');
 		}
 
@@ -38,7 +38,7 @@ export const actions: Actions = {
 	},
 
 	regenerateToken: async ({ locals }) => {
-		if (!locals.user?.isAdmin) {
+		if (locals.user?.role !== 'admin') {
 			throw error(403, 'Admin access required');
 		}
 

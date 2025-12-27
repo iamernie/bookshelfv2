@@ -14,12 +14,16 @@
 		Heart,
 		Moon,
 		Sun,
+		Monitor,
 		Terminal,
 		Shield,
 		FolderDown,
 		Target,
 		Code,
-		Activity
+		Activity,
+		Users,
+		Sliders,
+		UserCog
 	} from 'lucide-svelte';
 	import GlobalSearch from '$lib/components/search/GlobalSearch.svelte';
 	import { theme } from '$lib/stores/theme';
@@ -37,7 +41,7 @@
 	let searchOpen = $state(false);
 	let userMenuOpen = $state(false);
 	let addMenuOpen = $state(false);
-	let currentTheme = $state<'light' | 'dark'>('dark');
+	let currentTheme = $state<'light' | 'dark' | 'system'>('system');
 
 	// Subscribe to theme store
 	$effect(() => {
@@ -142,7 +146,9 @@
 			onclick={() => theme.toggle()}
 			aria-label="Toggle theme"
 		>
-			{#if currentTheme === 'dark'}
+			{#if currentTheme === 'system'}
+				<Monitor class="w-5 h-5" />
+			{:else if currentTheme === 'dark'}
 				<Sun class="w-5 h-5" />
 			{:else}
 				<Moon class="w-5 h-5" />
@@ -162,16 +168,27 @@
 				</button>
 
 				{#if userMenuOpen}
-					<div class="dropdown-menu right-0 top-full mt-1 w-48 fade-in">
+					<div class="dropdown-menu right-0 top-full mt-1 w-52 fade-in">
 						<div class="px-3 py-2 border-b" style="border-color: var(--border-color);">
 							<p class="font-medium" style="color: var(--text-primary);">{user.username}</p>
 							<p class="text-xs" style="color: var(--text-muted);">{user.email}</p>
 						</div>
-						<a href="/settings" class="dropdown-item" onclick={closeMenus}>
-							<Settings class="w-4 h-4" />
-							<span>Settings</span>
+						<!-- Account Section -->
+						<div class="px-3 py-1 mt-1">
+							<span class="text-xs font-medium flex items-center gap-1" style="color: var(--text-muted);">
+								<User class="w-3 h-3" />
+								Account
+							</span>
+						</div>
+						<a href="/account" class="dropdown-item" onclick={closeMenus}>
+							<UserCog class="w-4 h-4" />
+							<span>My Profile</span>
 						</a>
-						{#if user.isAdmin}
+						<a href="/account/settings" class="dropdown-item" onclick={closeMenus}>
+							<Sliders class="w-4 h-4" />
+							<span>My Preferences</span>
+						</a>
+						{#if user.role === 'admin'}
 							<div class="border-t my-1" style="border-color: var(--border-color);"></div>
 							<div class="px-3 py-1">
 								<span class="text-xs font-medium flex items-center gap-1" style="color: var(--text-muted);">
@@ -179,6 +196,14 @@
 									Admin
 								</span>
 							</div>
+							<a href="/admin/users" class="dropdown-item" onclick={closeMenus}>
+								<Users class="w-4 h-4" />
+								<span>Manage Users</span>
+							</a>
+							<a href="/admin/settings" class="dropdown-item" onclick={closeMenus}>
+								<Settings class="w-4 h-4" />
+								<span>System Settings</span>
+							</a>
 							<a href="/admin/console" class="dropdown-item" onclick={closeMenus}>
 								<Terminal class="w-4 h-4" />
 								<span>Console</span>

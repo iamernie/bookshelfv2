@@ -93,10 +93,10 @@ function parseSearchResults(html: string): GoodreadsSearchResult[] {
 
 		if (!linkMatch) continue;
 
-		const href = linkMatch[1];
+		const href = linkMatch[1] || '';
 		// Strip any HTML tags from the title (in case of nested elements)
-		let title = linkMatch[2].replace(/<[^>]*>/g, '').trim();
-		title = decodeHtmlEntities(title);
+		let title: string = (linkMatch[2] || '').replace(/<[^>]*>/g, '').trim();
+		title = decodeHtmlEntities(title) || title;
 
 		const goodreadsId = parseGoodreadsId(href);
 		if (!goodreadsId) continue;

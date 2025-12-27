@@ -4,7 +4,7 @@ import { getAISettings, saveAISettings, testAIConnection } from '$lib/server/ser
 
 // GET - Get AI settings (admin only)
 export const GET: RequestHandler = async ({ locals }) => {
-	if (!locals.user?.isAdmin) {
+	if (locals.user?.role !== 'admin') {
 		throw error(403, 'Admin access required');
 	}
 
@@ -24,7 +24,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 // PUT - Update AI settings (admin only)
 export const PUT: RequestHandler = async ({ locals, request }) => {
-	if (!locals.user?.isAdmin) {
+	if (locals.user?.role !== 'admin') {
 		throw error(403, 'Admin access required');
 	}
 
@@ -40,7 +40,7 @@ export const PUT: RequestHandler = async ({ locals, request }) => {
 
 // POST - Test API connection (admin only)
 export const POST: RequestHandler = async ({ locals, request }) => {
-	if (!locals.user?.isAdmin) {
+	if (locals.user?.role !== 'admin') {
 		throw error(403, 'Admin access required');
 	}
 

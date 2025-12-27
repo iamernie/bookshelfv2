@@ -22,7 +22,8 @@
 		selectedFormat,
 		selectedTag,
 		selectedAuthor,
-		selectedSeries
+		selectedSeries,
+		filterMode = 'and'
 	}: {
 		statuses?: FilterOption[];
 		genres?: FilterOption[];
@@ -36,6 +37,7 @@
 		selectedTag?: number;
 		selectedAuthor?: number;
 		selectedSeries?: number;
+		filterMode?: 'and' | 'or';
 	} = $props();
 
 	// Track which sections are expanded
@@ -67,6 +69,17 @@
 		const params = new URLSearchParams();
 		const search = $page.url.searchParams.get('search');
 		if (search) params.set('search', search);
+		// Preserve filter mode when clearing
+		const mode = $page.url.searchParams.get('filterMode');
+		if (mode) params.set('filterMode', mode);
+		goto(`/books?${params.toString()}`);
+	}
+
+	function toggleFilterMode() {
+		const params = new URLSearchParams($page.url.searchParams);
+		const currentMode = params.get('filterMode') || 'and';
+		params.set('filterMode', currentMode === 'and' ? 'or' : 'and');
+		params.delete('page'); // Reset to page 1
 		goto(`/books?${params.toString()}`);
 	}
 
@@ -117,6 +130,37 @@
 				</button>
 			{/if}
 		</div>
+
+		<!-- Filter Mode Toggle -->
+		{#if hasActiveFilters}
+			<div class="mb-4 p-2 rounded-lg" style="background-color: var(--bg-tertiary);">
+				<div class="flex items-center justify-between">
+					<span class="text-xs font-medium" style="color: var(--text-muted);">Match</span>
+					<button
+						type="button"
+						class="flex items-center rounded-full text-xs font-medium overflow-hidden"
+						style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);"
+						onclick={toggleFilterMode}
+					>
+						<span
+							class="px-2 py-1 transition-colors"
+							style="background-color: {filterMode === 'and' ? 'var(--accent)' : 'transparent'}; color: {filterMode === 'and' ? 'white' : 'var(--text-muted)'};"
+						>
+							ALL
+						</span>
+						<span
+							class="px-2 py-1 transition-colors"
+							style="background-color: {filterMode === 'or' ? 'var(--accent)' : 'transparent'}; color: {filterMode === 'or' ? 'white' : 'var(--text-muted)'};"
+						>
+							ANY
+						</span>
+					</button>
+				</div>
+				<p class="text-[10px] mt-1" style="color: var(--text-muted);">
+					{filterMode === 'and' ? 'Books must match all selected filters' : 'Books can match any selected filter'}
+				</p>
+			</div>
+		{/if}
 
 		<!-- Status Section -->
 		<div class="mb-3">

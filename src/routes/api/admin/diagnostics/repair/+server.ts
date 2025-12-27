@@ -12,7 +12,7 @@ import {
 
 export const POST: RequestHandler = async ({ locals, request }) => {
 	// Admin-only access
-	if (!locals.user?.isAdmin) {
+	if (locals.user?.role !== 'admin') {
 		throw error(403, 'Admin access required');
 	}
 

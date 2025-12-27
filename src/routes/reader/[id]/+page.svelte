@@ -423,9 +423,9 @@
 	<!-- Top toolbar -->
 	<div class="reader-toolbar" class:hidden={isFullscreen}>
 		<div class="flex items-center gap-2">
-			<a href="/books/{data.book.id}" class="btn btn-icon" title="Back to book">
+			<button type="button" class="btn btn-icon" title="Back" onclick={() => history.back()}>
 				<ArrowLeft class="w-5 h-5" />
-			</a>
+			</button>
 			<button class="btn btn-icon" title="Table of Contents" onclick={() => { tocOpen = !tocOpen; settingsOpen = false; }}>
 				<List class="w-5 h-5" />
 			</button>

@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { Search, Plus, Mic } from 'lucide-svelte';
 	import NarratorCard from '$lib/components/narrator/NarratorCard.svelte';
 	import NarratorModal from '$lib/components/narrator/NarratorModal.svelte';
@@ -21,11 +23,8 @@
 	let search = $state('');
 	let total = $state(0);
 
-	// Modal state
-	let showModal = $state(false);
-	let selectedNarrator = $state<NarratorWithStats | null>(null);
-	let modalMode = $state<'view' | 'edit' | 'add'>('view');
-	let narratorBooks = $state<{ id: number; title: string; coverImageUrl: string | null; rating: number | null }[]>([]);
+	// Modal state - only for adding new narrators
+	let showAddModal = $state(false);
 
 	async function loadNarrators() {
 		loading = true;
@@ -47,36 +46,19 @@
 		}
 	}
 
-	async function openNarrator(narrator: NarratorWithStats) {
-		try {
-			const response = await fetch(`/api/narrators/${narrator.id}`);
-			if (!response.ok) throw new Error('Failed to load narrator');
-
-			const data = await response.json();
-			selectedNarrator = data.narrator;
-			narratorBooks = data.books;
-			modalMode = 'view';
-			showModal = true;
-		} catch (err) {
-			console.error('Error loading narrator:', err);
-			toasts.error('Failed to load narrator details');
-		}
+	function openNarrator(narrator: NarratorWithStats) {
+		// Navigate to the edit page instead of modal
+		const returnUrl = encodeURIComponent($page.url.pathname + $page.url.search);
+		goto(`/narrators/${narrator.id}/edit?returnTo=${returnUrl}`);
 	}
 
 	function openAddModal() {
-		selectedNarrator = null;
-		narratorBooks = [];
-		modalMode = 'add';
-		showModal = true;
+		showAddModal = true;
 	}
 
-	async function saveNarrator(data: { name: string; bio?: string | null; url?: string | null }) {
-		const isNew = modalMode === 'add';
-		const url = isNew ? '/api/narrators' : `/api/narrators/${selectedNarrator?.id}`;
-		const method = isNew ? 'POST' : 'PUT';
-
-		const response = await fetch(url, {
-			method,
+	async function saveNewNarrator(data: { name: string; bio?: string | null; url?: string | null }) {
+		const response = await fetch('/api/narrators', {
+			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(data)
 		});
@@ -86,22 +68,8 @@
 			throw new Error(error.message || 'Failed to save narrator');
 		}
 
-		toasts.success(isNew ? 'Narrator created' : 'Narrator updated');
-		await loadNarrators();
-	}
-
-	async function deleteNarrator() {
-		if (!selectedNarrator) return;
-
-		const response = await fetch(`/api/narrators/${selectedNarrator.id}`, { method: 'DELETE' });
-
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.message || 'Failed to delete narrator');
-		}
-
-		toasts.success('Narrator deleted');
-		showModal = false;
+		toasts.success('Narrator created');
+		showAddModal = false;
 		await loadNarrators();
 	}
 
@@ -192,14 +160,13 @@
 	{/if}
 </div>
 
-<!-- Narrator Modal -->
-{#if showModal}
+<!-- Narrator Modal - only for adding -->
+{#if showAddModal}
 	<NarratorModal
-		narrator={selectedNarrator}
-		books={narratorBooks}
-		mode={modalMode}
-		onClose={() => showModal = false}
-		onSave={saveNarrator}
-		onDelete={deleteNarrator}
+		narrator={null}
+		books={[]}
+		mode="add"
+		onClose={() => showAddModal = false}
+		onSave={saveNewNarrator}
 	/>
 {/if}

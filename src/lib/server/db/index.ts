@@ -688,6 +688,48 @@ function runMigrations() {
 		// Ensure role column exists with proper values
 		// Roles: admin, librarian, member, viewer, guest
 		// (role column already exists but may need values updated)
+		safeAddColumn('users', 'username', 'TEXT');
+		safeAddColumn('users', 'password', 'TEXT');
+		safeAddColumn('users', 'resetToken', 'TEXT');
+		safeAddColumn('users', 'resetTokenExpires', 'TEXT');
+	}
+
+	// ========== User Preferences table ==========
+	safeCreateTable('user_preferences', `
+		CREATE TABLE user_preferences (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			userId INTEGER NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+			-- Display preferences
+			theme TEXT DEFAULT 'system',
+			accentColor TEXT DEFAULT '#3b82f6',
+			-- Dashboard preferences (JSON)
+			dashboardWidgets TEXT,
+			-- Default view preferences
+			defaultBooksView TEXT DEFAULT 'grid',
+			defaultBooksSort TEXT DEFAULT 'title',
+			defaultBooksSortOrder TEXT DEFAULT 'asc',
+			booksPerPage INTEGER DEFAULT 24,
+			-- Reader preferences
+			readerFontFamily TEXT DEFAULT 'system',
+			readerFontSize INTEGER DEFAULT 16,
+			readerLineHeight REAL DEFAULT 1.6,
+			readerTheme TEXT DEFAULT 'auto',
+			-- Notification preferences
+			emailNotifications INTEGER DEFAULT 0,
+			goalReminders INTEGER DEFAULT 1,
+			-- Sidebar state
+			sidebarCollapsed INTEGER DEFAULT 0,
+			-- Timestamps
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Create index for user_preferences queries
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_user_preferences_user ON user_preferences(userId)');
+	} catch {
+		// Index may already exist
 	}
 
 	console.log('[db] Schema check complete');

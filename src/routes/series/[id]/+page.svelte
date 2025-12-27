@@ -216,10 +216,10 @@
 
 <div class="page-container">
 	<!-- Back navigation -->
-	<a href="/series" class="back-link">
+	<button type="button" onclick={() => history.back()} class="back-link">
 		<ArrowLeft class="w-4 h-4" />
-		Back to Series
-	</a>
+		Back
+	</button>
 
 	<!-- Header section -->
 	<div class="series-header">
@@ -548,6 +548,12 @@
 	onAddTags={() => showBulkTagModal = true}
 	onChangeStatus={() => showBulkStatusModal = true}
 	onDelete={() => showBulkDeleteModal = true}
+	onComplete={() => invalidateAll()}
+	authors={data.options.authors}
+	narrators={data.options.narrators}
+	series={data.options.series}
+	formats={data.options.formats}
+	genres={data.options.genres}
 />
 
 <!-- Bulk Modals -->
@@ -604,6 +610,10 @@
 		font-size: 0.8rem;
 		margin-bottom: 0.75rem;
 		transition: color 0.2s;
+		background: none;
+		border: none;
+		padding: 0;
+		cursor: pointer;
 	}
 
 	.back-link:hover {

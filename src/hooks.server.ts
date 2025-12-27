@@ -85,7 +85,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				throw e;
 			}
 			// Otherwise log and continue (database might not be ready)
-			log.warn('Setup check failed:', e);
+			log.warn('Setup check failed:', e as Record<string, unknown>);
 		}
 	}
 

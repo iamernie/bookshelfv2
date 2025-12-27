@@ -33,11 +33,19 @@ This document outlines feature status and planned improvements.
 | **Inline Series Notes** | Edit series notes from book page | ✅ Completed |
 | **Admin Console** | Log viewer with filtering | ✅ Completed |
 | **Multi-user with Roles** | Admin/member roles, permissions | ✅ Completed |
+| **User Management UI** | Admin user CRUD, role assignment, account unlock | ✅ Completed |
+| **User Preferences** | Per-user theme, view settings, reader preferences | ✅ Completed |
+| **Account Settings** | Profile editing, password change, preferences | ✅ Completed |
+| **System Theme Support** | Light/Dark/System theme with OS preference sync | ✅ Completed |
+| **Catalog Manager** | Unified interface for authors, genres, tags, series, narrators, formats | ✅ Completed |
+| **Bulk Edit Modal** | Multi-field bulk editing (status, tags, genre, format, narrator, series, author) | ✅ Completed |
 | **Reading Activity Heatmap** | GitHub-style yearly reading calendar with streaks | ✅ Completed |
 | **Collapsible Sidebar** | Collapse sidebar to icon-only mode with localStorage persistence | ✅ Completed |
 | **BookCard Hover Actions** | Quick access buttons (read, info, menu) on book cover hover | ✅ Completed |
 | **Book Detail Tabs** | Tabbed interface with Details and Similar Books sections | ✅ Completed |
 | **Similar Books** | Recommendations based on shared authors, series, genres | ✅ Completed |
+| **Filter Mode Setting** | AND vs OR toggle for combining multiple filters | ✅ Completed |
+| **Series View Mode** | Group books by series in grid view with collapsible sections | ✅ Completed |
 
 ---
 
@@ -74,7 +82,8 @@ This document outlines feature status and planned improvements.
 | **Setup Wizard** | First-run wizard for Docker deployments | ✅ Completed |
 | **Database Repair Tools** | Orphan cleanup, duplicate detection, schema repair | ✅ Completed |
 | **Diagnostic Page** | System health, storage usage, migration status | ✅ Completed |
-| **Catalog Manager** | Unified interface for authors, genres, tags, series, publishers with bulk ops | Planned |
+| **Catalog Manager** | Unified interface for authors, genres, tags, series, narrators, formats with bulk ops | ✅ Completed |
+| **Default Sort/View Preferences** | Configurable default sort field, direction, view mode per user | ✅ Completed |
 | **File Naming Patterns** | Template-based file organization with {title}, {authors}, {series} placeholders | Planned |
 | **Write Metadata to File** | Embed metadata into EPUB/PDF files | Planned |
 | **Provider Priority Matrix** | Per-field metadata provider priority (1st-4th) with library overrides | Planned |
@@ -90,12 +99,12 @@ This document outlines feature status and planned improvements.
 | **Email Book Sharing** | Send ebooks via email, Kindle support | Medium |
 | **Better Login Page** | Improved design, password reset flow | ✅ Completed |
 | **User Signup Flow** | Self-registration option | Low |
-| **Series View Mode** | Group books by series in grid view | Medium |
+| **Series View Mode** | Group books by series in grid view | ✅ Completed |
 | **Auto-Move Files on Update** | Rename/move files based on metadata changes | Medium |
 | **Public Reviews Download** | Fetch and display Amazon/Goodreads reviews | Medium |
 | **Reader Settings Scope** | Global vs per-book reader preferences | Medium |
-| **Default Sort/View Preferences** | Configurable default sort field, direction, view mode | Low |
-| **Filter Mode Setting** | AND vs OR for combining filters | Low |
+| **Default Sort/View Preferences** | Configurable default sort field, direction, view mode | ✅ Completed |
+| **Filter Mode Setting** | AND vs OR for combining filters | ✅ Completed |
 
 ### Lower Priority
 
@@ -127,9 +136,12 @@ This document outlines feature status and planned improvements.
 - Clean up orphaned files on book deletion
 - Add storage usage reporting in admin
 
-### Settings Overhaul
-- Centralize all settings in one admin page
-- Add settings validation and defaults
+### Settings Overhaul ✅
+- Centralize all settings in one admin page ✅
+- Separate admin (system) settings from user preferences ✅
+- User management UI for admins ✅
+- Per-user preferences with theme, view, reader settings ✅
+- Add settings validation and defaults ✅
 - Environment variable documentation
 
 ### Diagnostic Tools ✅
@@ -173,7 +185,7 @@ This document outlines feature status and planned improvements.
 | AI Recommendations | ✅ | ✅ | ✅ |
 | Collapsible Sidebar | ✅ | ❌ | ✅ |
 | Similar Books | ✅ | ❌ | ✅ |
-| Catalog Manager | ❌ | ❌ | ✅ |
+| Catalog Manager | ✅ | ❌ | ✅ |
 | File Naming Patterns | ❌ | ❌ | ✅ |
 | Write Metadata to File | ❌ | ❌ | ✅ |
 | Provider Priority Matrix | ❌ | ❌ | ✅ |
@@ -215,9 +227,9 @@ Admin-only system diagnostics at `/admin/diagnostics`:
 - **Issue Detection** - Orphaned relationships, invalid references, expired sessions
 - **Repair Tools** - One-click fixes for detected issues
 
-### Catalog Manager (Planned)
+### Catalog Manager ✅ (Completed)
 
-Unified metadata management interface at `/admin/catalog`:
+Unified metadata management interface at `/catalog`:
 
 **Tabs for each entity type:**
 - Authors, Genres, Tags, Series, Publishers, Languages, Narrators
@@ -229,17 +241,48 @@ Unified metadata management interface at `/admin/catalog`:
 - Quick actions: View books, Edit, Delete
 
 **Bulk Operations:**
-- Delete selected
-- Merge selected (combine duplicates)
-- Split (for incorrectly merged entries)
+- Delete selected ✅
+- Merge selected (combine duplicates) ✅
+- Bulk edit from book pages (status, tags, genre, format, narrator, series, author) ✅
 
-**Smart Features (improvements over BookLore):**
+**Future Smart Features:**
 - Fuzzy duplicate detection (suggest "J.R.R. Tolkien" = "JRR Tolkien")
-- Smart merge with metadata preservation
 - Bulk metadata fetch (e.g., fetch Wikipedia bios for selected authors)
 - Relationship visualization (author → series → books graph)
 - Entity import/export (backup just authors or tags)
-- Audit trail (track who changed what, when)
+
+### User Management & Preferences ✅ (Completed)
+
+Multi-user system with role-based access and personal preferences:
+
+**Admin User Management (`/admin/users`):**
+- List all users with role stats
+- Create new users with role assignment
+- Edit user profiles and roles
+- Delete users (with cascade cleanup)
+- Unlock locked accounts
+- Search and pagination
+
+**User Account (`/account`):**
+- View and edit profile information
+- Change password with current password verification
+
+**User Preferences (`/account/settings`):**
+- Theme selection (Light/Dark/System with OS sync)
+- Default books view (Grid/List/Table)
+- Default sort field and direction
+- Books per page setting
+- Reader preferences (theme, font, size, line height)
+- Notification toggles (goal reminders, email)
+
+**System Settings (`/admin/settings`):**
+- Application-wide configuration
+- Storage paths
+- Library settings
+- OPDS catalog settings
+- Import behavior
+- Metadata providers
+- AI recommendations configuration
 
 ### File Naming Patterns (Planned)
 

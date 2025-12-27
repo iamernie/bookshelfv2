@@ -1,37 +1,62 @@
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { browser } from '$app/environment';
 
-type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark' | 'system';
+
+function getSystemTheme(): 'light' | 'dark' {
+	if (!browser) return 'dark';
+	return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+}
+
+function applyTheme(theme: Theme) {
+	if (!browser) return;
+
+	const actualTheme = theme === 'system' ? getSystemTheme() : theme;
+	document.documentElement.classList.remove('light', 'dark');
+	document.documentElement.classList.add(actualTheme);
+}
 
 function createThemeStore() {
-	// Get initial theme from localStorage or system preference
+	// Get initial theme from localStorage or default to system
 	const getInitialTheme = (): Theme => {
-		if (!browser) return 'dark';
+		if (!browser) return 'system';
 
 		const stored = localStorage.getItem('theme') as Theme | null;
-		if (stored === 'light' || stored === 'dark') {
+		if (stored === 'light' || stored === 'dark' || stored === 'system') {
 			return stored;
 		}
 
-		// Check system preference
-		if (window.matchMedia('(prefers-color-scheme: light)').matches) {
-			return 'light';
-		}
-
-		return 'dark';
+		return 'system';
 	};
 
-	const { subscribe, set, update } = writable<Theme>(getInitialTheme());
+	const { subscribe, set: internalSet, update } = writable<Theme>(getInitialTheme());
+
+	// Listen for system theme changes when in system mode
+	if (browser) {
+		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+			const current = get({ subscribe });
+			if (current === 'system') {
+				applyTheme('system');
+			}
+		});
+	}
 
 	return {
 		subscribe,
 		toggle: () => {
 			update(current => {
-				const next = current === 'dark' ? 'light' : 'dark';
+				// Cycle through: system -> light -> dark -> system
+				let next: Theme;
+				if (current === 'system') {
+					next = 'light';
+				} else if (current === 'light') {
+					next = 'dark';
+				} else {
+					next = 'system';
+				}
 				if (browser) {
 					localStorage.setItem('theme', next);
-					document.documentElement.classList.remove('light', 'dark');
-					document.documentElement.classList.add(next);
+					applyTheme(next);
 				}
 				return next;
 			});
@@ -39,10 +64,9 @@ function createThemeStore() {
 		set: (theme: Theme) => {
 			if (browser) {
 				localStorage.setItem('theme', theme);
-				document.documentElement.classList.remove('light', 'dark');
-				document.documentElement.classList.add(theme);
+				applyTheme(theme);
 			}
-			set(theme);
+			internalSet(theme);
 		}
 	};
 }
