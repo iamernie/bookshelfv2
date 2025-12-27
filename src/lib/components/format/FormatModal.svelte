@@ -1,6 +1,17 @@
 <script lang="ts">
 	import Modal from '$lib/components/ui/Modal.svelte';
-	import { Disc, BookOpen, Edit2, Trash2, AlertCircle, ArrowRight } from 'lucide-svelte';
+	import IconPicker from '$lib/components/ui/IconPicker.svelte';
+	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
+	import { BookOpen, Edit2, Trash2, AlertCircle, ArrowRight } from 'lucide-svelte';
+
+	// Common format-related icons
+	const FORMAT_ICONS = [
+		'book', 'book-open', 'book-copy', 'book-marked', 'book-text', 'book-open-check',
+		'headphones', 'headset', 'disc', 'disc-2', 'disc-3',
+		'tablet', 'smartphone', 'laptop', 'monitor',
+		'file', 'file-text', 'file-audio', 'file-video',
+		'library', 'scroll', 'newspaper', 'album', 'package'
+	] as const;
 
 	let {
 		format,
@@ -11,12 +22,12 @@
 		onSave,
 		onDelete
 	}: {
-		format: { id: number; name: string; bookCount?: number; createdAt: string | null; updatedAt: string | null } | null;
+		format: { id: number; name: string; icon?: string | null; color?: string | null; bookCount?: number; createdAt: string | null; updatedAt: string | null } | null;
 		books?: { id: number; title: string; coverImageUrl: string | null }[];
 		allFormats?: { id: number; name: string }[];
 		mode: 'view' | 'edit' | 'add';
 		onClose: () => void;
-		onSave: (data: { name: string }) => Promise<void>;
+		onSave: (data: { name: string; icon?: string; color?: string }) => Promise<void>;
 		onDelete?: (reassignTo: number | null) => Promise<void>;
 	} = $props();
 
@@ -28,6 +39,8 @@
 	let reassignToId = $state<string>('null'); // 'null' for no format, or format id as string
 
 	let name = $state(format?.name || '');
+	let icon = $state(format?.icon || 'book');
+	let color = $state(format?.color || '#6c757d');
 
 	// Get formats available for reassignment (exclude current format)
 	const reassignOptions = $derived(
@@ -40,7 +53,7 @@
 		if (!name.trim()) return;
 		saving = true;
 		try {
-			await onSave({ name: name.trim() });
+			await onSave({ name: name.trim(), icon, color });
 			onClose();
 		} finally {
 			saving = false;
@@ -152,8 +165,11 @@
 		<!-- View Mode -->
 		<div class="p-6 space-y-6">
 			<div class="flex items-center gap-4">
-				<div class="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
-					<Disc class="w-8 h-8 text-gray-500" />
+				<div
+					class="w-16 h-16 rounded-lg flex items-center justify-center"
+					style="background-color: {format.color || '#6c757d'}20;"
+				>
+					<LucideIcon name={format.icon || 'book'} size={32} color={format.color || '#6c757d'} />
 				</div>
 
 				<div class="flex-1">
@@ -173,7 +189,7 @@
 					</h3>
 					<div class="grid grid-cols-4 sm:grid-cols-6 gap-3">
 						{#each books.slice(0, 12) as book}
-							<a href="/books?id={book.id}" class="block">
+							<a href="/books/{book.id}" class="block">
 								<img
 									src={book.coverImageUrl || '/placeholder.png'}
 									alt={book.title}
@@ -230,6 +246,45 @@
 					placeholder="e.g., Hardcover, Paperback, Ebook, Audiobook"
 					class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
 				/>
+			</div>
+
+			<div class="grid grid-cols-2 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Icon</label>
+					<IconPicker icons={FORMAT_ICONS} bind:value={icon} placeholder="Select icon..." />
+				</div>
+
+				<div>
+					<label for="color" class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+					<div class="flex items-center gap-2">
+						<input
+							id="color"
+							type="color"
+							bind:value={color}
+							class="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+						/>
+						<input
+							type="text"
+							bind:value={color}
+							placeholder="#6c757d"
+							class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+						/>
+					</div>
+				</div>
+			</div>
+
+			<!-- Preview -->
+			<div class="p-4 rounded-lg border border-gray-200 bg-gray-50">
+				<p class="text-xs text-gray-500 mb-2">Preview</p>
+				<div class="flex items-center gap-3">
+					<div
+						class="w-10 h-10 rounded-lg flex items-center justify-center"
+						style="background-color: {color}20;"
+					>
+						<LucideIcon name={icon} size={20} {color} />
+					</div>
+					<span class="font-medium text-gray-900">{name || 'Format Name'}</span>
+				</div>
 			</div>
 
 			<!-- Form buttons -->

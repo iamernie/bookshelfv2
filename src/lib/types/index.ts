@@ -26,6 +26,8 @@ export interface BookCardData {
 	format?: {
 		id: number;
 		name: string;
+		icon?: string | null;
+		color?: string | null;
 	} | null;
 	tags?: {
 		id: number;

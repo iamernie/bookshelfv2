@@ -93,13 +93,15 @@ export async function getFormatByName(name: string): Promise<FormatType | null> 
 	return format[0] || null;
 }
 
-export async function createFormat(name: string): Promise<FormatType> {
+export async function createFormat(data: { name: string; icon?: string; color?: string }): Promise<FormatType> {
 	const now = new Date().toISOString();
 
 	const [newFormat] = await db
 		.insert(formats)
 		.values({
-			name,
+			name: data.name,
+			icon: data.icon || 'book',
+			color: data.color || '#6c757d',
 			createdAt: now,
 			updatedAt: now
 		})
@@ -108,12 +110,24 @@ export async function createFormat(name: string): Promise<FormatType> {
 	return newFormat;
 }
 
-export async function updateFormat(id: number, name: string): Promise<FormatType | null> {
+export async function updateFormat(id: number, data: { name: string; icon?: string; color?: string }): Promise<FormatType | null> {
 	const now = new Date().toISOString();
+
+	const updateData: Record<string, unknown> = {
+		name: data.name,
+		updatedAt: now
+	};
+
+	if (data.icon !== undefined) {
+		updateData.icon = data.icon;
+	}
+	if (data.color !== undefined) {
+		updateData.color = data.color;
+	}
 
 	const [updated] = await db
 		.update(formats)
-		.set({ name, updatedAt: now })
+		.set(updateData)
 		.where(eq(formats.id, id))
 		.returning();
 

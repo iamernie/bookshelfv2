@@ -34,7 +34,11 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 		throw error(400, { message: 'Format name is required' });
 	}
 
-	const format = await updateFormat(id, data.name.trim());
+	const format = await updateFormat(id, {
+		name: data.name.trim(),
+		icon: data.icon,
+		color: data.color
+	});
 
 	if (!format) {
 		throw error(404, { message: 'Format not found' });
@@ -65,7 +69,8 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 	}
 
 	try {
-		const deleted = await deleteFormat(id, reassignToId);
+		// Convert null to undefined for the service function
+		const deleted = await deleteFormat(id, reassignToId ?? undefined);
 		if (!deleted) {
 			throw error(404, { message: 'Format not found' });
 		}

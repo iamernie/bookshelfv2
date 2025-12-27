@@ -13,14 +13,30 @@
 		ExternalLink,
 		FileText,
 		Pencil,
-		Check
+		Check,
+		Info,
+		Search,
+		Sparkles,
+		Calendar,
+		BookMarked,
+		Globe,
+		Library
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
 	import { formatDate } from '$lib/utils/date';
+	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
+	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
 
 	let { data } = $props();
 
+	// Tab state
+	let activeTab = $state<'details' | 'similar'>('details');
+
 	let showDeleteConfirm = $state(false);
+	let permanentDelete = $state(false);
+
+	// Derived: is this a public library book?
+	const isPublicLibraryBook = $derived(data.book.libraryType === 'public');
 
 	// Inline editing state
 	let editingSummary = $state(false);
@@ -128,11 +144,21 @@
 	}
 
 	async function handleDelete() {
-		const res = await fetch(`/api/books/${data.book.id}`, {
+		// For public library books, admin can choose to permanently delete
+		const url = permanentDelete
+			? `/api/books/${data.book.id}?permanent=true`
+			: `/api/books/${data.book.id}`;
+
+		const res = await fetch(url, {
 			method: 'DELETE'
 		});
 		if (res.ok) {
-			toasts.success('Book deleted');
+			const result = await res.json();
+			if (result.action === 'removed_from_library') {
+				toasts.success('Removed from your library');
+			} else {
+				toasts.success('Book deleted');
+			}
 			goto('/books');
 		} else {
 			const err = await res.json();
@@ -227,15 +253,39 @@
 					{/if}
 				</div>
 
-				<!-- Status -->
+				<!-- Status Badge -->
 				{#if data.book.status}
 					<div
-						class="w-full py-2 px-4 rounded-lg text-center text-white font-medium mb-4"
+						class="w-full py-2 px-4 rounded-lg text-center text-white font-medium mb-4 flex items-center justify-center gap-2"
 						style="background-color: {data.book.status.color || '#6c757d'}"
 					>
+						{#if data.book.status.icon}
+							<DynamicIcon icon={data.book.status.icon} size={16} />
+						{/if}
 						{data.book.status.name}
 					</div>
 				{/if}
+
+				<!-- Format & Genre Pills -->
+				<div class="flex flex-wrap gap-2 mb-4">
+					{#if data.book.format}
+						<span
+							class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-white"
+							style="background-color: {data.book.format.color || '#6c757d'}"
+						>
+							<LucideIcon name={data.book.format.icon || 'book'} size={14} />
+							{data.book.format.name}
+						</span>
+					{/if}
+					{#if data.book.genre}
+						<span
+							class="px-3 py-1.5 rounded-lg text-sm"
+							style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
+						>
+							{data.book.genre.name}
+						</span>
+					{/if}
+				</div>
 
 				<!-- Quick Actions -->
 				<div class="space-y-2">
@@ -248,30 +298,97 @@
 							Download Ebook
 						</a>
 					{/if}
-					{#if data.book.goodreadsId}
-						<a
-							href="https://www.goodreads.com/book/show/{data.book.goodreadsId}"
-							target="_blank"
-							rel="noopener noreferrer"
-							class="w-full btn-ghost flex items-center justify-center gap-2 py-2"
-						>
-							<ExternalLink class="w-4 h-4" />
-							View on Goodreads
-						</a>
-					{/if}
 				</div>
+
+				<!-- External Links Card -->
+				{#if data.book.goodreadsId || data.book.googleBooksId || data.book.asin}
+					<div class="card p-4 mt-4">
+						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+							<Globe class="w-4 h-4" />
+							External Links
+						</h3>
+						<div class="space-y-2">
+							{#if data.book.goodreadsId}
+								<a
+									href="https://www.goodreads.com/book/show/{data.book.goodreadsId}"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="flex items-center gap-2 text-sm transition-colors hover:underline"
+									style="color: var(--accent);"
+								>
+									<ExternalLink class="w-3.5 h-3.5" />
+									Goodreads
+								</a>
+							{/if}
+							{#if data.book.googleBooksId}
+								<a
+									href="https://books.google.com/books?id={data.book.googleBooksId}"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="flex items-center gap-2 text-sm transition-colors hover:underline"
+									style="color: var(--accent);"
+								>
+									<ExternalLink class="w-3.5 h-3.5" />
+									Google Books
+								</a>
+							{/if}
+							{#if data.book.asin}
+								<a
+									href="https://www.amazon.com/dp/{data.book.asin}"
+									target="_blank"
+									rel="noopener noreferrer"
+									class="flex items-center gap-2 text-sm transition-colors hover:underline"
+									style="color: var(--accent);"
+								>
+									<ExternalLink class="w-3.5 h-3.5" />
+									Amazon
+								</a>
+							{/if}
+						</div>
+					</div>
+				{/if}
+
+				<!-- Identifiers Card -->
+				{#if data.book.isbn10 || data.book.isbn13 || data.book.asin}
+					<div class="card p-4 mt-4">
+						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+							<Library class="w-4 h-4" />
+							Identifiers
+						</h3>
+						<div class="space-y-2 text-sm">
+							{#if data.book.isbn13}
+								<div class="flex justify-between">
+									<span style="color: var(--text-muted);">ISBN-13</span>
+									<span class="font-mono" style="color: var(--text-primary);">{data.book.isbn13}</span>
+								</div>
+							{/if}
+							{#if data.book.isbn10}
+								<div class="flex justify-between">
+									<span style="color: var(--text-muted);">ISBN-10</span>
+									<span class="font-mono" style="color: var(--text-primary);">{data.book.isbn10}</span>
+								</div>
+							{/if}
+							{#if data.book.asin}
+								<div class="flex justify-between">
+									<span style="color: var(--text-muted);">ASIN</span>
+									<span class="font-mono" style="color: var(--text-primary);">{data.book.asin}</span>
+								</div>
+							{/if}
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Right Column: Details -->
 			<div class="lg:col-span-2">
 				<!-- Title -->
-				<h1 class="text-3xl font-bold mb-4" style="color: var(--text-primary);">
+				<h1 class="text-3xl font-bold mb-2" style="color: var(--text-primary);">
 					{data.book.title}
 				</h1>
 
 				<!-- Authors -->
 				{#if data.book.authors.length > 0}
-					<div class="flex items-center gap-2 mb-4">
+					<div class="flex items-center gap-2 mb-3">
 						<User class="w-5 h-5" style="color: var(--text-muted);" />
 						<div class="flex flex-wrap gap-2">
 							{#each data.book.authors as author}
@@ -295,7 +412,7 @@
 
 				<!-- Series -->
 				{#if data.book.series.length > 0}
-					<div class="flex items-center gap-2 mb-4">
+					<div class="flex items-center gap-2 mb-3">
 						<Hash class="w-5 h-5" style="color: var(--text-muted);" />
 						<div class="flex flex-wrap gap-2">
 							{#each data.book.series as s}
@@ -312,97 +429,15 @@
 							{/each}
 						</div>
 					</div>
-
-					<!-- Series Notes (Inline Editable) -->
-					{#each data.book.series as s}
-						<div class="mb-4 pl-7">
-							<div class="flex items-center justify-between mb-1">
-								<span class="text-sm font-medium" style="color: var(--text-muted);">
-									{s.title} Notes
-								</span>
-								{#if editingSeriesNotes !== s.id}
-									<button
-										type="button"
-										class="inline-edit-btn"
-										onclick={() => startEditSeriesNotes(s.id, s.comments)}
-										title="Edit series notes"
-									>
-										<Pencil class="w-3.5 h-3.5" />
-									</button>
-								{/if}
-							</div>
-							{#if editingSeriesNotes === s.id}
-								<div class="inline-edit-container">
-									<textarea
-										class="inline-edit-textarea"
-										bind:value={editSeriesNotesValue}
-										placeholder="Add notes about this series..."
-										rows="3"
-									></textarea>
-									<div class="inline-edit-actions">
-										<button
-											type="button"
-											class="inline-save-btn"
-											onclick={saveSeriesNotes}
-											disabled={savingSeriesNotes}
-										>
-											<Check class="w-4 h-4" />
-											{savingSeriesNotes ? 'Saving...' : 'Save'}
-										</button>
-										<button
-											type="button"
-											class="inline-cancel-btn"
-											onclick={cancelSeriesNotesEdit}
-											disabled={savingSeriesNotes}
-										>
-											Cancel
-										</button>
-									</div>
-								</div>
-							{:else}
-								<button
-									type="button"
-									class="inline-edit-content text-sm"
-									onclick={() => startEditSeriesNotes(s.id, s.comments)}
-								>
-									{#if s.comments}
-										<p class="whitespace-pre-wrap" style="color: var(--text-secondary);">{s.comments}</p>
-									{:else}
-										<p class="text-placeholder">Click to add series notes...</p>
-									{/if}
-								</button>
-							{/if}
-						</div>
-					{/each}
 				{/if}
 
-				<!-- Genre & Format Pills -->
-				<div class="flex flex-wrap gap-2 mb-6">
-					{#if data.book.genre}
-						<span
-							class="px-3 py-1 rounded-full text-sm"
-							style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
-						>
-							{data.book.genre.name}
-						</span>
-					{/if}
-					{#if data.book.format}
-						<span
-							class="px-3 py-1 rounded-full text-sm"
-							style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
-						>
-							{data.book.format.name}
-						</span>
-					{/if}
-					{#if data.book.narrator}
-						<span
-							class="px-3 py-1 rounded-full text-sm"
-							style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
-						>
-							Narrated by {data.book.narrator.name}
-						</span>
-					{/if}
-				</div>
+				<!-- Narrator -->
+				{#if data.book.narrator}
+					<div class="flex items-center gap-2 mb-4">
+						<BookMarked class="w-5 h-5" style="color: var(--text-muted);" />
+						<span style="color: var(--text-secondary);">Narrated by {data.book.narrator.name}</span>
+					</div>
+				{/if}
 
 				<!-- Tags -->
 				{#if data.book.tags.length > 0}
@@ -421,6 +456,32 @@
 					</div>
 				{/if}
 
+				<!-- Tab Navigation -->
+				<div class="mb-6 border-b" style="border-color: var(--border-color);">
+					<div class="flex gap-1">
+						<button
+							type="button"
+							class="tab-btn"
+							class:active={activeTab === 'details'}
+							onclick={() => activeTab = 'details'}
+						>
+							<Info class="w-4 h-4" />
+							Book Details
+						</button>
+						<button
+							type="button"
+							class="tab-btn"
+							class:active={activeTab === 'similar'}
+							onclick={() => activeTab = 'similar'}
+						>
+							<Sparkles class="w-4 h-4" />
+							Similar Books
+						</button>
+					</div>
+				</div>
+
+				<!-- Tab Content -->
+				{#if activeTab === 'details'}
 				<!-- Summary Section -->
 				{#if data.book.summary || editingSummary}
 					<div class="card p-6 mb-6">
@@ -586,6 +647,120 @@
 						</button>
 					{/if}
 				</div>
+
+				<!-- Series Notes (only show if there are series) -->
+				{#if data.book.series.length > 0}
+					{#each data.book.series as s}
+						<div class="card p-6 mt-6">
+							<div class="flex items-center justify-between mb-2">
+								<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+									<Hash class="w-5 h-5" />
+									{s.title} Notes
+								</h2>
+								{#if editingSeriesNotes !== s.id}
+									<button
+										type="button"
+										class="inline-edit-btn"
+										onclick={() => startEditSeriesNotes(s.id, s.comments)}
+										title="Edit series notes"
+									>
+										<Pencil class="w-4 h-4" />
+									</button>
+								{/if}
+							</div>
+							{#if editingSeriesNotes === s.id}
+								<div class="inline-edit-container">
+									<textarea
+										class="inline-edit-textarea"
+										bind:value={editSeriesNotesValue}
+										placeholder="Add notes about this series..."
+										rows="3"
+									></textarea>
+									<div class="inline-edit-actions">
+										<button
+											type="button"
+											class="inline-save-btn"
+											onclick={saveSeriesNotes}
+											disabled={savingSeriesNotes}
+										>
+											<Check class="w-4 h-4" />
+											{savingSeriesNotes ? 'Saving...' : 'Save'}
+										</button>
+										<button
+											type="button"
+											class="inline-cancel-btn"
+											onclick={cancelSeriesNotesEdit}
+											disabled={savingSeriesNotes}
+										>
+											Cancel
+										</button>
+									</div>
+								</div>
+							{:else}
+								<button
+									type="button"
+									class="inline-edit-content"
+									onclick={() => startEditSeriesNotes(s.id, s.comments)}
+								>
+									{#if s.comments}
+										<p class="whitespace-pre-wrap" style="color: var(--text-secondary);">{s.comments}</p>
+									{:else}
+										<p class="text-placeholder">Click to add series notes...</p>
+									{/if}
+								</button>
+							{/if}
+						</div>
+					{/each}
+				{/if}
+				{:else if activeTab === 'similar'}
+				<!-- Similar Books Tab -->
+				<div class="card p-6">
+					<div class="flex items-center gap-3 mb-4">
+						<div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: var(--bg-tertiary);">
+							<Sparkles class="w-5 h-5" style="color: var(--accent);" />
+						</div>
+						<div>
+							<h2 class="font-semibold" style="color: var(--text-primary);">Similar Books</h2>
+							<p class="text-sm" style="color: var(--text-muted);">Books you might also enjoy</p>
+						</div>
+					</div>
+
+					{#if data.similarBooks && data.similarBooks.length > 0}
+						<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+							{#each data.similarBooks as book}
+								<a
+									href="/books/{book.id}"
+									class="group rounded-lg overflow-hidden transition-shadow hover:shadow-lg"
+									style="background-color: var(--bg-tertiary);"
+								>
+									<div class="aspect-[2/3] relative">
+										<img
+											src={book.coverImageUrl || '/placeholder.png'}
+											alt={book.title}
+											class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+											loading="lazy"
+										/>
+									</div>
+									<div class="p-2">
+										<p class="font-medium text-xs line-clamp-2" style="color: var(--text-primary);">{book.title}</p>
+										{#if book.authorName}
+											<p class="text-[10px] mt-0.5 truncate" style="color: var(--text-muted);">{book.authorName}</p>
+										{/if}
+									</div>
+								</a>
+							{/each}
+						</div>
+					{:else}
+						<div class="text-center py-8">
+							<Sparkles class="w-12 h-12 mx-auto mb-3" style="color: var(--text-muted); opacity: 0.5;" />
+							<p style="color: var(--text-muted);">No similar books found yet</p>
+							<p class="text-sm mt-1" style="color: var(--text-muted);">
+								Similar books are suggested based on shared authors, series, genres, and tags.
+							</p>
+						</div>
+					{/if}
+				</div>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -593,27 +768,58 @@
 
 <!-- Delete Confirmation -->
 {#if showDeleteConfirm}
-	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => showDeleteConfirm = false}>
+	<div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={() => { showDeleteConfirm = false; permanentDelete = false; }}>
 		<div class="card p-6 max-w-md mx-4" onclick={(e) => e.stopPropagation()}>
-			<h2 class="text-xl font-bold mb-4" style="color: var(--text-primary);">Delete Book?</h2>
-			<p class="mb-6" style="color: var(--text-secondary);">
-				Are you sure you want to delete "{data.book.title}"? This action cannot be undone.
-			</p>
+			<h2 class="text-xl font-bold mb-4" style="color: var(--text-primary);">
+				{isPublicLibraryBook ? 'Remove from Library?' : 'Delete Book?'}
+			</h2>
+
+			{#if isPublicLibraryBook}
+				<p class="mb-4" style="color: var(--text-secondary);">
+					This book is in the public library. Removing it will only remove it from your personal library.
+				</p>
+
+				{#if data.canManagePublicLibrary}
+					<div class="mb-4 p-3 rounded-lg" style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color);">
+						<label class="flex items-center gap-3 cursor-pointer">
+							<input
+								type="checkbox"
+								bind:checked={permanentDelete}
+								class="w-4 h-4 rounded"
+								style="accent-color: #ef4444;"
+							/>
+							<span style="color: var(--text-primary);">
+								<strong>Permanently delete</strong> from public library
+							</span>
+						</label>
+						{#if permanentDelete}
+							<p class="text-sm mt-2" style="color: #ef4444;">
+								Warning: This will permanently delete the book for all users. This action cannot be undone.
+							</p>
+						{/if}
+					</div>
+				{/if}
+			{:else}
+				<p class="mb-6" style="color: var(--text-secondary);">
+					Are you sure you want to delete "{data.book.title}"? This action cannot be undone.
+				</p>
+			{/if}
+
 			<div class="flex justify-end gap-2">
 				<button
 					type="button"
 					class="btn-ghost"
-					onclick={() => showDeleteConfirm = false}
+					onclick={() => { showDeleteConfirm = false; permanentDelete = false; }}
 				>
 					Cancel
 				</button>
 				<button
 					type="button"
 					class="btn-accent"
-					style="background-color: #ef4444;"
+					style="background-color: {permanentDelete ? '#dc2626' : '#ef4444'};"
 					onclick={handleDelete}
 				>
-					Delete
+					{permanentDelete ? 'Permanently Delete' : (isPublicLibraryBook ? 'Remove' : 'Delete')}
 				</button>
 			</div>
 		</div>
@@ -735,5 +941,32 @@
 	.inline-cancel-btn:hover:not(:disabled) {
 		background-color: var(--bg-hover);
 		color: var(--text-primary);
+	}
+
+	/* Tab Navigation */
+	.tab-btn {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.75rem 1rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--text-muted);
+		background: transparent;
+		border: none;
+		border-bottom: 2px solid transparent;
+		cursor: pointer;
+		transition: all 0.2s;
+		margin-bottom: -1px;
+	}
+
+	.tab-btn:hover {
+		color: var(--text-primary);
+		background-color: var(--bg-tertiary);
+	}
+
+	.tab-btn.active {
+		color: var(--accent);
+		border-bottom-color: var(--accent);
 	}
 </style>

@@ -12,6 +12,7 @@
 		Plus,
 		ChevronDown,
 		ChevronRight,
+		ChevronLeft,
 		Disc,
 		Mic,
 		FolderOpen,
@@ -26,9 +27,13 @@
 		Layers,
 		ListChecks,
 		Wand2,
-		Lightbulb
+		Lightbulb,
+		PanelLeftClose,
+		PanelLeft
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
+	import { APP_CONFIG } from '$lib/config/app';
+	import { sidebarCollapsed } from '$lib/stores/sidebar';
 
 	interface MagicShelf {
 		id: number;
@@ -45,6 +50,21 @@
 	}
 
 	let { data }: { data: SidebarData } = $props();
+
+	// Collapsed state from store
+	let collapsed = $state(false);
+
+	// Subscribe to the store
+	$effect(() => {
+		const unsubscribe = sidebarCollapsed.subscribe((value) => {
+			collapsed = value;
+		});
+		return unsubscribe;
+	});
+
+	function toggleCollapse() {
+		sidebarCollapsed.update(v => !v);
+	}
 
 	// Collapsible sections state
 	let librariesOpen = $state(true);
@@ -72,39 +92,44 @@
 	}
 </script>
 
-<aside class="sidebar w-64 h-full flex flex-col overflow-hidden">
+<aside class="sidebar h-full flex flex-col overflow-hidden transition-all duration-300" class:collapsed style="width: {collapsed ? '64px' : '256px'};">
 	<!-- Logo / Brand -->
-	<div class="p-4 flex items-center gap-3">
-		<div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background-color: var(--accent);">
+	<div class="p-4 flex items-center gap-3" class:justify-center={collapsed}>
+		<div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background-color: var(--accent);">
 			<BookOpen class="w-5 h-5 text-white" />
 		</div>
-		<span class="text-lg font-bold" style="color: var(--text-primary);">BookShelf</span>
+		{#if !collapsed}
+			<span class="text-lg font-bold whitespace-nowrap" style="color: var(--text-primary);">BookShelf</span>
+		{/if}
 	</div>
 
 	<!-- Navigation -->
-	<nav class="flex-1 overflow-y-auto px-3 py-2">
+	<nav class="flex-1 overflow-y-auto py-2" class:px-3={!collapsed} class:px-2={collapsed}>
 		<!-- Main Nav -->
 		<div class="space-y-1">
-			<a href="/" class="sidebar-item" class:active={isActive('/')}>
-				<Home class="w-5 h-5" />
-				<span>Dashboard</span>
+			<a href="/" class="sidebar-item" class:active={isActive('/')} class:collapsed title={collapsed ? 'Dashboard' : undefined}>
+				<Home class="w-5 h-5 flex-shrink-0" />
+				{#if !collapsed}<span>Dashboard</span>{/if}
 			</a>
 
-			<a href="/books" class="sidebar-item" class:active={currentPath === '/books'}>
-				<BookOpen class="w-5 h-5" />
-				<span>My Books</span>
-				<span class="ml-auto text-xs px-2 py-0.5 rounded-full" style="background-color: var(--bg-tertiary); color: var(--accent);">
-					{data.totalBooks}
-				</span>
+			<a href="/books" class="sidebar-item" class:active={currentPath === '/books'} class:collapsed title={collapsed ? `My Books (${data.totalBooks})` : undefined}>
+				<BookOpen class="w-5 h-5 flex-shrink-0" />
+				{#if !collapsed}
+					<span>My Books</span>
+					<span class="ml-auto text-xs px-2 py-0.5 rounded-full" style="background-color: var(--bg-tertiary); color: var(--accent);">
+						{data.totalBooks}
+					</span>
+				{/if}
 			</a>
 
-			<a href="/library" class="sidebar-item" class:active={isActive('/library')}>
-				<Library class="w-5 h-5" />
-				<span>Public Library</span>
+			<a href="/library" class="sidebar-item" class:active={isActive('/library')} class:collapsed title={collapsed ? 'Public Library' : undefined}>
+				<Library class="w-5 h-5 flex-shrink-0" />
+				{#if !collapsed}<span>Public Library</span>{/if}
 			</a>
 		</div>
 
 		<!-- Libraries Section -->
+		{#if !collapsed}
 		<div class="mt-6">
 			<button
 				class="sidebar-section w-full flex items-center justify-between"
@@ -140,8 +165,10 @@
 				</div>
 			{/if}
 		</div>
+		{/if}
 
 		<!-- Statuses Section -->
+		{#if !collapsed}
 		<div class="mt-6">
 			<button
 				class="sidebar-section w-full flex items-center justify-between"
@@ -168,8 +195,10 @@
 				</div>
 			{/if}
 		</div>
+		{/if}
 
 		<!-- Smart Collections Section -->
+		{#if !collapsed}
 		<div class="mt-6">
 			<button
 				class="sidebar-section w-full flex items-center justify-between"
@@ -205,8 +234,10 @@
 				</div>
 			{/if}
 		</div>
+		{/if}
 
 		<!-- Management Section -->
+		{#if !collapsed}
 		<div class="mt-6">
 			<div class="sidebar-section">Manage</div>
 			<div class="mt-1 space-y-1">
@@ -240,8 +271,10 @@
 				</a>
 			</div>
 		</div>
+		{/if}
 
 		<!-- Import/Export Section -->
+		{#if !collapsed}
 		<div class="mt-6">
 			<div class="sidebar-section">Data</div>
 			<div class="mt-1 space-y-1">
@@ -255,24 +288,25 @@
 				</a>
 			</div>
 		</div>
+		{/if}
 
 		<!-- Stats & Settings -->
 		<div class="mt-6">
-			<div class="sidebar-section">More</div>
+			{#if !collapsed}<div class="sidebar-section">More</div>{/if}
 			<div class="mt-1 space-y-1">
-				<a href="/stats" class="sidebar-item text-sm" class:active={isActive('/stats')}>
-					<BarChart2 class="w-4 h-4" />
-					<span>Statistics</span>
+				<a href="/stats" class="sidebar-item text-sm" class:active={isActive('/stats')} class:collapsed title={collapsed ? 'Statistics' : undefined}>
+					<BarChart2 class="w-4 h-4 flex-shrink-0" />
+					{#if !collapsed}<span>Statistics</span>{/if}
 				</a>
-				<a href="/recommendations" class="sidebar-item text-sm" class:active={isActive('/recommendations')}>
-					<Lightbulb class="w-4 h-4" />
-					<span>Recommendations</span>
+				<a href="/recommendations" class="sidebar-item text-sm" class:active={isActive('/recommendations')} class:collapsed title={collapsed ? 'Recommendations' : undefined}>
+					<Lightbulb class="w-4 h-4 flex-shrink-0" />
+					{#if !collapsed}<span>Recommendations</span>{/if}
 				</a>
-				<a href="/search" class="sidebar-item text-sm" class:active={isActive('/search')}>
-					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<a href="/search" class="sidebar-item text-sm" class:active={isActive('/search')} class:collapsed title={collapsed ? 'Advanced Search' : undefined}>
+					<svg class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 					</svg>
-					<span>Advanced Search</span>
+					{#if !collapsed}<span>Advanced Search</span>{/if}
 				</a>
 			</div>
 		</div>
@@ -280,9 +314,36 @@
 
 	<!-- Bottom section -->
 	<div class="p-3 border-t" style="border-color: var(--border-color);">
-		<a href="/settings" class="sidebar-item text-sm" class:active={isActive('/settings')}>
-			<Settings class="w-4 h-4" />
-			<span>Settings</span>
+		<a href="/settings" class="sidebar-item text-sm" class:active={isActive('/settings')} class:collapsed title={collapsed ? 'Settings' : undefined}>
+			<Settings class="w-4 h-4 flex-shrink-0" />
+			{#if !collapsed}<span>Settings</span>{/if}
 		</a>
+
+		<!-- Collapse toggle button -->
+		<button
+			onclick={toggleCollapse}
+			class="sidebar-item text-sm w-full mt-2"
+			class:collapsed
+			title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+		>
+			{#if collapsed}
+				<PanelLeft class="w-4 h-4 flex-shrink-0" />
+			{:else}
+				<PanelLeftClose class="w-4 h-4 flex-shrink-0" />
+				<span>Collapse</span>
+			{/if}
+		</button>
+
+		<!-- Version and Copyright -->
+		{#if !collapsed}
+		<div class="mt-3 pt-2 border-t text-center" style="border-color: var(--border-color);">
+			<p class="text-[10px]" style="color: var(--text-muted);">
+				{APP_CONFIG.versionString}
+			</p>
+			<p class="text-[10px]" style="color: var(--text-muted);">
+				&copy; {APP_CONFIG.copyrightString}
+			</p>
+		</div>
+		{/if}
 	</div>
 </aside>

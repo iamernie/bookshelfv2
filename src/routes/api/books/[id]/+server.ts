@@ -2,6 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getBookById, updateBook, deleteBook } from '$lib/server/services/bookService';
 import { removeBookFromUserLibrary, getUserBook } from '$lib/server/services/userBookService';
+import { canManagePublicLibrary } from '$lib/server/services/permissionService';
 import { db, books } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 
@@ -46,6 +47,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	if (data.summary !== undefined) updateData.summary = data.summary?.trim() || null;
 	if (data.comments !== undefined) updateData.comments = data.comments?.trim() || null;
 	if (data.coverImageUrl !== undefined) updateData.coverImageUrl = data.coverImageUrl?.trim() || null;
+	if (data.originalCoverUrl !== undefined) updateData.originalCoverUrl = data.originalCoverUrl?.trim() || null;
 	if (data.isbn10 !== undefined) updateData.isbn10 = data.isbn10?.trim() || null;
 	if (data.isbn13 !== undefined) updateData.isbn13 = data.isbn13?.trim() || null;
 	if (data.asin !== undefined) updateData.asin = data.asin?.trim() || null;
@@ -91,7 +93,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	return json(book);
 };
 
-export const DELETE: RequestHandler = async ({ params, request, locals }) => {
+export const DELETE: RequestHandler = async ({ params, request, url, locals }) => {
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
 	}
@@ -100,6 +102,9 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 	if (isNaN(id)) {
 		throw error(400, { message: 'Invalid book ID' });
 	}
+
+	// Check if admin wants to permanently delete (via query param)
+	const permanentDelete = url.searchParams.get('permanent') === 'true';
 
 	// Check the book's library type
 	const [book] = await db
@@ -112,8 +117,29 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 		throw error(404, { message: 'Book not found' });
 	}
 
-	// If it's a public library book, only remove from user's library
+	// If it's a public library book
 	if (book.libraryType === 'public') {
+		// Admin can permanently delete public library books
+		if (permanentDelete) {
+			if (!canManagePublicLibrary(locals.user)) {
+				throw error(403, {
+					message: 'Only admins can permanently delete books from the public library.'
+				});
+			}
+
+			const deleted = await deleteBook(id);
+			if (!deleted) {
+				throw error(404, { message: 'Book not found' });
+			}
+
+			return json({
+				success: true,
+				action: 'deleted',
+				message: 'Book permanently deleted from the public library.'
+			});
+		}
+
+		// Regular users can only remove from their personal library
 		const userBook = await getUserBook(locals.user.id, id);
 		if (!userBook) {
 			throw error(400, {

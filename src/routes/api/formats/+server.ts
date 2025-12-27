@@ -29,7 +29,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		throw error(409, { message: 'A format with this name already exists' });
 	}
 
-	const format = await createFormat(data.name.trim());
+	const format = await createFormat({
+		name: data.name.trim(),
+		icon: data.icon,
+		color: data.color
+	});
 
 	return json(format, { status: 201 });
 };

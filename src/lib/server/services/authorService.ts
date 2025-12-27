@@ -72,10 +72,21 @@ export async function getAuthors(options: GetAuthorsOptions = {}): Promise<{
 	} = options;
 	const offset = (page - 1) * limit;
 
-	// Build where clause
-	const whereClause = search ? like(authors.name, `%${search}%`) : undefined;
+	// User library condition for filtering - only show authors with books in user's library
+	const libCond = getUserLibraryCondition(userId, 'b');
 
-	// Get total count
+	// Build where clause - only authors that have books in the user's library
+	const hasLibraryBooks = sql`EXISTS (
+		SELECT 1 FROM bookauthors ba
+		JOIN books b ON ba.bookId = b.id
+		WHERE ba.authorId = authors.id AND ${libCond}
+	)`;
+
+	const whereClause = search
+		? and(like(authors.name, `%${search}%`), hasLibraryBooks)
+		: hasLibraryBooks;
+
+	// Get total count (only authors with books in user's library)
 	const countResult = await db
 		.select({ count: sql<number>`count(*)` })
 		.from(authors)
@@ -104,9 +115,6 @@ export async function getAuthors(options: GetAuthorsOptions = {}): Promise<{
 			orderColumn = authors.name;
 	}
 	const orderDir = order === 'desc' ? desc : asc;
-
-	// User library condition for filtering stats
-	const libCond = getUserLibraryCondition(userId, 'b');
 
 	// Get authors with statistics (filtered by user's library)
 	const items = await db

@@ -1,4 +1,4 @@
-import { db, books, bookAuthors, bookSeries, bookTags, authors, series, statuses, genres, formats, narrators, tags } from '$lib/server/db';
+import { db, books, bookAuthors, bookSeries, bookTags, authors, series, statuses, genres, formats, narrators, tags, userBooks, userBookTags, metadataSuggestions, readingSessions, bookdropQueue } from '$lib/server/db';
 import { eq, like, sql, desc, asc, and, or, inArray } from 'drizzle-orm';
 import type { Book, NewBook } from '$lib/server/db/schema';
 
@@ -8,7 +8,7 @@ export interface BookWithRelations extends Book {
 	tags: { id: number; name: string; color: string | null; icon: string | null }[];
 	status: { id: number; name: string; color: string | null; icon: string | null } | null;
 	genre: { id: number; name: string } | null;
-	format: { id: number; name: string } | null;
+	format: { id: number; name: string; icon: string | null; color: string | null } | null;
 	narrator: { id: number; name: string } | null;
 }
 
@@ -208,7 +208,7 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 			tags: bookTagsData,
 			status: statusData[0] ? { id: statusData[0].id, name: statusData[0].name, color: statusData[0].color, icon: statusData[0].icon } : null,
 			genre: genreData[0] ? { id: genreData[0].id, name: genreData[0].name } : null,
-			format: formatData[0] ? { id: formatData[0].id, name: formatData[0].name } : null,
+			format: formatData[0] ? { id: formatData[0].id, name: formatData[0].name, icon: formatData[0].icon, color: formatData[0].color } : null,
 			narrator: narratorData[0] ? { id: narratorData[0].id, name: narratorData[0].name } : null
 		};
 	}));
@@ -259,7 +259,7 @@ export async function getBookById(id: number): Promise<BookWithRelations | null>
 		tags: bookTagsData,
 		status: statusData[0] ? { id: statusData[0].id, name: statusData[0].name, color: statusData[0].color, icon: statusData[0].icon } : null,
 		genre: genreData[0] ? { id: genreData[0].id, name: genreData[0].name } : null,
-		format: formatData[0] ? { id: formatData[0].id, name: formatData[0].name } : null,
+		format: formatData[0] ? { id: formatData[0].id, name: formatData[0].name, icon: formatData[0].icon, color: formatData[0].color } : null,
 		narrator: narratorData[0] ? { id: narratorData[0].id, name: narratorData[0].name } : null
 	};
 }
@@ -400,6 +400,17 @@ export async function updateBook(id: number, data: Partial<CreateBookData>): Pro
 }
 
 export async function deleteBook(id: number): Promise<boolean> {
+	// Delete related records first (foreign key constraints)
+	await db.delete(bookAuthors).where(eq(bookAuthors.bookId, id));
+	await db.delete(bookSeries).where(eq(bookSeries.bookId, id));
+	await db.delete(bookTags).where(eq(bookTags.bookId, id));
+	await db.delete(userBooks).where(eq(userBooks.bookId, id));
+	await db.delete(userBookTags).where(eq(userBookTags.bookId, id));
+	await db.delete(metadataSuggestions).where(eq(metadataSuggestions.bookId, id));
+	await db.delete(readingSessions).where(eq(readingSessions.bookId, id));
+	await db.delete(bookdropQueue).where(eq(bookdropQueue.bookId, id));
+
+	// Now delete the book
 	const result = await db.delete(books).where(eq(books.id, id));
 	return result.changes > 0;
 }
@@ -450,7 +461,7 @@ export async function getBooksCardData(bookIds: number[]): Promise<{
 	completedDate: string | null;
 	status: { id: number; name: string; color: string | null; icon: string | null } | null;
 	genre: { id: number; name: string } | null;
-	format: { id: number; name: string } | null;
+	format: { id: number; name: string; icon: string | null; color: string | null } | null;
 	tags: { id: number; name: string; color: string | null; icon: string | null }[];
 }[]> {
 	if (bookIds.length === 0) return [];
@@ -511,7 +522,7 @@ export async function getBooksCardData(bookIds: number[]): Promise<{
 			completedDate: book.completedDate,
 			status: statusData[0] ? { id: statusData[0].id, name: statusData[0].name, color: statusData[0].color, icon: statusData[0].icon } : null,
 			genre: genreData[0] ? { id: genreData[0].id, name: genreData[0].name } : null,
-			format: formatData[0] ? { id: formatData[0].id, name: formatData[0].name } : null,
+			format: formatData[0] ? { id: formatData[0].id, name: formatData[0].name, icon: formatData[0].icon, color: formatData[0].color } : null,
 			tags: bookTagsData
 		};
 	}));

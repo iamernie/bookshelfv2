@@ -11,7 +11,7 @@ import {
 	type SaveContext
 } from '$lib/server/services/ebookMetadataService';
 import { db } from '$lib/server/db';
-import { books, authors, bookAuthors, formats, statuses } from '$lib/server/db/schema';
+import { books, authors, bookAuthors, formats, statuses, genres, series, bookSeries } from '$lib/server/db/schema';
 import { eq, like } from 'drizzle-orm';
 
 // Store pending imports in memory (in production, use Redis or similar)
@@ -99,6 +99,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		publisher: book.metadata.publisher,
 		isbn: book.metadata.isbn,
 		description: book.metadata.description,
+		subjects: book.metadata.subjects,  // genres
+		series: book.metadata.series,
+		seriesNumber: book.metadata.seriesNumber,
 		hasCover: !!book.metadata.coverImage
 	}));
 
@@ -243,10 +246,24 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 				.where(eq(statuses.key, 'UNREAD'))
 				.get();
 
+			// Try to match first subject to existing genre
+			let genreId: number | null = null;
+			const subjects = extracted.metadata.subjects || [];
+			for (const subject of subjects) {
+				const existingGenre = await db.select().from(genres)
+					.where(like(genres.name, subject))
+					.get();
+				if (existingGenre) {
+					genreId = existingGenre.id;
+					break;
+				}
+			}
+
 			const newBook = await db.insert(books).values({
 				title: bookTitle,
 				coverImageUrl: coverPath,
 				formatId,
+				genreId,
 				ebookPath,
 				statusId: unreadStatus?.id || null,
 				isbn13: isbn && isbn.length === 13 ? isbn : null,
@@ -262,6 +279,34 @@ export const PUT: RequestHandler = async ({ request, locals }) => {
 				await db.insert(bookAuthors).values({
 					bookId: newBook.id,
 					authorId,
+					createdAt: now,
+					updatedAt: now
+				}).onConflictDoNothing();
+			}
+
+			// Handle series from metadata
+			const seriesName = customData.series || extracted.metadata.series;
+			const seriesNum = customData.seriesNumber || extracted.metadata.seriesNumber;
+
+			if (seriesName) {
+				// Find or create series
+				let seriesRecord = await db.select().from(series)
+					.where(like(series.title, seriesName))
+					.get();
+
+				if (!seriesRecord) {
+					seriesRecord = await db.insert(series).values({
+						title: seriesName,
+						createdAt: now,
+						updatedAt: now
+					}).returning().get();
+				}
+
+				// Link book to series
+				await db.insert(bookSeries).values({
+					bookId: newBook.id,
+					seriesId: seriesRecord.id,
+					bookNum: seriesNum || undefined,
 					createdAt: now,
 					updatedAt: now
 				}).onConflictDoNothing();

@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { BookOpen, Star, Edit3 } from 'lucide-svelte';
+	import { BookOpen, Star, Edit3, Info, BookOpenCheck, MoreVertical } from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
+	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
 	import QuickEditOverlay from './QuickEditOverlay.svelte';
+	import BookCardMenu from './BookCardMenu.svelte';
 	import type { BookCardData } from '$lib/types';
 
 	interface Status {
@@ -19,11 +21,18 @@
 		showTags = true,
 		showAuthor = true,
 		showSeries = true,
+		showFormat = true,
 		quickEdit = false,
+		showHoverActions = true,
 		statuses = [],
 		onSelect,
 		onClick,
-		onQuickEdit
+		onQuickEdit,
+		onViewDetails,
+		onEdit,
+		onDownload,
+		onDelete,
+		onAssignShelf
 	}: {
 		book: BookCardData;
 		selected?: boolean;
@@ -32,21 +41,29 @@
 		showTags?: boolean;
 		showAuthor?: boolean;
 		showSeries?: boolean;
+		showFormat?: boolean;
 		quickEdit?: boolean;
+		showHoverActions?: boolean;
 		statuses?: Status[];
 		onSelect?: (id: number) => void;
 		onClick?: (book: BookCardData) => void;
 		onQuickEdit?: (bookId: number, field: string, value: any) => Promise<void>;
+		onViewDetails?: (book: BookCardData) => void;
+		onEdit?: (book: BookCardData) => void;
+		onDownload?: (book: BookCardData) => void;
+		onDelete?: (book: BookCardData) => void;
+		onAssignShelf?: (book: BookCardData) => void;
 	} = $props();
 
 	let showQuickEditOverlay = $state(false);
+	let isHovered = $state(false);
 
 	function handleClick(e: MouseEvent) {
 		if (showQuickEditOverlay) return;
 		if (selectable && (e.target as HTMLElement).closest('input[type=checkbox]')) {
 			return;
 		}
-		if ((e.target as HTMLElement).closest('.quick-edit-btn')) {
+		if ((e.target as HTMLElement).closest('.quick-edit-btn') || (e.target as HTMLElement).closest('.hover-action-btn') || (e.target as HTMLElement).closest('.book-card-menu')) {
 			return;
 		}
 		onClick?.(book);
@@ -68,8 +85,8 @@
 		}
 	}
 
-	function handleQuickEditClick(e: MouseEvent) {
-		e.stopPropagation();
+	function handleQuickEditClick(e?: MouseEvent) {
+		e?.stopPropagation();
 		showQuickEditOverlay = true;
 	}
 
@@ -102,6 +119,43 @@
 
 	// Get first 2 tags for display (to not clutter the card)
 	let displayTags = $derived((book.tags || []).slice(0, 2));
+
+	// Hover action handlers
+	function handleReadClick(e: MouseEvent) {
+		e.stopPropagation();
+		if (book.ebookPath) {
+			window.location.href = `/reader/${book.id}`;
+		}
+	}
+
+	function handleInfoClick(e: MouseEvent) {
+		e.stopPropagation();
+		if (onViewDetails) {
+			onViewDetails(book);
+		} else {
+			window.location.href = `/books/${book.id}`;
+		}
+	}
+
+	function handleEditAction() {
+		if (onEdit) {
+			onEdit(book);
+		} else {
+			window.location.href = `/books/${book.id}/edit`;
+		}
+	}
+
+	function handleDownloadAction() {
+		onDownload?.(book);
+	}
+
+	function handleDeleteAction() {
+		onDelete?.(book);
+	}
+
+	function handleAssignShelfAction() {
+		onAssignShelf?.(book);
+	}
 </script>
 
 <div
@@ -109,6 +163,8 @@
 	style="{selected ? 'ring: 2px solid var(--accent);' : ''}"
 	onclick={handleClick}
 	onkeydown={handleKeydown}
+	onmouseenter={() => isHovered = true}
+	onmouseleave={() => isHovered = false}
 	role="button"
 	tabindex="0"
 >
@@ -135,8 +191,49 @@
 			/>
 		{/if}
 
-		<!-- Quick Edit Button (shows on hover) -->
-		{#if quickEdit && !showQuickEditOverlay}
+		<!-- Hover Action Overlay -->
+		{#if showHoverActions && !showQuickEditOverlay}
+			<div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center pointer-events-none">
+				<div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto">
+					<!-- Read Button (if ebook exists) -->
+					{#if book.ebookPath}
+						<button
+							type="button"
+							class="hover-action-btn p-2.5 rounded-full bg-white/90 text-gray-800 hover:bg-white hover:scale-110 transition-all shadow-lg"
+							onclick={handleReadClick}
+							title="Read book"
+						>
+							<BookOpenCheck class="w-5 h-5" />
+						</button>
+					{/if}
+
+					<!-- Info Button -->
+					<button
+						type="button"
+						class="hover-action-btn p-2.5 rounded-full bg-white/90 text-gray-800 hover:bg-white hover:scale-110 transition-all shadow-lg"
+						onclick={handleInfoClick}
+						title="View details"
+					>
+						<Info class="w-5 h-5" />
+					</button>
+				</div>
+			</div>
+
+			<!-- Menu Button (top right) -->
+			<div class="book-card-menu absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+				<BookCardMenu
+					bookId={book.id}
+					hasEbook={!!book.ebookPath}
+					onViewDetails={() => { window.location.href = `/books/${book.id}`; }}
+					onEdit={handleEditAction}
+					onQuickEdit={quickEdit ? () => handleQuickEditClick() : undefined}
+					onDownload={book.ebookPath ? handleDownloadAction : undefined}
+					onDelete={onDelete ? handleDeleteAction : undefined}
+					onAssignShelf={onAssignShelf ? handleAssignShelfAction : undefined}
+				/>
+			</div>
+		{:else if quickEdit && !showQuickEditOverlay}
+			<!-- Quick Edit Button (fallback when hover actions disabled) -->
 			<button
 				type="button"
 				class="quick-edit-btn absolute top-1 right-1 p-1.5 rounded bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90"
@@ -175,8 +272,18 @@
 			</div>
 		{/if}
 
-		<!-- Ebook Badge -->
-		{#if book.ebookPath}
+		<!-- Format Badge -->
+		{#if showFormat && book.format}
+			<div
+				class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-white shadow-sm flex items-center gap-1"
+				style="background-color: {book.format.color || '#6c757d'}"
+				title={book.format.name}
+			>
+				<LucideIcon name={book.format.icon || 'book'} size={10} />
+				{book.format.name}
+			</div>
+		{:else if book.ebookPath}
+			<!-- Ebook Badge (fallback if no format) -->
 			<div class="absolute bottom-1 left-1 p-1 rounded-full" style="background-color: var(--accent); color: white;">
 				<BookOpen class="w-3 h-3" />
 			</div>

@@ -67,9 +67,267 @@ function safeCreateTable(tableName: string, createSQL: string): boolean {
 	return false;
 }
 
+// Rename table if old name exists and new name doesn't
+function safeRenameTable(oldName: string, newName: string): boolean {
+	if (tableExists(oldName) && !tableExists(newName)) {
+		try {
+			sqlite.exec(`ALTER TABLE "${oldName}" RENAME TO "${newName}"`);
+			console.log(`[db] Renamed table ${oldName} to ${newName}`);
+			return true;
+		} catch (e) {
+			console.error(`[db] Failed to rename table ${oldName} to ${newName}:`, e);
+			return false;
+		}
+	}
+	return false;
+}
+
 // Run migrations
 function runMigrations() {
 	console.log('[db] Checking schema...');
+
+	// ========== V1 to V2 table name migrations ==========
+	// V1 used PascalCase for some junction tables, V2 uses lowercase
+	safeRenameTable('BookAuthors', 'bookauthors');
+	safeRenameTable('BookSeries', 'bookseries');
+	safeRenameTable('BookTags', 'booktags');
+	safeRenameTable('SeriesTags', 'seriestags');
+
+	// ========== Core V1 tables (needed for fresh installs or V1 migration) ==========
+
+	// Users table
+	safeCreateTable('users', `
+		CREATE TABLE users (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			email TEXT NOT NULL UNIQUE,
+			passwordHash TEXT NOT NULL,
+			firstName TEXT,
+			lastName TEXT,
+			role TEXT DEFAULT 'user',
+			failedLoginAttempts INTEGER DEFAULT 0,
+			lockoutUntil TEXT,
+			passwordResetToken TEXT,
+			passwordResetExpires TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Genres table
+	safeCreateTable('genres', `
+		CREATE TABLE genres (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			color TEXT,
+			icon TEXT,
+			description TEXT,
+			displayOrder INTEGER DEFAULT 0,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Statuses table
+	safeCreateTable('statuses', `
+		CREATE TABLE statuses (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			key TEXT,
+			isSystem INTEGER DEFAULT 0,
+			sortOrder INTEGER DEFAULT 0,
+			color TEXT,
+			icon TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Series statuses table
+	safeCreateTable('seriesstatuses', `
+		CREATE TABLE seriesstatuses (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			color TEXT,
+			icon TEXT,
+			sortOrder INTEGER DEFAULT 0,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Authors table
+	safeCreateTable('authors', `
+		CREATE TABLE authors (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			bio TEXT,
+			website TEXT,
+			photoUrl TEXT,
+			birthDate TEXT,
+			deathDate TEXT,
+			nationality TEXT,
+			wikipediaUrl TEXT,
+			goodreadsUrl TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Series table
+	safeCreateTable('series', `
+		CREATE TABLE series (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			description TEXT,
+			status TEXT DEFAULT 'ongoing',
+			color TEXT,
+			icon TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Tags table
+	safeCreateTable('tags', `
+		CREATE TABLE tags (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			color TEXT,
+			icon TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Formats table (V2 addition - may be missing from V1)
+	safeCreateTable('formats', `
+		CREATE TABLE formats (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Narrators table (V2 addition - may be missing from V1)
+	safeCreateTable('narrators', `
+		CREATE TABLE narrators (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			bio TEXT,
+			photoUrl TEXT,
+			website TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Books table
+	safeCreateTable('books', `
+		CREATE TABLE books (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT NOT NULL,
+			subtitle TEXT,
+			description TEXT,
+			coverImageUrl TEXT,
+			originalCoverUrl TEXT,
+			isbn10 TEXT,
+			isbn13 TEXT,
+			asin TEXT,
+			goodreadsId TEXT,
+			googleBooksId TEXT,
+			pageCount INTEGER,
+			publisher TEXT,
+			publishYear INTEGER,
+			language TEXT DEFAULT 'English',
+			edition TEXT,
+			purchasePrice REAL,
+			bookNum REAL,
+			bookNumEnd INTEGER,
+			rating REAL,
+			statusId INTEGER REFERENCES statuses(id),
+			genreId INTEGER REFERENCES genres(id),
+			formatId INTEGER REFERENCES formats(id),
+			narratorId INTEGER REFERENCES narrators(id),
+			startReadingDate TEXT,
+			completedDate TEXT,
+			comments TEXT,
+			ebookPath TEXT,
+			ebookFormat TEXT,
+			readingProgress REAL DEFAULT 0,
+			lastReadAt TEXT,
+			readingPosition TEXT,
+			dnfPage INTEGER,
+			dnfPercent INTEGER,
+			dnfReason TEXT,
+			dnfDate TEXT,
+			dnfPercentComplete INTEGER,
+			libraryType TEXT DEFAULT 'personal',
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Junction tables
+	safeCreateTable('bookauthors', `
+		CREATE TABLE bookauthors (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			bookId INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+			authorId INTEGER NOT NULL REFERENCES authors(id) ON DELETE CASCADE,
+			authorOrder INTEGER DEFAULT 0,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(bookId, authorId)
+		)
+	`);
+
+	safeCreateTable('bookseries', `
+		CREATE TABLE bookseries (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			bookId INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+			seriesId INTEGER NOT NULL REFERENCES series(id) ON DELETE CASCADE,
+			seriesOrder REAL,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(bookId, seriesId)
+		)
+	`);
+
+	safeCreateTable('booktags', `
+		CREATE TABLE booktags (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			bookId INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+			tagId INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(bookId, tagId)
+		)
+	`);
+
+	safeCreateTable('booknarrators', `
+		CREATE TABLE booknarrators (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			bookId INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+			narratorId INTEGER NOT NULL REFERENCES narrators(id) ON DELETE CASCADE,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(bookId, narratorId)
+		)
+	`);
+
+	// Create indexes for junction tables
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_bookauthors_book ON bookauthors(bookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_bookauthors_author ON bookauthors(authorId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_bookseries_book ON bookseries(bookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_bookseries_series ON bookseries(seriesId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_booktags_book ON booktags(bookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_booktags_tag ON booktags(tagId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_booknarrators_book ON booknarrators(bookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_booknarrators_narrator ON booknarrators(narratorId)');
+	} catch {
+		// Indexes may already exist
+	}
 
 	// ========== V2-specific tables ==========
 
@@ -126,6 +384,10 @@ function runMigrations() {
 
 	// ========== Books table columns ==========
 	if (tableExists('books')) {
+		// V2 additions - format and narrator references
+		safeAddColumn('books', 'formatId', 'INTEGER REFERENCES formats(id)');
+		safeAddColumn('books', 'narratorId', 'INTEGER REFERENCES narrators(id)');
+
 		// Ebook-related columns
 		safeAddColumn('books', 'ebookPath', 'VARCHAR(255)');
 		safeAddColumn('books', 'ebookFormat', 'VARCHAR(50)');
@@ -203,6 +465,12 @@ function runMigrations() {
 		safeAddColumn('genres', 'icon', 'VARCHAR(50)');
 		safeAddColumn('genres', 'description', 'TEXT');
 		safeAddColumn('genres', 'displayOrder', 'INTEGER DEFAULT 0');
+	}
+
+	// ========== Formats table columns ==========
+	if (tableExists('formats')) {
+		safeAddColumn('formats', 'icon', "TEXT DEFAULT 'book'");
+		safeAddColumn('formats', 'color', "TEXT DEFAULT '#6c757d'");
 	}
 
 	// ========== Statuses table columns ==========

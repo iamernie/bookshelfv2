@@ -8,6 +8,8 @@
 	interface FormatWithCount {
 		id: number;
 		name: string;
+		icon?: string | null;
+		color?: string | null;
 		bookCount: number;
 		createdAt: string | null;
 		updatedAt: string | null;
@@ -67,7 +69,7 @@
 		showModal = true;
 	}
 
-	async function saveFormat(data: { name: string }) {
+	async function saveFormat(data: { name: string; icon?: string; color?: string }) {
 		const isNew = modalMode === 'add';
 		const url = isNew ? '/api/formats' : `/api/formats/${selectedFormat?.id}`;
 		const method = isNew ? 'POST' : 'PUT';

@@ -240,7 +240,9 @@
 		if (data.coverUrl && !originalCoverUrl) originalCoverUrl = data.coverUrl;
 	}
 
-	function applyMetadataResult(result: any, selectedFields: string[]) {
+	async function applyMetadataResult(result: any, selectedFields: string[]) {
+		let coverDownloaded = false;
+
 		for (const field of selectedFields) {
 			switch (field) {
 				case 'title':
@@ -250,7 +252,27 @@
 					if (result.description) summary = result.description;
 					break;
 				case 'coverUrl':
-					if (result.coverUrl) originalCoverUrl = result.coverUrl;
+					// Automatically download the cover image
+					if (result.coverUrl) {
+						originalCoverUrl = result.coverUrl;
+						downloadingCover = true;
+						try {
+							const res = await fetch('/api/covers/download', {
+								method: 'POST',
+								headers: { 'Content-Type': 'application/json' },
+								body: JSON.stringify({ url: result.coverUrl, bookId: book.id })
+							});
+							if (res.ok) {
+								const data = await res.json();
+								coverImageUrl = data.coverPath;
+								coverDownloaded = true;
+							}
+						} catch {
+							// Silently fail, user can manually download later
+						} finally {
+							downloadingCover = false;
+						}
+					}
 					break;
 				case 'isbn13':
 					if (result.isbn13) isbn13 = result.isbn13;
@@ -283,7 +305,8 @@
 			googleBooksId = result.providerId;
 		}
 
-		toasts.success(`Applied ${selectedFields.length} fields from ${result.provider}`);
+		const coverMsg = coverDownloaded ? ' (cover downloaded)' : '';
+		toasts.success(`Applied ${selectedFields.length} fields from ${result.provider}${coverMsg}`);
 	}
 
 	async function handleEbookUpload(file: File) {

@@ -388,6 +388,48 @@ The `api.http` file contains example requests for testing with the REST Client e
 
 ---
 
+## App Configuration
+
+### Version & Copyright
+
+Version and copyright information is centralized in `src/lib/config/app.ts`:
+
+```typescript
+// src/lib/config/app.ts
+export const APP_CONFIG = {
+  name: 'BookShelf',
+  version: '2.0.0',
+  copyright: {
+    owner: 'Ernie',
+    year: 2026
+  },
+  get versionString() { return `v${this.version}`; },
+  get copyrightString() { return `${this.copyright.year} ${this.copyright.owner}`; }
+};
+```
+
+**Usage in components:**
+
+```svelte
+<script lang="ts">
+  import { APP_CONFIG } from '$lib/config/app';
+</script>
+
+<p>{APP_CONFIG.versionString}</p>
+<p>&copy; {APP_CONFIG.copyrightString}</p>
+```
+
+**Where it's displayed:**
+- Sidebar footer (visible on all authenticated pages)
+- Login page footer
+
+**To update version/copyright:**
+1. Edit `src/lib/config/app.ts`
+2. Update the `version`, `copyright.owner`, or `copyright.year` values
+3. Changes apply automatically across all pages
+
+---
+
 ## Environment Variables
 
 ```env

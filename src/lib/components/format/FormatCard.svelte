@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { BookOpen, Disc } from 'lucide-svelte';
+	import { BookOpen } from 'lucide-svelte';
+	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
 
 	let {
 		format,
@@ -8,10 +9,15 @@
 		format: {
 			id: number;
 			name: string;
+			icon?: string | null;
+			color?: string | null;
 			bookCount: number;
 		};
 		onclick: () => void;
 	} = $props();
+
+	const iconName = $derived(format.icon || 'book');
+	const iconColor = $derived(format.color || '#6c757d');
 </script>
 
 <button
@@ -20,8 +26,11 @@
 	onclick={onclick}
 >
 	<div class="flex items-center gap-4">
-		<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
-			<Disc class="w-6 h-6 text-gray-500" />
+		<div
+			class="w-12 h-12 rounded-lg flex items-center justify-center"
+			style="background-color: {iconColor}20;"
+		>
+			<LucideIcon name={iconName} size={24} color={iconColor} />
 		</div>
 
 		<div class="flex-1 min-w-0">

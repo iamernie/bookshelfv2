@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto, invalidateAll } from '$app/navigation';
 	import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-svelte';
+	import { APP_CONFIG } from '$lib/config/app';
 
 	let email = $state('');
 	let password = $state('');
@@ -266,8 +267,9 @@
 		</div>
 
 		<!-- Footer -->
-		<p class="mt-6 text-center text-sm" style="color: var(--text-muted);">
-			Powered by <a href="https://github.com" class="hover:underline" style="color: var(--accent-color);">BookShelf</a>
-		</p>
+		<div class="mt-6 text-center text-xs" style="color: var(--text-muted);">
+			<p>{APP_CONFIG.name} {APP_CONFIG.versionString}</p>
+			<p>&copy; {APP_CONFIG.copyrightString}</p>
+		</div>
 	</div>
 </div>

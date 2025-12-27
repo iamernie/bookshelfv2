@@ -105,7 +105,7 @@ export async function autocomplete(query: string): Promise<AutocompleteResult> {
 				author: authorData[0]?.name || null,
 				series: seriesData[0]?.title || null,
 				type: 'book' as const,
-				url: `/books?id=${book.id}`
+				url: `/books/${book.id}`
 			};
 		})
 	);
@@ -116,19 +116,19 @@ export async function autocomplete(query: string): Promise<AutocompleteResult> {
 			id: a.id,
 			name: a.name,
 			type: 'author' as const,
-			url: `/authors?id=${a.id}`
+			url: `/authors/${a.id}`
 		})),
 		series: seriesResult.map(s => ({
 			id: s.id,
 			title: s.title,
 			type: 'series' as const,
-			url: `/series?id=${s.id}`
+			url: `/series/${s.id}`
 		})),
 		narrators: narratorsResult.map(n => ({
 			id: n.id,
 			name: n.name,
 			type: 'narrator' as const,
-			url: `/narrators?id=${n.id}`
+			url: `/narrators/${n.id}`
 		}))
 	};
 }

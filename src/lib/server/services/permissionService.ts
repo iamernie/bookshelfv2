@@ -3,7 +3,12 @@
  * Handles role-based access control for the application.
  */
 
-import type { User, UserRole } from '$lib/server/db/schema';
+import type { UserRole } from '$lib/server/db/schema';
+
+// Minimal user type that only requires what we need for permission checking
+interface UserWithRole {
+	role: string | null;
+}
 
 // Permission types
 export enum Permission {
@@ -125,7 +130,7 @@ const ROLE_HIERARCHY: UserRole[] = ['admin', 'librarian', 'member', 'viewer', 'g
 /**
  * Check if a user has a specific permission
  */
-export function hasPermission(user: User | null, permission: Permission): boolean {
+export function hasPermission(user: UserWithRole | null, permission: Permission): boolean {
 	if (!user) return false;
 
 	const role = (user.role as UserRole) || 'member';
@@ -137,21 +142,21 @@ export function hasPermission(user: User | null, permission: Permission): boolea
 /**
  * Check if a user has all of the specified permissions
  */
-export function hasAllPermissions(user: User | null, permissions: Permission[]): boolean {
+export function hasAllPermissions(user: UserWithRole | null, permissions: Permission[]): boolean {
 	return permissions.every(p => hasPermission(user, p));
 }
 
 /**
  * Check if a user has any of the specified permissions
  */
-export function hasAnyPermission(user: User | null, permissions: Permission[]): boolean {
+export function hasAnyPermission(user: UserWithRole | null, permissions: Permission[]): boolean {
 	return permissions.some(p => hasPermission(user, p));
 }
 
 /**
  * Check if a user has at least a certain role level
  */
-export function hasRole(user: User | null, minimumRole: UserRole): boolean {
+export function hasRole(user: UserWithRole | null, minimumRole: UserRole): boolean {
 	if (!user) return false;
 
 	const userRole = (user.role as UserRole) || 'member';
@@ -165,35 +170,35 @@ export function hasRole(user: User | null, minimumRole: UserRole): boolean {
 /**
  * Check if a user is an admin
  */
-export function isAdmin(user: User | null): boolean {
+export function isAdmin(user: UserWithRole | null): boolean {
 	return user?.role === 'admin';
 }
 
 /**
  * Check if a user is a librarian or above
  */
-export function isLibrarianOrAbove(user: User | null): boolean {
+export function isLibrarianOrAbove(user: UserWithRole | null): boolean {
 	return hasRole(user, 'librarian');
 }
 
 /**
  * Check if a user can edit book metadata (librarian or admin)
  */
-export function canEditMetadata(user: User | null): boolean {
+export function canEditMetadata(user: UserWithRole | null): boolean {
 	return hasPermission(user, Permission.EDIT_BOOK_METADATA);
 }
 
 /**
  * Check if a user can review metadata suggestions
  */
-export function canReviewSuggestions(user: User | null): boolean {
+export function canReviewSuggestions(user: UserWithRole | null): boolean {
 	return hasPermission(user, Permission.REVIEW_SUGGESTIONS);
 }
 
 /**
  * Check if a user can manage the public library
  */
-export function canManagePublicLibrary(user: User | null): boolean {
+export function canManagePublicLibrary(user: UserWithRole | null): boolean {
 	return hasPermission(user, Permission.MANAGE_PUBLIC_LIBRARY);
 }
 

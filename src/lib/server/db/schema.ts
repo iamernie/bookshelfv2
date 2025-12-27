@@ -128,6 +128,8 @@ export const narrators = sqliteTable('narrators', {
 export const formats = sqliteTable('formats', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	name: text('name').notNull(),
+	icon: text('icon').default('book'),
+	color: text('color').default('#6c757d'),
 	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
 	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
 });

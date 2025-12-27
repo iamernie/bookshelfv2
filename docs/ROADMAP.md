@@ -34,6 +34,10 @@ This document outlines feature status and planned improvements.
 | **Admin Console** | Log viewer with filtering | ✅ Completed |
 | **Multi-user with Roles** | Admin/member roles, permissions | ✅ Completed |
 | **Reading Activity Heatmap** | GitHub-style yearly reading calendar with streaks | ✅ Completed |
+| **Collapsible Sidebar** | Collapse sidebar to icon-only mode with localStorage persistence | ✅ Completed |
+| **BookCard Hover Actions** | Quick access buttons (read, info, menu) on book cover hover | ✅ Completed |
+| **Book Detail Tabs** | Tabbed interface with Details and Similar Books sections | ✅ Completed |
+| **Similar Books** | Recommendations based on shared authors, series, genres | ✅ Completed |
 
 ---
 
@@ -70,6 +74,10 @@ This document outlines feature status and planned improvements.
 | **Setup Wizard** | First-run wizard for Docker deployments | ✅ Completed |
 | **Database Repair Tools** | Orphan cleanup, duplicate detection, schema repair | ✅ Completed |
 | **Diagnostic Page** | System health, storage usage, migration status | ✅ Completed |
+| **Catalog Manager** | Unified interface for authors, genres, tags, series, publishers with bulk ops | Planned |
+| **File Naming Patterns** | Template-based file organization with {title}, {authors}, {series} placeholders | Planned |
+| **Write Metadata to File** | Embed metadata into EPUB/PDF files | Planned |
+| **Provider Priority Matrix** | Per-field metadata provider priority (1st-4th) with library overrides | Planned |
 
 ### Medium Priority
 
@@ -82,15 +90,33 @@ This document outlines feature status and planned improvements.
 | **Email Book Sharing** | Send ebooks via email, Kindle support | Medium |
 | **Better Login Page** | Improved design, password reset flow | ✅ Completed |
 | **User Signup Flow** | Self-registration option | Low |
+| **Series View Mode** | Group books by series in grid view | Medium |
+| **Auto-Move Files on Update** | Rename/move files based on metadata changes | Medium |
+| **Public Reviews Download** | Fetch and display Amazon/Goodreads reviews | Medium |
+| **Reader Settings Scope** | Global vs per-book reader preferences | Medium |
+| **Default Sort/View Preferences** | Configurable default sort field, direction, view mode | Low |
+| **Filter Mode Setting** | AND vs OR for combining filters | Low |
 
 ### Lower Priority
 
 | Feature | Description | Complexity |
 |---------|-------------|------------|
+| **Barcode Scanner** | ISBN lookup via device camera for quick book adding | Medium |
+| **Infinite Scroll** | Virtual scrolling for large book lists | Medium |
 | **Kobo Device Sync** | Native Kobo integration (BookLore feature) | High |
 | **Real-Time Updates (SSE)** | Live notifications for imports, multi-user | Medium |
 | **Community Reviews** | Display Goodreads reviews on book pages | Low |
 | **Metadata Field Locking** | Prevent auto-refresh from overwriting edits | Low |
+| **EPUB Font Options** | Book Default/Serif/Sans Serif/Roboto/Cursive/Monospace | Low |
+| **EPUB Flow Mode** | Paginated vs scrolled reading | Low |
+| **EPUB/PDF Page Spread** | Single page vs double page view | Low |
+| **PDF Page Zoom Options** | Auto Zoom/Page Fit/Page Width/Actual Size | Low |
+| **CBX Fit Mode** | Fit Page/Width/Height/Actual Size/Automatic | Low |
+| **CBX Scroll Mode** | Paginated vs infinite scroll for comics | Low |
+| **Cover Cropping Options** | Vertical/horizontal auto-crop with aspect ratio threshold | Low |
+| **Max File Upload Size** | Configurable upload limit in settings | Low |
+| **Library-Specific Overrides** | Per-library sort/view/metadata preferences | Low |
+| **Douban Metadata Provider** | Chinese book metadata source | Low |
 
 ---
 
@@ -145,6 +171,17 @@ This document outlines feature status and planned improvements.
 | Audible Import | ✅ | ✅ | ❌ |
 | Public Widgets | ✅ | ✅ | ❌ |
 | AI Recommendations | ✅ | ✅ | ✅ |
+| Collapsible Sidebar | ✅ | ❌ | ✅ |
+| Similar Books | ✅ | ❌ | ✅ |
+| Catalog Manager | ❌ | ❌ | ✅ |
+| File Naming Patterns | ❌ | ❌ | ✅ |
+| Write Metadata to File | ❌ | ❌ | ✅ |
+| Provider Priority Matrix | ❌ | ❌ | ✅ |
+| Series View Mode | ❌ | ❌ | ✅ |
+| Reader Settings Scope | ❌ | ❌ | ✅ |
+| Public Reviews | ❌ | ❌ | ✅ |
+| Barcode Scanner | ❌ | ✅ | ❌ |
+| Infinite Scroll | ❌ | ✅ | ✅ |
 | KOReader Sync | ❌ | ❌ | ✅ |
 | Kobo Sync | ❌ | ❌ | ✅ |
 | OIDC/SSO | ❌ | ❌ | ✅ |
@@ -177,6 +214,57 @@ Admin-only system diagnostics at `/admin/diagnostics`:
 - **Data Summary** - Counts for books, authors, series, genres, users, sessions
 - **Issue Detection** - Orphaned relationships, invalid references, expired sessions
 - **Repair Tools** - One-click fixes for detected issues
+
+### Catalog Manager (Planned)
+
+Unified metadata management interface at `/admin/catalog`:
+
+**Tabs for each entity type:**
+- Authors, Genres, Tags, Series, Publishers, Languages, Narrators
+
+**Features per tab:**
+- Sortable table with search/filter
+- Book count per entity
+- Multi-select with bulk operations
+- Quick actions: View books, Edit, Delete
+
+**Bulk Operations:**
+- Delete selected
+- Merge selected (combine duplicates)
+- Split (for incorrectly merged entries)
+
+**Smart Features (improvements over BookLore):**
+- Fuzzy duplicate detection (suggest "J.R.R. Tolkien" = "JRR Tolkien")
+- Smart merge with metadata preservation
+- Bulk metadata fetch (e.g., fetch Wikipedia bios for selected authors)
+- Relationship visualization (author → series → books graph)
+- Entity import/export (backup just authors or tags)
+- Audit trail (track who changed what, when)
+
+### File Naming Patterns (Planned)
+
+Template-based file organization at `/admin/settings/patterns`:
+
+**Default Pattern:**
+```
+{authors}/{series}/>{seriesIndex}. >{title}< - {authors}>< ({year})>
+```
+
+**Available Placeholders:**
+- `{title}` - Book title
+- `{subtitle}` - Book subtitle
+- `{authors}` - Author name(s)
+- `{year}` - Publication year
+- `{series}` - Series name
+- `{seriesIndex}` - Series number (e.g., 01)
+- `{isbn13}` - ISBN-13
+
+**Optional Blocks:**
+- Wrap in `<...>` to make optional (excluded if placeholder empty)
+- Example: `<{seriesIndex} - >{title}` outputs "01 - Dune" or just "Dune"
+
+**Library-Specific Overrides:**
+- Different patterns per genre/library
 
 ---
 

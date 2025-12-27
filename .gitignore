@@ -23,6 +23,8 @@ static/covers/
 !static/covers/placeholder.png
 static/ebooks/
 !static/ebooks/.gitkeep
+static/uploads/temp/
+!static/uploads/temp/.gitkeep
 
 # Testing databases
 testing/databases/*.sqlite

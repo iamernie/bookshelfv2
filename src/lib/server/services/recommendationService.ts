@@ -10,10 +10,11 @@ import { createLogger } from './loggerService';
 
 const log = createLogger('recommendations');
 
-// Status constants
-const STATUS_READ = 1;
-const STATUS_CURRENT = 2;
-const STATUS_WISHLIST = 5;
+// Status constants (matching database IDs)
+const STATUS_UNREAD = 1;
+const STATUS_READ = 2;
+const STATUS_CURRENT = 3;
+const STATUS_WISHLIST = 8;
 
 export interface AIRecommendation {
 	title: string;
@@ -448,6 +449,100 @@ export async function getRuleBasedRecommendations(): Promise<RuleBasedRecommenda
 }
 
 /**
+ * Get books similar to a specific book
+ * Based on shared authors, series, genres, and tags
+ */
+export async function getSimilarBooks(bookId: number, limit: number = 8): Promise<{
+	id: number;
+	title: string;
+	coverImageUrl: string | null;
+	authorName: string | null;
+	rating: number | null;
+}[]> {
+	// Get the source book's metadata
+	const sourceBook = await db
+		.select({
+			id: books.id,
+			authorId: books.authorId,
+			seriesId: books.seriesId,
+			genreId: books.genreId
+		})
+		.from(books)
+		.where(eq(books.id, bookId))
+		.limit(1);
+
+	if (sourceBook.length === 0) {
+		return [];
+	}
+
+	const source = sourceBook[0];
+
+	// Get all authors for this book (from junction table)
+	const bookAuthorIds = await db
+		.select({ authorId: bookAuthors.authorId })
+		.from(bookAuthors)
+		.where(eq(bookAuthors.bookId, bookId));
+
+	const authorIds = bookAuthorIds.map(ba => ba.authorId).filter((id): id is number => id !== null);
+	if (source.authorId && !authorIds.includes(source.authorId)) {
+		authorIds.push(source.authorId);
+	}
+
+	// Get all series for this book (from junction table)
+	const bookSeriesIds = await db
+		.select({ seriesId: bookSeries.seriesId })
+		.from(bookSeries)
+		.where(eq(bookSeries.bookId, bookId));
+
+	const seriesIds = bookSeriesIds.map(bs => bs.seriesId).filter((id): id is number => id !== null);
+	if (source.seriesId && !seriesIds.includes(source.seriesId)) {
+		seriesIds.push(source.seriesId);
+	}
+
+	// Build a score-based query for similar books
+	// Priority: Same series > Same author > Same genre
+	const similarBooks = await db.all<{
+		id: number;
+		title: string;
+		coverImageUrl: string | null;
+		authorName: string | null;
+		rating: number | null;
+		relevanceScore: number;
+	}>(sql`
+		SELECT DISTINCT
+			b.id,
+			b.title,
+			b.coverImageUrl,
+			a.name as authorName,
+			b.rating,
+			(
+				CASE WHEN b.seriesId IN (${seriesIds.length > 0 ? sql.join(seriesIds.map(id => sql`${id}`), sql`, `) : sql`-1`}) THEN 10 ELSE 0 END +
+				CASE WHEN b.authorId IN (${authorIds.length > 0 ? sql.join(authorIds.map(id => sql`${id}`), sql`, `) : sql`-1`}) THEN 5 ELSE 0 END +
+				CASE WHEN b.genreId = ${source.genreId} AND ${source.genreId} IS NOT NULL THEN 3 ELSE 0 END +
+				CASE WHEN b.rating >= 4 THEN 2 ELSE 0 END
+			) as relevanceScore
+		FROM books b
+		LEFT JOIN authors a ON b.authorId = a.id
+		WHERE b.id != ${bookId}
+		AND (
+			b.seriesId IN (${seriesIds.length > 0 ? sql.join(seriesIds.map(id => sql`${id}`), sql`, `) : sql`-1`})
+			OR b.authorId IN (${authorIds.length > 0 ? sql.join(authorIds.map(id => sql`${id}`), sql`, `) : sql`-1`})
+			OR (b.genreId = ${source.genreId} AND ${source.genreId} IS NOT NULL)
+		)
+		ORDER BY relevanceScore DESC, b.rating DESC NULLS LAST
+		LIMIT ${limit}
+	`);
+
+	return similarBooks.map(b => ({
+		id: b.id,
+		title: b.title,
+		coverImageUrl: b.coverImageUrl,
+		authorName: b.authorName,
+		rating: b.rating
+	}));
+}
+
+/**
  * Add AI recommendation to library as wishlist item
  */
 export async function addRecommendationToLibrary(data: {
@@ -517,11 +612,14 @@ export async function addRecommendationToLibrary(data: {
 
 		// Link author via junction table
 		if (authorId) {
+			const now = new Date().toISOString();
 			await db.insert(bookAuthors).values({
 				bookId: newBook.id,
 				authorId,
 				isPrimary: true,
-				displayOrder: 0
+				displayOrder: 0,
+				createdAt: now,
+				updatedAt: now
 			});
 		}
 

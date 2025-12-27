@@ -211,6 +211,10 @@ body {
 		background-color: var(--bg-tertiary);
 		color: var(--accent);
 	}
+	.sidebar-item.collapsed {
+		@apply justify-center px-2;
+		gap: 0;
+	}
 
 	.sidebar-section {
 		@apply px-3 py-2 text-xs font-semibold uppercase tracking-wider;

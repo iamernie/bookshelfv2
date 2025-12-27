@@ -19,7 +19,9 @@ export interface EbookMetadata {
 	language: string | null;
 	description: string | null;
 	isbn: string | null;
-	subjects: string[];
+	subjects: string[];  // genres
+	series: string | null;
+	seriesNumber: number | null;
 	coverImage: Buffer | null;
 	coverMimeType: string | null;
 }
@@ -43,6 +45,8 @@ function parseOPF(opfContent: string): EbookMetadata {
 		description: null,
 		isbn: null,
 		subjects: [],
+		series: null,
+		seriesNumber: null,
 		coverImage: null,
 		coverMimeType: null
 	};
@@ -101,6 +105,42 @@ function parseOPF(opfContent: string): EbookMetadata {
 		metadata.subjects.push(decodeXmlEntities(match[1].trim()));
 	}
 
+	// Extract series info - Calibre format
+	// <meta name="calibre:series" content="Series Name"/>
+	// <meta name="calibre:series_index" content="1"/>
+	const calibreSeriesMatch = opfContent.match(/<meta[^>]*name="calibre:series"[^>]*content="([^"]+)"/i);
+	if (calibreSeriesMatch) {
+		metadata.series = decodeXmlEntities(calibreSeriesMatch[1].trim());
+	}
+
+	const calibreSeriesIndexMatch = opfContent.match(/<meta[^>]*name="calibre:series_index"[^>]*content="([^"]+)"/i);
+	if (calibreSeriesIndexMatch) {
+		const index = parseFloat(calibreSeriesIndexMatch[1]);
+		if (!isNaN(index)) {
+			metadata.seriesNumber = index;
+		}
+	}
+
+	// Also check for EPUB3 belongs-to-collection
+	// <meta property="belongs-to-collection" id="c01">Series Name</meta>
+	// <meta refines="#c01" property="collection-type">series</meta>
+	// <meta refines="#c01" property="group-position">1</meta>
+	if (!metadata.series) {
+		const collectionMatch = opfContent.match(/<meta[^>]*property="belongs-to-collection"[^>]*>([^<]+)<\/meta>/i);
+		if (collectionMatch) {
+			metadata.series = decodeXmlEntities(collectionMatch[1].trim());
+
+			// Try to get position
+			const positionMatch = opfContent.match(/<meta[^>]*property="group-position"[^>]*>([^<]+)<\/meta>/i);
+			if (positionMatch) {
+				const pos = parseFloat(positionMatch[1]);
+				if (!isNaN(pos)) {
+					metadata.seriesNumber = pos;
+				}
+			}
+		}
+	}
+
 	return metadata;
 }
 
@@ -131,6 +171,8 @@ async function extractEpubMetadata(filePath: string): Promise<EbookMetadata> {
 		description: null,
 		isbn: null,
 		subjects: [],
+		series: null,
+		seriesNumber: null,
 		coverImage: null,
 		coverMimeType: null
 	};
@@ -265,6 +307,8 @@ function parseFilename(filename: string): EbookMetadata {
 		description: null,
 		isbn: null,
 		subjects: [],
+		series: null,
+		seriesNumber: null,
 		coverImage: null,
 		coverMimeType: null
 	};
@@ -277,6 +321,17 @@ function parseFilename(filename: string): EbookMetadata {
 	// "Author - Title"
 	// "Title (Series #1)"
 	// "Author - Title (Series #1)"
+	// "Series Name Book 1 - Title - Author"
+
+	// Try to extract series info from patterns like "(Series Name #1)" or "(Series Name, Book 1)"
+	const seriesMatch = name.match(/\(([^)]+?)\s*[#,]\s*(\d+(?:\.\d+)?)\s*\)/) ||
+		name.match(/\[([^\]]+?)\s*[#,]\s*(\d+(?:\.\d+)?)\s*\]/);
+	if (seriesMatch) {
+		metadata.series = seriesMatch[1].trim();
+		metadata.seriesNumber = parseFloat(seriesMatch[2]);
+		// Remove series info from name for cleaner title
+		name = name.replace(seriesMatch[0], '').trim();
+	}
 
 	// Try to extract author from "Author - Title" or "Title - Author" pattern
 	const dashParts = name.split(' - ');
@@ -293,9 +348,10 @@ function parseFilename(filename: string): EbookMetadata {
 		metadata.title = name.trim();
 	}
 
-	// Clean up title - remove series info for cleaner title
+	// Clean up title - remove any remaining series patterns
 	if (metadata.title) {
 		metadata.title = metadata.title.replace(/\s*\([^)]*#\d+[^)]*\)\s*$/, '').trim();
+		metadata.title = metadata.title.replace(/\s*\[[^\]]*#\d+[^\]]*\]\s*$/, '').trim();
 	}
 
 	return metadata;

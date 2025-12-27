@@ -12,6 +12,7 @@
 		Check,
 		AlertCircle
 	} from 'lucide-svelte';
+	import { toasts } from '$lib/stores/toast';
 
 	let { data } = $props();
 
@@ -81,9 +82,12 @@
 				aiRecommendations[index].added = true;
 				aiRecommendations[index].inLibrary = true;
 				aiRecommendations[index].bookId = result.bookId;
+				toasts.success(`Added "${rec.title}" to your wishlist`);
+			} else {
+				toasts.error(result.error || 'Failed to add book');
 			}
 		} catch {
-			// Ignore error, button will reset
+			toasts.error('Failed to add book to wishlist');
 		} finally {
 			aiRecommendations[index].adding = false;
 		}
