@@ -15,7 +15,11 @@
 		Monitor,
 		Grid,
 		List,
-		Table
+		Table,
+		Shield,
+		Link,
+		Unlink,
+		ExternalLink
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
 	import { theme as themeStore, type Theme } from '$lib/stores/theme';
@@ -26,6 +30,7 @@
 	let saving = $state(false);
 	let saved = $state(false);
 	let resetting = $state(false);
+	let unlinkingProvider = $state<number | null>(null);
 
 	// Theme options
 	const themeOptions = [
@@ -132,6 +137,34 @@
 		preferences.theme = value as Theme;
 		// Immediately apply theme for preview
 		themeStore.set(value as Theme);
+	}
+
+	async function unlinkOidcAccount(providerId: number) {
+		if (!confirm('Are you sure you want to unlink this account? You will need to link it again to use it for sign-in.')) {
+			return;
+		}
+
+		unlinkingProvider = providerId;
+
+		try {
+			const res = await fetch('/api/auth/oidc/unlink', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ providerId })
+			});
+
+			if (!res.ok) {
+				toasts.error('Failed to unlink account');
+				return;
+			}
+
+			toasts.success('Account unlinked');
+			invalidateAll();
+		} catch {
+			toasts.error('An error occurred');
+		} finally {
+			unlinkingProvider = null;
+		}
 	}
 </script>
 
@@ -399,6 +432,98 @@
 				</label>
 			</div>
 		</section>
+
+		<!-- Connected Accounts Section -->
+		{#if data.oidcLinks?.length > 0 || data.availableProviders?.length > 0}
+			<section class="card p-6">
+				<div class="flex items-center gap-2 mb-4">
+					<Shield class="w-5 h-5" style="color: var(--accent);" />
+					<h2 class="text-lg font-semibold" style="color: var(--text-primary);">Connected Accounts</h2>
+				</div>
+
+				{#if data.justLinked}
+					<div class="mb-4 p-3 rounded-lg flex items-center gap-2" style="background: rgba(34, 197, 94, 0.1); color: #22c55e;">
+						<Check class="w-4 h-4" />
+						<span class="text-sm">Account linked successfully!</span>
+					</div>
+				{/if}
+
+				<p class="text-sm mb-4" style="color: var(--text-muted);">
+					Link external identity providers to sign in without a password.
+				</p>
+
+				<div class="space-y-3">
+					<!-- Linked Accounts -->
+					{#each data.oidcLinks || [] as link}
+						<div class="flex items-center justify-between p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+							<div class="flex items-center gap-3">
+								{#if link.providerIcon}
+									<img src={link.providerIcon} alt="" class="w-8 h-8 rounded" />
+								{:else}
+									<div
+										class="w-8 h-8 rounded flex items-center justify-center text-white font-bold text-sm"
+										style="background: {link.providerColor || 'var(--accent)'};"
+									>
+										{link.providerName.charAt(0)}
+									</div>
+								{/if}
+								<div>
+									<p class="font-medium" style="color: var(--text-primary);">{link.providerName}</p>
+									{#if link.oidcEmail}
+										<p class="text-xs" style="color: var(--text-muted);">{link.oidcEmail}</p>
+									{/if}
+								</div>
+							</div>
+							<div class="flex items-center gap-2">
+								<span class="text-xs px-2 py-1 rounded-full" style="background: rgba(34, 197, 94, 0.1); color: #22c55e;">
+									Linked
+								</span>
+								<button
+									type="button"
+									class="p-2 rounded-lg hover:bg-red-500/10 transition-colors"
+									title="Unlink account"
+									onclick={() => unlinkOidcAccount(link.providerId)}
+									disabled={unlinkingProvider === link.providerId}
+								>
+									{#if unlinkingProvider === link.providerId}
+										<Loader2 class="w-4 h-4 animate-spin" style="color: var(--text-muted);" />
+									{:else}
+										<Unlink class="w-4 h-4 text-red-400" />
+									{/if}
+								</button>
+							</div>
+						</div>
+					{/each}
+
+					<!-- Available Providers to Link -->
+					{#each data.availableProviders || [] as provider}
+						<a
+							href="/auth/oidc/{provider.slug}"
+							class="flex items-center justify-between p-3 rounded-lg transition-colors hover:opacity-90"
+							style="background-color: var(--bg-tertiary); border: 1px dashed var(--border-color);"
+						>
+							<div class="flex items-center gap-3">
+								{#if provider.iconUrl}
+									<img src={provider.iconUrl} alt="" class="w-8 h-8 rounded opacity-50" />
+								{:else}
+									<div
+										class="w-8 h-8 rounded flex items-center justify-center text-white font-bold text-sm opacity-50"
+										style="background: {provider.buttonColor || 'var(--accent)'};"
+									>
+										{provider.name.charAt(0)}
+									</div>
+								{/if}
+								<div>
+									<p class="font-medium" style="color: var(--text-primary);">{provider.name}</p>
+									<p class="text-xs" style="color: var(--text-muted);">Click to link</p>
+								</div>
+							</div>
+							<Link class="w-4 h-4" style="color: var(--text-muted);" />
+						</a>
+					{/each}
+				</div>
+			</section>
+		{/if}
 	</div>
 </div>
 

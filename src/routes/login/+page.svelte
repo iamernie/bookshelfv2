@@ -113,10 +113,10 @@
 						<p class="text-sm mt-1" style="color: var(--text-muted);">Sign in to continue to your library</p>
 					</div>
 
-					{#if error}
+					{#if error || data.oidcError}
 						<div class="flex items-center gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/30">
 							<AlertCircle class="w-5 h-5 text-red-400 flex-shrink-0" />
-							<span class="text-red-400 text-sm">{error}</span>
+							<span class="text-red-400 text-sm">{error || data.oidcError}</span>
 						</div>
 					{/if}
 
@@ -196,6 +196,36 @@
 							Sign in
 						{/if}
 					</button>
+
+					{#if data.oidcProviders && data.oidcProviders.length > 0}
+						<div class="relative my-6">
+							<div class="absolute inset-0 flex items-center">
+								<div class="w-full border-t" style="border-color: var(--border-color);"></div>
+							</div>
+							<div class="relative flex justify-center text-sm">
+								<span class="px-2" style="background: var(--bg-secondary); color: var(--text-muted);">
+									or continue with
+								</span>
+							</div>
+						</div>
+
+						<div class="space-y-3">
+							{#each data.oidcProviders as provider}
+								<a
+									href="/auth/oidc/{provider.slug}"
+									class="flex items-center justify-center gap-3 w-full py-3 px-4 rounded-lg border font-medium transition-colors hover:opacity-90"
+									style="background-color: {provider.buttonColor || 'var(--bg-tertiary)'};
+									       border-color: {provider.buttonColor || 'var(--border-color)'};
+									       color: {provider.buttonColor ? 'white' : 'var(--text-primary)'};"
+								>
+									{#if provider.iconUrl}
+										<img src={provider.iconUrl} alt="" class="w-5 h-5" />
+									{/if}
+									Sign in with {provider.name}
+								</a>
+							{/each}
+						</div>
+					{/if}
 
 					{#if data.signupEnabled}
 						<div class="text-center">

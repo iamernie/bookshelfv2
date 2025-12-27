@@ -6,12 +6,57 @@ import { env } from '$env/dynamic/private';
 const databasePath = env.DATABASE_PATH || './data/database.sqlite';
 
 // Ensure data directory exists
-import { mkdirSync, existsSync } from 'fs';
-import { dirname } from 'path';
+import { mkdirSync, existsSync, copyFileSync } from 'fs';
+import { dirname, basename, join } from 'path';
 
 const dir = dirname(databasePath);
 if (!existsSync(dir)) {
 	mkdirSync(dir, { recursive: true });
+}
+
+// ============================================================================
+// PRE-MIGRATION BACKUP - Creates backup before any schema changes
+// ============================================================================
+
+function createPreMigrationBackup(): string | null {
+	// Only backup if database exists and has content
+	if (!existsSync(databasePath)) {
+		return null;
+	}
+
+	try {
+		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+		const dbName = basename(databasePath, '.sqlite');
+		const backupDir = join(dir, 'backups');
+
+		// Ensure backup directory exists
+		if (!existsSync(backupDir)) {
+			mkdirSync(backupDir, { recursive: true });
+		}
+
+		const backupPath = join(backupDir, `${dbName}-pre-migration-${timestamp}.sqlite`);
+
+		// Copy the database file
+		copyFileSync(databasePath, backupPath);
+
+		// Also copy WAL file if it exists
+		const walPath = databasePath + '-wal';
+		if (existsSync(walPath)) {
+			copyFileSync(walPath, backupPath + '-wal');
+		}
+
+		// Also copy SHM file if it exists
+		const shmPath = databasePath + '-shm';
+		if (existsSync(shmPath)) {
+			copyFileSync(shmPath, backupPath + '-shm');
+		}
+
+		console.log(`[db] Created pre-migration backup: ${backupPath}`);
+		return backupPath;
+	} catch (e) {
+		console.error('[db] Failed to create pre-migration backup:', e);
+		return null;
+	}
 }
 
 const sqlite = new Database(databasePath);
@@ -23,11 +68,72 @@ sqlite.pragma('journal_mode = WAL');
 // SCHEMA MIGRATION - Ensures all required tables and columns exist
 // ============================================================================
 
+// Migration status for tracking progress
+export interface MigrationStatus {
+	inProgress: boolean;
+	completed: boolean;
+	currentStep: string;
+	steps: string[];
+	completedSteps: string[];
+	error: string | null;
+	backupPath: string | null;
+	startTime: number | null;
+	endTime: number | null;
+}
+
+export const migrationStatus: MigrationStatus = {
+	inProgress: false,
+	completed: false,
+	currentStep: '',
+	steps: [],
+	completedSteps: [],
+	error: null,
+	backupPath: null,
+	startTime: null,
+	endTime: null
+};
+
+// Track if we've made any changes (to know if backup was needed)
+let migrationsMade = false;
+let backupCreated = false;
+
+function updateStatus(step: string) {
+	migrationStatus.currentStep = step;
+	console.log(`[db] ${step}`);
+}
+
+function completeStep(step: string) {
+	if (!migrationStatus.completedSteps.includes(step)) {
+		migrationStatus.completedSteps.push(step);
+	}
+}
+
+function ensureBackup() {
+	if (!backupCreated && !migrationsMade) {
+		updateStatus('Creating pre-migration backup...');
+		const backup = createPreMigrationBackup();
+		if (backup) {
+			backupCreated = true;
+			migrationStatus.backupPath = backup;
+			completeStep('Backup created');
+		}
+	}
+}
+
 function tableExists(tableName: string): boolean {
+	// SQLite table names are case-insensitive, so check with LOWER()
 	const result = sqlite.prepare(
-		"SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+		"SELECT name FROM sqlite_master WHERE type='table' AND LOWER(name)=LOWER(?)"
 	).get(tableName);
 	return !!result;
+}
+
+// Get actual table name (with correct case) from database
+function getActualTableName(tableName: string): string | null {
+	const result = sqlite.prepare(
+		"SELECT name FROM sqlite_master WHERE type='table' AND LOWER(name)=LOWER(?)"
+	).get(tableName) as { name: string } | undefined;
+	return result?.name || null;
 }
 
 function columnExists(tableName: string, columnName: string): boolean {
@@ -41,9 +147,11 @@ function columnExists(tableName: string, columnName: string): boolean {
 
 function safeAddColumn(tableName: string, columnName: string, columnDef: string): boolean {
 	if (!columnExists(tableName, columnName)) {
+		ensureBackup(); // Create backup before first change
 		try {
 			sqlite.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDef}`);
 			console.log(`[db] Added column ${tableName}.${columnName}`);
+			migrationsMade = true;
 			return true;
 		} catch (e) {
 			console.error(`[db] Failed to add column ${tableName}.${columnName}:`, e);
@@ -55,9 +163,11 @@ function safeAddColumn(tableName: string, columnName: string, columnDef: string)
 
 function safeCreateTable(tableName: string, createSQL: string): boolean {
 	if (!tableExists(tableName)) {
+		ensureBackup(); // Create backup before first change
 		try {
 			sqlite.exec(createSQL);
 			console.log(`[db] Created table ${tableName}`);
+			migrationsMade = true;
 			return true;
 		} catch (e) {
 			console.error(`[db] Failed to create table ${tableName}:`, e);
@@ -68,14 +178,33 @@ function safeCreateTable(tableName: string, createSQL: string): boolean {
 }
 
 // Rename table if old name exists and new name doesn't
+// Handles case-insensitive SQLite table names properly
 function safeRenameTable(oldName: string, newName: string): boolean {
-	if (tableExists(oldName) && !tableExists(newName)) {
+	const actualOldName = getActualTableName(oldName);
+	const actualNewName = getActualTableName(newName);
+
+	// If both exist (case variations), they're the same table - nothing to do
+	if (actualOldName && actualNewName) {
+		// Both names resolve to tables - if they're different tables, we have a conflict
+		// If same table (just different case), nothing to do
+		if (actualOldName.toLowerCase() === actualNewName.toLowerCase()) {
+			return false; // Same table, already exists
+		}
+		// Different tables with similar names - skip rename to avoid conflict
+		console.log(`[db] Skipping rename ${oldName} -> ${newName}: both tables exist`);
+		return false;
+	}
+
+	// Only rename if old exists and new doesn't
+	if (actualOldName && !actualNewName) {
+		ensureBackup(); // Create backup before first change
 		try {
-			sqlite.exec(`ALTER TABLE "${oldName}" RENAME TO "${newName}"`);
-			console.log(`[db] Renamed table ${oldName} to ${newName}`);
+			sqlite.exec(`ALTER TABLE "${actualOldName}" RENAME TO "${newName}"`);
+			console.log(`[db] Renamed table ${actualOldName} to ${newName}`);
+			migrationsMade = true;
 			return true;
 		} catch (e) {
-			console.error(`[db] Failed to rename table ${oldName} to ${newName}:`, e);
+			console.error(`[db] Failed to rename table ${actualOldName} to ${newName}:`, e);
 			return false;
 		}
 	}
@@ -84,18 +213,35 @@ function safeRenameTable(oldName: string, newName: string): boolean {
 
 // Run migrations
 function runMigrations() {
-	console.log('[db] Checking schema...');
+	migrationStatus.inProgress = true;
+	migrationStatus.startTime = Date.now();
+	migrationStatus.steps = [
+		'Checking database schema',
+		'Migrating table names',
+		'Creating core tables',
+		'Adding new columns',
+		'Creating V2 tables',
+		'Creating indexes',
+		'Finalizing'
+	];
 
-	// ========== V1 to V2 table name migrations ==========
-	// V1 used PascalCase for some junction tables, V2 uses lowercase
-	safeRenameTable('BookAuthors', 'bookauthors');
-	safeRenameTable('BookSeries', 'bookseries');
-	safeRenameTable('BookTags', 'booktags');
-	safeRenameTable('SeriesTags', 'seriestags');
+	try {
+		updateStatus('Checking database schema...');
+		completeStep('Checking database schema');
 
-	// ========== Core V1 tables (needed for fresh installs or V1 migration) ==========
+		// ========== V1 to V2 table name migrations ==========
+		updateStatus('Migrating table names...');
+		// V1 used PascalCase for some junction tables, V2 uses lowercase
+		safeRenameTable('BookAuthors', 'bookauthors');
+		safeRenameTable('BookSeries', 'bookseries');
+		safeRenameTable('BookTags', 'booktags');
+		safeRenameTable('SeriesTags', 'seriestags');
+		completeStep('Migrating table names');
 
-	// Users table
+		// ========== Core V1 tables (needed for fresh installs or V1 migration) ==========
+		updateStatus('Creating core tables...');
+
+		// Users table
 	safeCreateTable('users', `
 		CREATE TABLE users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -381,8 +527,10 @@ function runMigrations() {
 			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
 		)
 	`);
+	completeStep('Creating core tables');
 
 	// ========== Books table columns ==========
+	updateStatus('Adding new columns...');
 	if (tableExists('books')) {
 		// V2 additions - format and narrator references
 		safeAddColumn('books', 'formatId', 'INTEGER REFERENCES formats(id)');
@@ -513,6 +661,10 @@ function runMigrations() {
 		safeAddColumn('readinggoals', 'targetPages', 'INTEGER');
 		safeAddColumn('readinggoals', 'targetMonthly', 'INTEGER');
 	}
+	completeStep('Adding new columns');
+
+	// ========== V2 Tables ==========
+	updateStatus('Creating V2 tables...');
 
 	// ========== BookDrop Queue table ==========
 	safeCreateTable('bookdrop_queue', `
@@ -758,7 +910,76 @@ function runMigrations() {
 		// Index may already exist
 	}
 
-	console.log('[db] Schema check complete');
+	// ========== OIDC Providers table ==========
+	safeCreateTable('oidc_providers', `
+		CREATE TABLE oidc_providers (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			slug TEXT NOT NULL UNIQUE,
+			issuerUrl TEXT NOT NULL,
+			clientId TEXT NOT NULL,
+			clientSecret TEXT NOT NULL,
+			scopes TEXT DEFAULT '["openid", "profile", "email"]',
+			enabled INTEGER DEFAULT 1,
+			autoCreateUsers INTEGER DEFAULT 0,
+			defaultRole TEXT DEFAULT 'member',
+			iconUrl TEXT,
+			buttonColor TEXT,
+			displayOrder INTEGER DEFAULT 0,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// ========== User OIDC Links table ==========
+	safeCreateTable('user_oidc_links', `
+		CREATE TABLE user_oidc_links (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			providerId INTEGER NOT NULL REFERENCES oidc_providers(id) ON DELETE CASCADE,
+			oidcSubject TEXT NOT NULL,
+			oidcEmail TEXT,
+			oidcName TEXT,
+			linkedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			lastLoginAt TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(providerId, oidcSubject)
+		)
+	`);
+	completeStep('Creating V2 tables');
+
+	// Create indexes for OIDC tables
+	updateStatus('Creating indexes...');
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_user_oidc_links_user ON user_oidc_links(userId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_user_oidc_links_provider ON user_oidc_links(providerId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_user_oidc_links_subject ON user_oidc_links(providerId, oidcSubject)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_oidc_providers_slug ON oidc_providers(slug)');
+	} catch {
+		// Indexes may already exist
+	}
+	completeStep('Creating indexes');
+
+	// Finalize
+	updateStatus('Finalizing...');
+	completeStep('Finalizing');
+
+	if (migrationsMade) {
+		console.log('[db] Schema migrations complete');
+	} else {
+		console.log('[db] Schema up to date');
+	}
+
+	} catch (e) {
+		migrationStatus.error = e instanceof Error ? e.message : String(e);
+		console.error('[db] Migration failed:', e);
+		throw e;
+	} finally {
+		migrationStatus.inProgress = false;
+		migrationStatus.completed = true;
+		migrationStatus.endTime = Date.now();
+	}
 }
 
 // Run migrations on module load

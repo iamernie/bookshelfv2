@@ -429,6 +429,41 @@ export const readingSessions = sqliteTable('reading_sessions', {
 });
 
 // ============================================
+// OIDC Authentication Tables
+// ============================================
+
+export const oidcProviders = sqliteTable('oidc_providers', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	name: text('name').notNull(), // Display name, e.g., "Google", "Authentik"
+	slug: text('slug').notNull().unique(), // URL-safe identifier, e.g., "google"
+	issuerUrl: text('issuerUrl').notNull(), // OIDC issuer URL
+	clientId: text('clientId').notNull(),
+	clientSecret: text('clientSecret').notNull(), // Should be encrypted
+	scopes: text('scopes').default('["openid", "profile", "email"]'), // JSON array
+	enabled: integer('enabled', { mode: 'boolean' }).default(true),
+	autoCreateUsers: integer('autoCreateUsers', { mode: 'boolean' }).default(false),
+	defaultRole: text('defaultRole').default('member'),
+	iconUrl: text('iconUrl'), // Optional icon for login button
+	buttonColor: text('buttonColor'), // Optional button color
+	displayOrder: integer('displayOrder').default(0),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+export const userOidcLinks = sqliteTable('user_oidc_links', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	providerId: integer('providerId').notNull().references(() => oidcProviders.id, { onDelete: 'cascade' }),
+	oidcSubject: text('oidcSubject').notNull(), // 'sub' claim from provider
+	oidcEmail: text('oidcEmail'), // Email from ID token
+	oidcName: text('oidcName'), // Name from ID token
+	linkedAt: text('linkedAt').default('CURRENT_TIMESTAMP'),
+	lastLoginAt: text('lastLoginAt'),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+// ============================================
 // Relations
 // ============================================
 
@@ -488,7 +523,8 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 	userBookTags: many(userBookTags),
 	metadataSuggestions: many(metadataSuggestions),
 	readingSessions: many(readingSessions),
-	preferences: one(userPreferences, { fields: [users.id], references: [userPreferences.userId] })
+	preferences: one(userPreferences, { fields: [users.id], references: [userPreferences.userId] }),
+	oidcLinks: many(userOidcLinks)
 }));
 
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
@@ -516,6 +552,15 @@ export const metadataSuggestionsRelations = relations(metadataSuggestions, ({ on
 	book: one(books, { fields: [metadataSuggestions.bookId], references: [books.id] }),
 	user: one(users, { fields: [metadataSuggestions.userId], references: [users.id] }),
 	reviewer: one(users, { fields: [metadataSuggestions.reviewedBy], references: [users.id] })
+}));
+
+export const oidcProvidersRelations = relations(oidcProviders, ({ many }) => ({
+	userLinks: many(userOidcLinks)
+}));
+
+export const userOidcLinksRelations = relations(userOidcLinks, ({ one }) => ({
+	user: one(users, { fields: [userOidcLinks.userId], references: [users.id] }),
+	provider: one(oidcProviders, { fields: [userOidcLinks.providerId], references: [oidcProviders.id] })
 }));
 
 // ============================================
@@ -557,6 +602,10 @@ export type ReadingSession = typeof readingSessions.$inferSelect;
 export type NewReadingSession = typeof readingSessions.$inferInsert;
 export type UserPreference = typeof userPreferences.$inferSelect;
 export type NewUserPreference = typeof userPreferences.$inferInsert;
+export type OidcProvider = typeof oidcProviders.$inferSelect;
+export type NewOidcProvider = typeof oidcProviders.$inferInsert;
+export type UserOidcLink = typeof userOidcLinks.$inferSelect;
+export type NewUserOidcLink = typeof userOidcLinks.$inferInsert;
 
 // Library type values
 export type LibraryType = 'personal' | 'public';

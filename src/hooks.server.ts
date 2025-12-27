@@ -3,9 +3,28 @@ import { redirect, error } from '@sveltejs/kit';
 import { getSession, validateCredentials } from '$lib/server/services/authService';
 import { createLogger, logRequest, logError } from '$lib/server/services/loggerService';
 import { checkSetupNeeded } from '$lib/server/services/setupService';
+import { migrationStatus } from '$lib/server/db';
 
 const log = createLogger('hooks');
-const PUBLIC_PATHS = ['/login', '/reset-password', '/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password', '/api/docs', '/docs', '/setup', '/api/setup', '/health', '/widgets'];
+const PUBLIC_PATHS = [
+	'/login',
+	'/reset-password',
+	'/api/auth/login',
+	'/api/auth/forgot-password',
+	'/api/auth/reset-password',
+	'/api/auth/oidc/providers',
+	'/auth/oidc', // OIDC initiate and callback routes
+	'/api/docs',
+	'/docs',
+	'/setup',
+	'/api/setup',
+	'/health',
+	'/widgets',
+	'/signup',
+	'/api/auth/signup',
+	'/upgrade',
+	'/api/system/migration-status'
+];
 
 // Handle Basic Auth for OPDS routes
 async function handleOPDSAuth(event: Parameters<Handle>[0]['event']): Promise<boolean> {
@@ -37,6 +56,14 @@ async function handleOPDSAuth(event: Parameters<Handle>[0]['event']): Promise<bo
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Check if database migration is in progress
+	const isUpgradePath = event.url.pathname.startsWith('/upgrade') ||
+		event.url.pathname.startsWith('/api/system/migration-status');
+
+	if (migrationStatus.inProgress && !isUpgradePath) {
+		throw redirect(303, '/upgrade');
+	}
+
 	const isOPDSRoute = event.url.pathname.startsWith('/opds');
 
 	// Handle OPDS routes with Basic Auth
