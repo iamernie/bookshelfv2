@@ -3,7 +3,7 @@
 
 export const APP_CONFIG = {
 	name: 'BookShelf',
-	version: '0.4.0',
+	version: '0.4.1',
 	copyright: {
 		owner: 'Ernie',
 		year: 2026

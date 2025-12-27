@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2025-12-27
+
+### Fixed
+- V1 to V2 migration now correctly marks existing users as email-verified
+  - Existing V1 users no longer blocked from login due to missing email verification
+
+### Added
+- Password reset CLI script for Docker deployments
+  - Usage: `docker exec -it bookshelf-v2 node scripts/reset-password.js <email> <new-password>`
+
 ## [0.4.0] - 2025-12-27
 
 ### Added

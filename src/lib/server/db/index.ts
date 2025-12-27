@@ -961,6 +961,26 @@ function runMigrations() {
 	}
 	completeStep('Creating indexes');
 
+	// ========== Data migrations for V1 compatibility ==========
+	updateStatus('Migrating V1 user data...');
+
+	// Mark existing V1 users as email verified (they were created before verification was required)
+	// Only update users who have emailVerified=0 and no verification token
+	try {
+		const result = sqlite.prepare(`
+			UPDATE users
+			SET emailVerified = 1
+			WHERE emailVerified = 0
+			  AND (emailVerificationToken IS NULL OR emailVerificationToken = '')
+		`).run();
+		if (result.changes > 0) {
+			console.log(`[db] Marked ${result.changes} existing V1 users as email verified`);
+			migrationsMade = true;
+		}
+	} catch (e) {
+		console.error('[db] Failed to update V1 user email verification:', e);
+	}
+
 	// Finalize
 	updateStatus('Finalizing...');
 	completeStep('Finalizing');

@@ -54,6 +54,9 @@ COPY --from=builder /app/static ./static
 # Copy entrypoint script
 COPY docker-entrypoint.sh ./
 
+# Copy utility scripts
+COPY scripts ./scripts
+
 # Make entrypoint executable
 RUN chmod +x /app/docker-entrypoint.sh
 
