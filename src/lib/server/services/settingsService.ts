@@ -27,18 +27,25 @@ export const DEFAULT_SETTINGS = {
 		description: 'Directory for temporary file uploads during import'
 	},
 	'storage.ebook_path_pattern': {
-		value: '{filename}',
+		value: '{author}/<{series}/>{title}',
 		type: 'string',
 		category: 'storage',
 		label: 'Ebook Path Pattern',
-		description: 'Pattern for organizing ebooks. Use: {author}, {series}, {title}, {format}, {filename}'
+		description: 'Pattern for organizing ebooks. Placeholders: {author}, {series}, {seriesIndex}, {title}, {year}, {format}. Use <...> for optional sections.'
 	},
 	'storage.cover_path_pattern': {
-		value: '{filename}',
+		value: '{author}/<{series}/>{title}',
 		type: 'string',
 		category: 'storage',
 		label: 'Cover Path Pattern',
-		description: 'Pattern for organizing covers. Use: {author}, {series}, {title}, {filename}'
+		description: 'Pattern for organizing covers. Same placeholders as ebook pattern.'
+	},
+	'storage.auto_organize': {
+		value: 'false',
+		type: 'boolean',
+		category: 'storage',
+		label: 'Auto-Organize Files',
+		description: 'Automatically move/rename files when metadata is updated'
 	},
 	// Library settings
 	'library.name': {
@@ -318,9 +325,17 @@ export async function getStoragePaths(): Promise<{
 // File path pattern context for resolving patterns
 export interface PathPatternContext {
 	author?: string;
+	authors?: string;        // All authors comma-separated
 	series?: string;
+	seriesIndex?: string;    // Series number (e.g., "1", "2.5")
 	title?: string;
+	subtitle?: string;
+	year?: string;           // Publication year
 	format?: string;
+	genre?: string;
+	publisher?: string;
+	language?: string;
+	isbn?: string;
 	filename?: string;
 }
 
@@ -342,9 +357,18 @@ export function resolvePathPattern(pattern: string, context: PathPatternContext)
 	// Replace each placeholder with its sanitized value or empty string
 	const replacements: Record<string, string | undefined> = {
 		'{author}': context.author,
+		'{authors}': context.authors,
 		'{series}': context.series,
+		'{seriesIndex}': context.seriesIndex,
+		'{seriesNum}': context.seriesIndex, // Alias
 		'{title}': context.title,
+		'{subtitle}': context.subtitle,
+		'{year}': context.year,
 		'{format}': context.format,
+		'{genre}': context.genre,
+		'{publisher}': context.publisher,
+		'{language}': context.language,
+		'{isbn}': context.isbn,
 		'{filename}': context.filename
 	};
 
@@ -354,6 +378,14 @@ export function resolvePathPattern(pattern: string, context: PathPatternContext)
 			result = result.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), sanitized);
 		}
 	}
+
+	// Handle optional blocks: <...> sections are removed if they contain unresolved/empty placeholders
+	// e.g., "<{series}/>" becomes "" if series is empty, or "fantasy/" if series is "Fantasy"
+	result = result.replace(/<([^>]*)>/g, (match, content) => {
+		// Check if the content still has empty segments from unresolved placeholders
+		const cleaned = content.replace(/\/+/g, '/').replace(/^\/|\/$/g, '').trim();
+		return cleaned ? cleaned : '';
+	});
 
 	// Clean up any empty path segments (e.g., "author//title" becomes "author/title")
 	result = result
@@ -366,4 +398,23 @@ export function resolvePathPattern(pattern: string, context: PathPatternContext)
 	}
 
 	return result;
+}
+
+// Get list of available placeholders for documentation
+export function getAvailablePlaceholders(): Array<{ placeholder: string; description: string; example: string }> {
+	return [
+		{ placeholder: '{author}', description: 'Primary author name', example: 'brandon_sanderson' },
+		{ placeholder: '{authors}', description: 'All authors, comma-separated', example: 'brandon_sanderson_brian_mcclellan' },
+		{ placeholder: '{series}', description: 'Primary series name', example: 'the_stormlight_archive' },
+		{ placeholder: '{seriesIndex}', description: 'Book number in series', example: '1' },
+		{ placeholder: '{title}', description: 'Book title', example: 'the_way_of_kings' },
+		{ placeholder: '{subtitle}', description: 'Book subtitle', example: 'part_one' },
+		{ placeholder: '{year}', description: 'Publication year', example: '2010' },
+		{ placeholder: '{format}', description: 'File format (epub, pdf, etc.)', example: 'epub' },
+		{ placeholder: '{genre}', description: 'Primary genre', example: 'fantasy' },
+		{ placeholder: '{publisher}', description: 'Publisher name', example: 'tor_books' },
+		{ placeholder: '{language}', description: 'Language code', example: 'en' },
+		{ placeholder: '{isbn}', description: 'ISBN-13', example: '9780765326355' },
+		{ placeholder: '{filename}', description: 'Original filename (sanitized)', example: 'the_way_of_kings' }
+	];
 }

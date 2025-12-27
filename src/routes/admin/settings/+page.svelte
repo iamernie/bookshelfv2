@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { Settings, FolderOpen, BookOpen, Monitor, Rss, Upload, Save, Check, AlertCircle, Loader2, Database, Sparkles, Eye, EyeOff } from 'lucide-svelte';
+	import { Settings, FolderOpen, BookOpen, Monitor, Rss, Upload, Save, Check, AlertCircle, Loader2, Database, Sparkles, Eye, EyeOff, FileText, HelpCircle } from 'lucide-svelte';
+
+	interface Placeholder {
+		placeholder: string;
+		description: string;
+		example: string;
+	}
 
 	interface Setting {
 		key: string;
@@ -27,6 +33,49 @@
 	let testResult = $state<{ success: boolean; message: string } | null>(null);
 	let savingAI = $state(false);
 	let aiSaveSuccess = $state(false);
+
+	// Pattern preview state
+	let placeholders = $state<Placeholder[]>([]);
+	let ebookPatternPreview = $state('');
+	let coverPatternPreview = $state('');
+	let showPatternHelp = $state(false);
+
+	// Fetch placeholders on mount
+	$effect(() => {
+		fetch('/api/settings/patterns')
+			.then(res => res.json())
+			.then(data => {
+				placeholders = data.placeholders || [];
+			})
+			.catch(console.error);
+	});
+
+	// Update pattern previews when patterns change
+	async function updatePatternPreview(pattern: string, type: 'ebook' | 'cover') {
+		try {
+			const res = await fetch('/api/settings/patterns', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ pattern })
+			});
+			const data = await res.json();
+			if (type === 'ebook') {
+				ebookPatternPreview = data.preview || '';
+			} else {
+				coverPatternPreview = data.preview || '';
+			}
+		} catch (err) {
+			console.error('Failed to preview pattern:', err);
+		}
+	}
+
+	// Initialize pattern previews
+	$effect(() => {
+		const ebookPattern = editedSettings['storage.ebook_path_pattern'];
+		const coverPattern = editedSettings['storage.cover_path_pattern'];
+		if (ebookPattern) updatePatternPreview(ebookPattern, 'ebook');
+		if (coverPattern) updatePatternPreview(coverPattern, 'cover');
+	});
 
 	// Initialize edited settings from data
 	$effect(() => {
@@ -255,6 +304,7 @@
 				<div class="divide-y" style="border-color: var(--border-color);">
 					{#each settings as setting}
 						{@const inputProps = renderInput(setting)}
+						{@const isPatternSetting = setting.key.includes('path_pattern')}
 						<div class="p-4 flex items-start gap-4">
 							<div class="flex-1">
 								<label for={setting.key} class="font-medium" style="color: var(--text-primary);">
@@ -263,6 +313,17 @@
 								<p class="text-sm mt-0.5" style="color: var(--text-muted);">
 									{setting.description}
 								</p>
+								{#if isPatternSetting}
+									{@const preview = setting.key === 'storage.ebook_path_pattern' ? ebookPatternPreview : coverPatternPreview}
+									{#if preview}
+										<div class="mt-2 flex items-center gap-2">
+											<span class="text-xs font-medium" style="color: var(--text-muted);">Preview:</span>
+											<code class="text-xs px-2 py-1 rounded" style="background: var(--bg-tertiary); color: var(--accent);">
+												{preview}
+											</code>
+										</div>
+									{/if}
+								{/if}
 							</div>
 							<div class="w-72">
 								{#if setting.type === 'boolean'}
@@ -276,6 +337,31 @@
 									>
 										<span class="toggle-knob"></span>
 									</button>
+								{:else if isPatternSetting}
+									<div class="flex gap-2">
+										<input
+											type="text"
+											id={setting.key}
+											value={editedSettings[setting.key] ?? setting.value}
+											oninput={(e) => {
+												const value = (e.target as HTMLInputElement).value;
+												updateSetting(setting.key, value);
+												updatePatternPreview(value, setting.key === 'storage.ebook_path_pattern' ? 'ebook' : 'cover');
+											}}
+											disabled={!data.isAdmin}
+											class="w-full px-3 py-2 rounded-lg text-sm font-mono"
+											style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+										/>
+										<button
+											type="button"
+											class="p-2 rounded-lg transition-colors"
+											style="background: var(--bg-tertiary); color: var(--text-muted);"
+											onclick={() => showPatternHelp = !showPatternHelp}
+											title="Show available placeholders"
+										>
+											<HelpCircle class="w-4 h-4" />
+										</button>
+									</div>
 								{:else}
 									<input
 										type={inputProps.type}
@@ -292,6 +378,53 @@
 					{/each}
 				</div>
 			</div>
+
+			<!-- Pattern Help Panel - shows after Storage category -->
+			{#if category === 'storage' && showPatternHelp}
+				<div class="rounded-xl overflow-hidden mt-4" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+					<div class="p-4 border-b flex items-center justify-between" style="border-color: var(--border-color);">
+						<div class="flex items-center gap-3">
+							<FileText class="w-5 h-5" style="color: var(--accent);" />
+							<h3 class="font-semibold" style="color: var(--text-primary);">Available Placeholders</h3>
+						</div>
+						<button
+							type="button"
+							class="text-sm px-3 py-1 rounded-lg transition-colors"
+							style="color: var(--text-muted);"
+							onclick={() => showPatternHelp = false}
+						>
+							Close
+						</button>
+					</div>
+					<div class="p-4">
+						<p class="text-sm mb-4" style="color: var(--text-muted);">
+							Use these placeholders in your patterns. Wrap sections in <code class="px-1 rounded" style="background: var(--bg-tertiary);">&lt;...&gt;</code> to make them optional (removed if placeholder is empty).
+						</p>
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+							{#each placeholders as ph}
+								<div class="flex items-start gap-3 p-2 rounded-lg" style="background: var(--bg-tertiary);">
+									<code class="text-sm font-bold px-2 py-0.5 rounded" style="background: var(--accent); color: white;">
+										{ph.placeholder}
+									</code>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm" style="color: var(--text-primary);">{ph.description}</p>
+										<p class="text-xs truncate" style="color: var(--text-muted);">e.g., {ph.example}</p>
+									</div>
+								</div>
+							{/each}
+						</div>
+						<div class="mt-4 p-3 rounded-lg" style="background: var(--bg-tertiary);">
+							<p class="text-sm font-medium mb-2" style="color: var(--text-primary);">Example Patterns:</p>
+							<ul class="text-sm space-y-1" style="color: var(--text-muted);">
+								<li><code class="font-mono">{'{author}/{title}'}</code> → brandon_sanderson/the_way_of_kings</li>
+								<li><code class="font-mono">{'{author}/<{series}/>{title}'}</code> → brandon_sanderson/the_stormlight_archive/the_way_of_kings</li>
+								<li><code class="font-mono">{'{genre}/{author}/{title}'}</code> → fantasy/brandon_sanderson/the_way_of_kings</li>
+								<li><code class="font-mono">{'{author}/<{series}/><{seriesIndex}. >{title}'}</code> → brandon_sanderson/the_stormlight_archive/1._the_way_of_kings</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+			{/if}
 		{/each}
 
 		<!-- AI Recommendations Settings -->

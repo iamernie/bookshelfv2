@@ -46,6 +46,7 @@ This document outlines feature status and planned improvements.
 | **Similar Books** | Recommendations based on shared authors, series, genres | ✅ Completed |
 | **Filter Mode Setting** | AND vs OR toggle for combining multiple filters | ✅ Completed |
 | **Series View Mode** | Group books by series in grid view with collapsible sections | ✅ Completed |
+| **File Naming Patterns** | Template-based file organization with placeholders and auto-organize | ✅ Completed |
 
 ---
 
@@ -84,7 +85,7 @@ This document outlines feature status and planned improvements.
 | **Diagnostic Page** | System health, storage usage, migration status | ✅ Completed |
 | **Catalog Manager** | Unified interface for authors, genres, tags, series, narrators, formats with bulk ops | ✅ Completed |
 | **Default Sort/View Preferences** | Configurable default sort field, direction, view mode per user | ✅ Completed |
-| **File Naming Patterns** | Template-based file organization with {title}, {authors}, {series} placeholders | Planned |
+| **File Naming Patterns** | Template-based file organization with {title}, {authors}, {series} placeholders | ✅ Completed |
 | **Write Metadata to File** | Embed metadata into EPUB/PDF files | Planned |
 | **Provider Priority Matrix** | Per-field metadata provider priority (1st-4th) with library overrides | Planned |
 
@@ -186,10 +187,10 @@ This document outlines feature status and planned improvements.
 | Collapsible Sidebar | ✅ | ❌ | ✅ |
 | Similar Books | ✅ | ❌ | ✅ |
 | Catalog Manager | ✅ | ❌ | ✅ |
-| File Naming Patterns | ❌ | ❌ | ✅ |
+| File Naming Patterns | ✅ | ❌ | ✅ |
 | Write Metadata to File | ❌ | ❌ | ✅ |
 | Provider Priority Matrix | ❌ | ❌ | ✅ |
-| Series View Mode | ❌ | ❌ | ✅ |
+| Series View Mode | ✅ | ❌ | ✅ |
 | Reader Settings Scope | ❌ | ❌ | ✅ |
 | Public Reviews | ❌ | ❌ | ✅ |
 | Barcode Scanner | ❌ | ✅ | ❌ |
