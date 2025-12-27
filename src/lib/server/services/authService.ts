@@ -296,3 +296,246 @@ export async function resetPassword(
 
 	return { success: true };
 }
+
+// ============================================================================
+// User Registration / Signup Functions
+// ============================================================================
+
+const VERIFICATION_TOKEN_EXPIRY_HOURS = 24;
+
+export function generateVerificationToken(): string {
+	return crypto.randomBytes(32).toString('hex');
+}
+
+export interface SignupInput {
+	username: string;
+	email: string;
+	password: string;
+	firstName?: string;
+	lastName?: string;
+}
+
+export interface SignupResult {
+	success: boolean;
+	userId?: number;
+	verificationToken?: string;
+	error?: string;
+}
+
+export async function signup(
+	input: SignupInput,
+	defaultRole: string = 'member',
+	approvalStatus: string = 'approved',
+	inviteCodeUsed?: string
+): Promise<SignupResult> {
+	// Check if username is taken
+	const existingUsername = await db
+		.select({ id: users.id })
+		.from(users)
+		.where(eq(users.username, input.username))
+		.limit(1);
+
+	if (existingUsername.length > 0) {
+		return { success: false, error: 'Username is already taken' };
+	}
+
+	// Check if email is taken
+	const existingEmail = await db
+		.select({ id: users.id })
+		.from(users)
+		.where(eq(users.email, input.email.toLowerCase()))
+		.limit(1);
+
+	if (existingEmail.length > 0) {
+		return { success: false, error: 'Email is already registered' };
+	}
+
+	// Hash password
+	const hashedPassword = await hashPassword(input.password);
+
+	// Generate email verification token
+	const verificationToken = generateVerificationToken();
+	const verificationExpires = new Date(
+		Date.now() + VERIFICATION_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000
+	).toISOString();
+
+	const now = new Date().toISOString();
+
+	// Create user
+	const result = await db.insert(users).values({
+		username: input.username,
+		email: input.email.toLowerCase(),
+		password: hashedPassword,
+		role: defaultRole,
+		firstName: input.firstName || null,
+		lastName: input.lastName || null,
+		emailVerified: false,
+		emailVerificationToken: verificationToken,
+		emailVerificationExpires: verificationExpires,
+		approvalStatus,
+		inviteCodeUsed: inviteCodeUsed || null,
+		createdAt: now,
+		updatedAt: now
+	});
+
+	return {
+		success: true,
+		userId: result.lastInsertRowid as number,
+		verificationToken
+	};
+}
+
+export async function verifyEmail(token: string): Promise<{ success: boolean; error?: string }> {
+	const result = await db
+		.select()
+		.from(users)
+		.where(eq(users.emailVerificationToken, token))
+		.limit(1);
+
+	const user = result[0];
+
+	if (!user) {
+		return { success: false, error: 'Invalid verification token' };
+	}
+
+	if (user.emailVerified) {
+		return { success: false, error: 'Email is already verified' };
+	}
+
+	if (!user.emailVerificationExpires) {
+		return { success: false, error: 'Invalid verification token' };
+	}
+
+	const expiresAt = new Date(user.emailVerificationExpires);
+	if (expiresAt < new Date()) {
+		return { success: false, error: 'Verification token has expired. Please request a new one.' };
+	}
+
+	await db
+		.update(users)
+		.set({
+			emailVerified: true,
+			emailVerificationToken: null,
+			emailVerificationExpires: null,
+			updatedAt: new Date().toISOString()
+		})
+		.where(eq(users.id, user.id));
+
+	return { success: true };
+}
+
+export async function resendVerificationEmail(
+	email: string
+): Promise<{ success: boolean; token?: string; error?: string }> {
+	const user = await getUserByEmail(email);
+
+	if (!user) {
+		// Don't reveal whether user exists
+		return { success: true };
+	}
+
+	if (user.emailVerified) {
+		return { success: false, error: 'Email is already verified' };
+	}
+
+	// Generate new verification token
+	const verificationToken = generateVerificationToken();
+	const verificationExpires = new Date(
+		Date.now() + VERIFICATION_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000
+	).toISOString();
+
+	await db
+		.update(users)
+		.set({
+			emailVerificationToken: verificationToken,
+			emailVerificationExpires: verificationExpires,
+			updatedAt: new Date().toISOString()
+		})
+		.where(eq(users.id, user.id));
+
+	return { success: true, token: verificationToken };
+}
+
+export async function isEmailVerified(userId: number): Promise<boolean> {
+	const result = await db
+		.select({ emailVerified: users.emailVerified })
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+
+	return result[0]?.emailVerified || false;
+}
+
+export async function getUserApprovalStatus(userId: number): Promise<string> {
+	const result = await db
+		.select({ approvalStatus: users.approvalStatus })
+		.from(users)
+		.where(eq(users.id, userId))
+		.limit(1);
+
+	return result[0]?.approvalStatus || 'approved';
+}
+
+export async function approveUser(
+	userId: number,
+	approvedBy: number
+): Promise<{ success: boolean; error?: string }> {
+	const result = await db
+		.update(users)
+		.set({
+			approvalStatus: 'approved',
+			approvedBy,
+			approvedAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString()
+		})
+		.where(eq(users.id, userId));
+
+	return { success: result.changes > 0 };
+}
+
+export async function rejectUser(
+	userId: number,
+	approvedBy: number
+): Promise<{ success: boolean; error?: string }> {
+	const result = await db
+		.update(users)
+		.set({
+			approvalStatus: 'rejected',
+			approvedBy,
+			approvedAt: new Date().toISOString(),
+			updatedAt: new Date().toISOString()
+		})
+		.where(eq(users.id, userId));
+
+	return { success: result.changes > 0 };
+}
+
+export async function getPendingApprovals(): Promise<
+	Array<{
+		id: number;
+		username: string;
+		email: string;
+		firstName: string | null;
+		lastName: string | null;
+		createdAt: string;
+		inviteCodeUsed: string | null;
+	}>
+> {
+	const result = await db
+		.select({
+			id: users.id,
+			username: users.username,
+			email: users.email,
+			firstName: users.firstName,
+			lastName: users.lastName,
+			createdAt: users.createdAt,
+			inviteCodeUsed: users.inviteCodeUsed
+		})
+		.from(users)
+		.where(eq(users.approvalStatus, 'pending'));
+
+	return result.map((r) => ({
+		...r,
+		createdAt: r.createdAt || ''
+	}));
+}

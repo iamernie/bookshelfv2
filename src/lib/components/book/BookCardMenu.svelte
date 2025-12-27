@@ -31,9 +31,18 @@
 	} = $props();
 
 	let isOpen = $state(false);
+	let buttonRef = $state<HTMLElement | null>(null);
+	let dropdownPosition = $state({ top: 0, right: 0 });
 
 	function handleToggle(e: MouseEvent) {
 		e.stopPropagation();
+		if (!isOpen && buttonRef) {
+			const rect = buttonRef.getBoundingClientRect();
+			dropdownPosition = {
+				top: rect.bottom + 4,
+				right: window.innerWidth - rect.right
+			};
+		}
 		isOpen = !isOpen;
 	}
 
@@ -57,27 +66,29 @@
 <div class="relative">
 	<button
 		type="button"
+		bind:this={buttonRef}
 		class="p-1.5 rounded bg-black/70 text-white hover:bg-black/90 transition-colors"
 		onclick={handleToggle}
 		title="More actions"
 	>
 		<MoreVertical class="w-4 h-4" />
 	</button>
+</div>
 
-	{#if isOpen}
-		<!-- Backdrop -->
-		<button
-			type="button"
-			class="fixed inset-0 z-40"
-			onclick={() => isOpen = false}
-			aria-label="Close menu"
-		></button>
+{#if isOpen}
+	<!-- Backdrop -->
+	<button
+		type="button"
+		class="fixed inset-0 z-[9998]"
+		onclick={() => isOpen = false}
+		aria-label="Close menu"
+	></button>
 
-		<!-- Dropdown Menu -->
-		<div
-			class="absolute right-0 top-full mt-1 z-50 min-w-[160px] rounded-lg shadow-lg border overflow-hidden"
-			style="background-color: var(--bg-secondary); border-color: var(--border-color);"
-		>
+	<!-- Dropdown Menu (Portal - fixed position to avoid overflow clipping) -->
+	<div
+		class="fixed z-[9999] min-w-[160px] rounded-lg shadow-lg border overflow-hidden"
+		style="top: {dropdownPosition.top}px; right: {dropdownPosition.right}px; background-color: var(--bg-secondary); border-color: var(--border-color);"
+	>
 			<div class="py-1">
 				{#if onViewDetails}
 					<button
@@ -148,8 +159,7 @@
 				{/if}
 			</div>
 		</div>
-	{/if}
-</div>
+{/if}
 
 <style>
 	.menu-item {

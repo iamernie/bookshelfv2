@@ -47,6 +47,9 @@ This document outlines feature status and planned improvements.
 | **Filter Mode Setting** | AND vs OR toggle for combining multiple filters | ✅ Completed |
 | **Series View Mode** | Group books by series in grid view with collapsible sections | ✅ Completed |
 | **File Naming Patterns** | Template-based file organization with placeholders and auto-organize | ✅ Completed |
+| **User Signup Flow** | Public registration with email verification, invite codes, admin approval | ✅ Completed |
+| **Invite Code System** | Admin-managed invite codes with usage limits and expiration | ✅ Completed |
+| **Status Bar Quick Edit** | Clickable full-width status bar on BookCard with dropdown for quick status changes | ✅ Completed |
 
 ---
 
@@ -99,7 +102,7 @@ This document outlines feature status and planned improvements.
 | **OIDC Authentication** | SSO with Authentik, Keycloak, etc. | Medium |
 | **Email Book Sharing** | Send ebooks via email, Kindle support | Medium |
 | **Better Login Page** | Improved design, password reset flow | ✅ Completed |
-| **User Signup Flow** | Self-registration option | Low |
+| **User Signup Flow** | Self-registration with email verification, invite codes, admin approval | ✅ Completed |
 | **Series View Mode** | Group books by series in grid view | ✅ Completed |
 | **Auto-Move Files on Update** | Rename/move files based on metadata changes | Medium |
 | **Public Reviews Download** | Fetch and display Amazon/Goodreads reviews | Medium |
@@ -309,6 +312,37 @@ Template-based file organization at `/admin/settings/patterns`:
 
 **Library-Specific Overrides:**
 - Different patterns per genre/library
+
+### User Signup Flow ✅ (Completed)
+
+Public registration system with multiple security options:
+
+**Registration Settings (`/admin/settings`):**
+- Enable/disable public signups
+- Require email verification
+- Require invite code
+- Require admin approval
+- Default role for new users
+
+**Invite Code System (`/admin/invite-codes`):**
+- Generate codes with format BOOK-XXXX-XXXX
+- Set optional max uses per code
+- Set optional expiration date
+- Activate/deactivate codes
+- Track usage count
+- Label codes for organization
+
+**Admin Approval Workflow:**
+- New users marked as "pending" when approval required
+- Admin panel shows pending approvals count
+- Approve or reject users from invite codes page
+- Rejected users cannot log in
+
+**Email Verification:**
+- Verification email sent on signup (if email configured)
+- 24-hour token expiration
+- Resend verification option
+- Unverified users cannot log in
 
 ---
 

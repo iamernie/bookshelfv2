@@ -23,7 +23,8 @@
 		Activity,
 		Users,
 		Sliders,
-		UserCog
+		UserCog,
+		Ticket
 	} from 'lucide-svelte';
 	import GlobalSearch from '$lib/components/search/GlobalSearch.svelte';
 	import { theme } from '$lib/stores/theme';
@@ -199,6 +200,10 @@
 							<a href="/admin/users" class="dropdown-item" onclick={closeMenus}>
 								<Users class="w-4 h-4" />
 								<span>Manage Users</span>
+							</a>
+							<a href="/admin/invite-codes" class="dropdown-item" onclick={closeMenus}>
+								<Ticket class="w-4 h-4" />
+								<span>Invite Codes</span>
 							</a>
 							<a href="/admin/settings" class="dropdown-item" onclick={closeMenus}>
 								<Settings class="w-4 h-4" />

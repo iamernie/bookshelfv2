@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Settings, FolderOpen, BookOpen, Monitor, Rss, Upload, Save, Check, AlertCircle, Loader2, Database, Sparkles, Eye, EyeOff, FileText, HelpCircle } from 'lucide-svelte';
+	import { Settings, FolderOpen, BookOpen, Monitor, Rss, Upload, Save, Check, AlertCircle, Loader2, Database, Sparkles, Eye, EyeOff, FileText, HelpCircle, UserPlus } from 'lucide-svelte';
 
 	interface Placeholder {
 		placeholder: string;
@@ -119,6 +119,11 @@
 			icon: Database,
 			title: 'Metadata Providers',
 			description: 'Configure book metadata lookup sources'
+		},
+		registration: {
+			icon: UserPlus,
+			title: 'User Registration',
+			description: 'Configure public signup and email verification'
 		}
 	};
 

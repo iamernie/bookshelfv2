@@ -62,6 +62,42 @@ export const DEFAULT_SETTINGS = {
 		label: 'Default Status',
 		description: 'Default reading status for new books'
 	},
+	// Registration settings
+	'registration.allow_signup': {
+		value: 'false',
+		type: 'boolean',
+		category: 'registration',
+		label: 'Allow Public Signup',
+		description: 'Allow new users to register accounts'
+	},
+	'registration.require_email_verification': {
+		value: 'true',
+		type: 'boolean',
+		category: 'registration',
+		label: 'Require Email Verification',
+		description: 'New users must verify their email before accessing the library'
+	},
+	'registration.default_role': {
+		value: 'member',
+		type: 'string',
+		category: 'registration',
+		label: 'Default Role for New Users',
+		description: 'Role assigned to newly registered users (member, viewer, guest)'
+	},
+	'registration.require_admin_approval': {
+		value: 'false',
+		type: 'boolean',
+		category: 'registration',
+		label: 'Require Admin Approval',
+		description: 'New registrations must be approved by an admin before activation'
+	},
+	'registration.require_invite_code': {
+		value: 'false',
+		type: 'boolean',
+		category: 'registration',
+		label: 'Require Invite Code',
+		description: 'New users must enter a valid invite code to register'
+	},
 	// Display settings
 	'display.books_per_page': {
 		value: '24',

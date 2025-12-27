@@ -162,7 +162,7 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 		issues.push({
 			type: 'orphan',
 			severity: 'warning',
-			entity: 'book_authors',
+			entity: 'bookauthors',
 			count: orphanedBookAuthors[0].count,
 			description: 'Book-author relationships referencing deleted books or authors',
 			canRepair: true
@@ -182,7 +182,7 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 		issues.push({
 			type: 'orphan',
 			severity: 'warning',
-			entity: 'book_series',
+			entity: 'bookseries',
 			count: orphanedBookSeries[0].count,
 			description: 'Book-series relationships referencing deleted books or series',
 			canRepair: true
@@ -202,7 +202,7 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 		issues.push({
 			type: 'orphan',
 			severity: 'warning',
-			entity: 'book_tags',
+			entity: 'booktags',
 			count: orphanedBookTags[0].count,
 			description: 'Book-tag relationships referencing deleted books or tags',
 			canRepair: true
@@ -215,7 +215,7 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 		.select({ count: count() })
 		.from(authors)
 		.where(
-			sql`${authors.id} NOT IN (SELECT DISTINCT authorId FROM book_authors WHERE authorId IS NOT NULL)
+			sql`${authors.id} NOT IN (SELECT DISTINCT authorId FROM bookauthors WHERE authorId IS NOT NULL)
 			AND ${authors.id} NOT IN (SELECT DISTINCT authorId FROM books WHERE authorId IS NOT NULL)`
 		);
 
@@ -235,7 +235,7 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 		.select({ count: count() })
 		.from(series)
 		.where(
-			sql`${series.id} NOT IN (SELECT DISTINCT seriesId FROM book_series WHERE seriesId IS NOT NULL)
+			sql`${series.id} NOT IN (SELECT DISTINCT seriesId FROM bookseries WHERE seriesId IS NOT NULL)
 			AND ${series.id} NOT IN (SELECT DISTINCT seriesId FROM books WHERE seriesId IS NOT NULL)`
 		);
 
@@ -254,7 +254,7 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 	const tagsWithNoBooks = await db
 		.select({ count: count() })
 		.from(tags)
-		.where(sql`${tags.id} NOT IN (SELECT DISTINCT tagId FROM book_tags WHERE tagId IS NOT NULL)`);
+		.where(sql`${tags.id} NOT IN (SELECT DISTINCT tagId FROM booktags WHERE tagId IS NOT NULL)`);
 
 	if (tagsWithNoBooks[0].count > 0) {
 		issues.push({
@@ -359,25 +359,25 @@ export async function repairOrphanedRelationships(): Promise<RepairResult> {
 	let repaired = 0;
 
 	try {
-		// Clean orphaned book_authors
+		// Clean orphaned bookauthors
 		const baResult = await db.run(sql`
-			DELETE FROM book_authors
+			DELETE FROM bookauthors
 			WHERE bookId NOT IN (SELECT id FROM books)
 			   OR authorId NOT IN (SELECT id FROM authors)
 		`);
 		repaired += baResult.changes;
 
-		// Clean orphaned book_series
+		// Clean orphaned bookseries
 		const bsResult = await db.run(sql`
-			DELETE FROM book_series
+			DELETE FROM bookseries
 			WHERE bookId NOT IN (SELECT id FROM books)
 			   OR seriesId NOT IN (SELECT id FROM series)
 		`);
 		repaired += bsResult.changes;
 
-		// Clean orphaned book_tags
+		// Clean orphaned booktags
 		const btResult = await db.run(sql`
-			DELETE FROM book_tags
+			DELETE FROM booktags
 			WHERE bookId NOT IN (SELECT id FROM books)
 			   OR tagId NOT IN (SELECT id FROM tags)
 		`);
@@ -463,7 +463,7 @@ export async function removeOrphanedAuthors(): Promise<RepairResult> {
 	try {
 		const result = await db.run(sql`
 			DELETE FROM authors
-			WHERE id NOT IN (SELECT DISTINCT authorId FROM book_authors WHERE authorId IS NOT NULL)
+			WHERE id NOT IN (SELECT DISTINCT authorId FROM bookauthors WHERE authorId IS NOT NULL)
 			  AND id NOT IN (SELECT DISTINCT authorId FROM books WHERE authorId IS NOT NULL)
 		`);
 		return { success: true, repaired: result.changes, errors: [] };
@@ -483,7 +483,7 @@ export async function removeOrphanedSeries(): Promise<RepairResult> {
 	try {
 		const result = await db.run(sql`
 			DELETE FROM series
-			WHERE id NOT IN (SELECT DISTINCT seriesId FROM book_series WHERE seriesId IS NOT NULL)
+			WHERE id NOT IN (SELECT DISTINCT seriesId FROM bookseries WHERE seriesId IS NOT NULL)
 			  AND id NOT IN (SELECT DISTINCT seriesId FROM books WHERE seriesId IS NOT NULL)
 		`);
 		return { success: true, repaired: result.changes, errors: [] };
@@ -503,7 +503,7 @@ export async function removeOrphanedTags(): Promise<RepairResult> {
 	try {
 		const result = await db.run(sql`
 			DELETE FROM tags
-			WHERE id NOT IN (SELECT DISTINCT tagId FROM book_tags WHERE tagId IS NOT NULL)
+			WHERE id NOT IN (SELECT DISTINCT tagId FROM booktags WHERE tagId IS NOT NULL)
 		`);
 		return { success: true, repaired: result.changes, errors: [] };
 	} catch (error) {

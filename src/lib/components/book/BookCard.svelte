@@ -57,13 +57,16 @@
 
 	let showQuickEditOverlay = $state(false);
 	let isHovered = $state(false);
+	let showStatusDropdown = $state(false);
+	let statusBarRef = $state<HTMLElement | null>(null);
+	let dropdownPosition = $state({ top: 0, left: 0, width: 0 });
 
 	function handleClick(e: MouseEvent) {
-		if (showQuickEditOverlay) return;
+		if (showQuickEditOverlay || showStatusDropdown) return;
 		if (selectable && (e.target as HTMLElement).closest('input[type=checkbox]')) {
 			return;
 		}
-		if ((e.target as HTMLElement).closest('.quick-edit-btn') || (e.target as HTMLElement).closest('.hover-action-btn') || (e.target as HTMLElement).closest('.book-card-menu')) {
+		if ((e.target as HTMLElement).closest('.quick-edit-btn') || (e.target as HTMLElement).closest('.hover-action-btn') || (e.target as HTMLElement).closest('.book-card-menu') || (e.target as HTMLElement).closest('.status-bar-wrapper')) {
 			return;
 		}
 		onClick?.(book);
@@ -75,8 +78,9 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (showQuickEditOverlay && e.key === 'Escape') {
+		if ((showQuickEditOverlay || showStatusDropdown) && e.key === 'Escape') {
 			showQuickEditOverlay = false;
+			showStatusDropdown = false;
 			return;
 		}
 		if (e.key === 'Enter' || e.key === ' ') {
@@ -99,6 +103,35 @@
 	async function handleStatusChange(bookId: number, statusId: number) {
 		if (onQuickEdit) {
 			await onQuickEdit(bookId, 'statusId', statusId);
+		}
+	}
+
+	function handleStatusBarClick(e: MouseEvent) {
+		e.stopPropagation();
+		if (onQuickEdit && statuses.length > 0) {
+			if (!showStatusDropdown && statusBarRef) {
+				const rect = statusBarRef.getBoundingClientRect();
+				// Use viewport coordinates for fixed positioning
+				dropdownPosition = {
+					top: rect.bottom,
+					left: rect.left,
+					width: rect.width
+				};
+			}
+			showStatusDropdown = !showStatusDropdown;
+		}
+	}
+
+	async function handleStatusSelect(statusId: number) {
+		showStatusDropdown = false;
+		if (onQuickEdit) {
+			await onQuickEdit(book.id, 'statusId', statusId);
+		}
+	}
+
+	function handleClickOutside(e: MouseEvent) {
+		if (showStatusDropdown && statusBarRef && !statusBarRef.contains(e.target as Node)) {
+			showStatusDropdown = false;
 		}
 	}
 
@@ -157,6 +190,8 @@
 		onAssignShelf?.(book);
 	}
 </script>
+
+<svelte:window onclick={handleClickOutside} />
 
 <div
 	class="card group cursor-pointer hover:shadow-lg transition-all duration-200"
@@ -289,19 +324,25 @@
 			</div>
 		{/if}
 
-		<!-- Status Badge -->
-		{#if showStatus && book.status}
-			<div
-				class="absolute bottom-1 right-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-white shadow-sm flex items-center gap-1"
+	</div>
+
+	<!-- Status Bar (full-width, above title) -->
+	{#if showStatus && book.status}
+		<div class="status-bar-wrapper" bind:this={statusBarRef}>
+			<button
+				type="button"
+				class="status-bar w-full py-1 text-center text-white font-semibold text-[10px] uppercase tracking-wide flex items-center justify-center gap-1 shadow-sm transition-all {onQuickEdit && statuses.length > 0 ? 'hover:brightness-110 cursor-pointer' : 'cursor-default'}"
 				style="background-color: {book.status.color || '#6c757d'}"
+				onclick={handleStatusBarClick}
+				title={onQuickEdit && statuses.length > 0 ? 'Click to change status' : book.status.name}
 			>
 				{#if book.status.icon}
 					<DynamicIcon icon={book.status.icon} size={10} />
 				{/if}
 				{book.status.name}
-			</div>
-		{/if}
-	</div>
+			</button>
+		</div>
+	{/if}
 
 	<!-- Book Info -->
 	<div class="px-2 py-1.5">
@@ -338,3 +379,31 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Status Dropdown Portal (rendered outside card to avoid overflow clipping) -->
+{#if showStatusDropdown && showStatus && book.status}
+	<div
+		class="fixed z-[9999] shadow-lg rounded overflow-hidden"
+		style="top: {dropdownPosition.top}px; left: {dropdownPosition.left}px; width: {dropdownPosition.width}px; background-color: var(--bg-secondary); border: 1px solid var(--border-color);"
+	>
+		{#each statuses as status}
+			<button
+				type="button"
+				class="w-full px-2 py-1.5 text-left text-[10px] font-medium flex items-center gap-1.5 transition-colors"
+				style="background-color: {status.id === book.status?.id ? (status.color || '#6c757d') : 'var(--bg-secondary)'}; color: {status.id === book.status?.id ? 'white' : 'var(--text-primary)'}"
+				onmouseenter={(e) => { if (status.id !== book.status?.id) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-tertiary)'; }}
+				onmouseleave={(e) => { if (status.id !== book.status?.id) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-secondary)'; }}
+				onclick={(e) => { e.stopPropagation(); handleStatusSelect(status.id); }}
+			>
+				<span
+					class="w-2 h-2 rounded-full flex-shrink-0"
+					style="background-color: {status.color || '#6c757d'}"
+				></span>
+				{#if status.icon}
+					<DynamicIcon icon={status.icon} size={10} />
+				{/if}
+				{status.name}
+			</button>
+		{/each}
+	</div>
+{/if}

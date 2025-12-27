@@ -149,13 +149,25 @@ export const users = sqliteTable('users', {
 	username: text('username').notNull().unique(),
 	email: text('email').notNull().unique(),
 	password: text('password').notNull(),
-	role: text('role').default('user'), // admin, editor, user
+	role: text('role').default('member'), // admin, librarian, member, viewer, guest
 	firstName: text('firstName'),
 	lastName: text('lastName'),
+	// Account security
 	failedLoginAttempts: integer('failedLoginAttempts').default(0),
 	lockoutUntil: text('lockoutUntil'),
+	// Password reset
 	resetToken: text('resetToken'),
 	resetTokenExpires: text('resetTokenExpires'),
+	// Email verification
+	emailVerified: integer('emailVerified', { mode: 'boolean' }).default(false),
+	emailVerificationToken: text('emailVerificationToken'),
+	emailVerificationExpires: text('emailVerificationExpires'),
+	// Account approval
+	approvalStatus: text('approvalStatus').default('approved'), // pending, approved, rejected
+	approvedBy: integer('approvedBy'),
+	approvedAt: text('approvedAt'),
+	inviteCodeUsed: text('inviteCodeUsed'),
+	// Timestamps
 	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
 	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
 });
@@ -196,6 +208,19 @@ export const sessions = sqliteTable('Sessions', {
 	data: text('data'),
 	createdAt: text('createdAt').notNull().default('CURRENT_TIMESTAMP'),
 	updatedAt: text('updatedAt').notNull().default('CURRENT_TIMESTAMP')
+});
+
+export const inviteCodes = sqliteTable('invitecodes', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	code: text('code').notNull().unique(),
+	label: text('label'), // Description for admin reference
+	maxUses: integer('maxUses'), // null = unlimited
+	usedCount: integer('usedCount').default(0),
+	expiresAt: text('expiresAt'), // null = never expires
+	isActive: integer('isActive', { mode: 'boolean' }).default(true),
+	createdBy: integer('createdBy').references(() => users.id),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
 });
 
 export const magicShelves = sqliteTable('magicshelves', {

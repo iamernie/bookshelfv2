@@ -3,6 +3,8 @@
 	import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle } from 'lucide-svelte';
 	import { APP_CONFIG } from '$lib/config/app';
 
+	let { data } = $props();
+
 	let email = $state('');
 	let password = $state('');
 	let error = $state('');
@@ -194,6 +196,17 @@
 							Sign in
 						{/if}
 					</button>
+
+					{#if data.signupEnabled}
+						<div class="text-center">
+							<p class="text-sm" style="color: var(--text-muted);">
+								Don't have an account?
+								<a href="/signup" class="hover:underline" style="color: var(--accent-color);">
+									Sign up
+								</a>
+							</p>
+						</div>
+					{/if}
 				</form>
 			{:else}
 				<!-- Forgot Password Form -->

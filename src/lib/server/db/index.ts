@@ -692,7 +692,33 @@ function runMigrations() {
 		safeAddColumn('users', 'password', 'TEXT');
 		safeAddColumn('users', 'resetToken', 'TEXT');
 		safeAddColumn('users', 'resetTokenExpires', 'TEXT');
+		// Email verification columns
+		safeAddColumn('users', 'emailVerified', 'INTEGER DEFAULT 0');
+		safeAddColumn('users', 'emailVerificationToken', 'TEXT');
+		safeAddColumn('users', 'emailVerificationExpires', 'TEXT');
+
+		// Account approval columns
+		safeAddColumn('users', 'approvalStatus', "TEXT DEFAULT 'approved'");
+		safeAddColumn('users', 'approvedBy', 'INTEGER');
+		safeAddColumn('users', 'approvedAt', 'TEXT');
+		safeAddColumn('users', 'inviteCodeUsed', 'TEXT');
 	}
+
+	// ========== Invite Codes table ==========
+	safeCreateTable('invitecodes', `
+		CREATE TABLE invitecodes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			code TEXT NOT NULL UNIQUE,
+			label TEXT,
+			maxUses INTEGER,
+			usedCount INTEGER DEFAULT 0,
+			expiresAt TEXT,
+			isActive INTEGER DEFAULT 1,
+			createdBy INTEGER REFERENCES users(id),
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
 
 	// ========== User Preferences table ==========
 	safeCreateTable('user_preferences', `

@@ -282,11 +282,12 @@
 								href="/books/{item.book.id}"
 								class="card p-3 flex gap-3 hover:shadow-md transition-shadow group"
 							>
-								<div class="w-12 h-18 flex-shrink-0 rounded overflow-hidden" style="background-color: var(--bg-tertiary);">
+								<div class="w-12 flex-shrink-0 rounded overflow-hidden aspect-[2/3]" style="background-color: var(--bg-tertiary);">
 									<img
 										src={item.book.coverImageUrl || '/placeholder.png'}
 										alt={item.book.title}
 										class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+										onerror={(e) => { (e.currentTarget as HTMLImageElement).onerror = null; (e.currentTarget as HTMLImageElement).src = '/placeholder.png'; }}
 									/>
 								</div>
 								<div class="flex-1 min-w-0">
