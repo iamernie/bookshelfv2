@@ -20,6 +20,7 @@
 	} from 'lucide-svelte';
 	import type { Author } from '$lib/server/db/schema';
 	import { toasts } from '$lib/stores/toast';
+	import { formatDate, toInputDate } from '$lib/utils/date';
 
 	interface WikiSearchResult {
 		title: string;
@@ -79,8 +80,8 @@
 	// Form fields
 	let name = $state(author?.name || '');
 	let bio = $state(author?.bio || '');
-	let birthDate = $state(author?.birthDate || '');
-	let deathDate = $state(author?.deathDate || '');
+	let birthDate = $state(toInputDate(author?.birthDate));
+	let deathDate = $state(toInputDate(author?.deathDate));
 	let birthPlace = $state(author?.birthPlace || '');
 	let photoUrl = $state(author?.photoUrl || '');
 	let website = $state(author?.website || '');
@@ -211,15 +212,6 @@
 		}
 	}
 
-	function formatDate(dateStr: string | null): string {
-		if (!dateStr) return '';
-		try {
-			return new Date(dateStr).toLocaleDateString();
-		} catch {
-			return dateStr;
-		}
-	}
-
 	function formatRating(rating: number | null | undefined): string {
 		if (rating === null || rating === undefined) return 'N/A';
 		return rating.toFixed(1);
@@ -248,7 +240,7 @@
 							src={author.photoUrl}
 							alt={author.name}
 							class="author-photo"
-							onerror={(e) => { e.currentTarget.src = '/placeholder.png'; }}
+							onerror={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.png'; }}
 						/>
 					{:else}
 						<img src="/placeholder.png" alt={author.name} class="author-photo placeholder" />
@@ -344,7 +336,7 @@
 									src={book.coverImageUrl || '/placeholder.png'}
 									alt={book.title}
 									class="book-cover"
-									onerror={(e) => { e.currentTarget.src = '/placeholder.png'; }}
+									onerror={(e) => { (e.currentTarget as HTMLImageElement).src = '/placeholder.png'; }}
 								/>
 							</a>
 						{/each}

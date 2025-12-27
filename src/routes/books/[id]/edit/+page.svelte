@@ -19,9 +19,12 @@
 		Plus,
 		Minus,
 		ChevronRight,
-		Library
+		Library,
+		Database
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
+	import { toInputDate } from '$lib/utils/date';
+	import MetadataSearchModal from '$lib/components/book/MetadataSearchModal.svelte';
 
 	let { data } = $props();
 	const book = data.book;
@@ -41,9 +44,9 @@
 	let genreId = $state(book.genreId?.toString() || '');
 	let formatId = $state(book.formatId?.toString() || '');
 	let narratorId = $state(book.narratorId?.toString() || '');
-	let releaseDate = $state(book.releaseDate || '');
-	let startReadingDate = $state(book.startReadingDate || '');
-	let completedDate = $state(book.completedDate || '');
+	let releaseDate = $state(toInputDate(book.releaseDate));
+	let startReadingDate = $state(toInputDate(book.startReadingDate));
+	let completedDate = $state(toInputDate(book.completedDate));
 	let isbn10 = $state(book.isbn10 || '');
 	let isbn13 = $state(book.isbn13 || '');
 	let asin = $state(book.asin || '');
@@ -62,6 +65,9 @@
 	let lookupLoading = $state(false);
 	let lookupIsbn = $state('');
 	let coverPreviewUrl = $derived(coverImageUrl || originalCoverUrl || '');
+
+	// Metadata search modal
+	let showMetadataModal = $state(false);
 
 	// Ebook upload state
 	let uploadingEbook = $state(false);
@@ -232,6 +238,52 @@
 		if (data.isbn13 && !isbn13) isbn13 = data.isbn13;
 		if (data.isbn10 && !isbn10) isbn10 = data.isbn10;
 		if (data.coverUrl && !originalCoverUrl) originalCoverUrl = data.coverUrl;
+	}
+
+	function applyMetadataResult(result: any, selectedFields: string[]) {
+		for (const field of selectedFields) {
+			switch (field) {
+				case 'title':
+					if (result.title) title = result.title;
+					break;
+				case 'summary':
+					if (result.description) summary = result.description;
+					break;
+				case 'coverUrl':
+					if (result.coverUrl) originalCoverUrl = result.coverUrl;
+					break;
+				case 'isbn13':
+					if (result.isbn13) isbn13 = result.isbn13;
+					break;
+				case 'isbn10':
+					if (result.isbn10) isbn10 = result.isbn10;
+					break;
+				case 'publisher':
+					if (result.publisher) publisher = result.publisher;
+					break;
+				case 'publishYear':
+					if (result.publishYear) publishYear = result.publishYear.toString();
+					break;
+				case 'pageCount':
+					if (result.pageCount) pageCount = result.pageCount.toString();
+					break;
+				case 'language':
+					if (result.language) language = result.language;
+					break;
+				case 'rating':
+					if (result.rating) rating = result.rating.toString();
+					break;
+			}
+		}
+
+		// Store provider IDs
+		if (result.provider === 'goodreads' && result.providerId) {
+			goodreadsId = result.providerId;
+		} else if (result.provider === 'googlebooks' && result.providerId) {
+			googleBooksId = result.providerId;
+		}
+
+		toasts.success(`Applied ${selectedFields.length} fields from ${result.provider}`);
 	}
 
 	async function handleEbookUpload(file: File) {
@@ -482,6 +534,25 @@
 					<div class="space-y-3">
 						<!-- Basic Info Tab -->
 						{#if activeTab === 'basic'}
+							<!-- Quick Metadata Search -->
+							<div class="rounded-lg p-3" style="background: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, purple) 100%);">
+								<div class="flex items-center justify-between">
+									<div class="flex items-center gap-2">
+										<Database class="w-4 h-4 text-white" />
+										<span class="text-sm font-medium text-white">Quick fill from online databases</span>
+									</div>
+									<button
+										type="button"
+										onclick={() => showMetadataModal = true}
+										class="px-3 py-1.5 rounded-md text-sm font-medium flex items-center gap-1.5"
+										style="background-color: white; color: var(--accent);"
+									>
+										<Search class="w-3.5 h-3.5" />
+										Search Metadata
+									</button>
+								</div>
+							</div>
+
 							<!-- Title Section -->
 							<div class="rounded-lg p-4" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
 								<label for="title" class="block text-xs font-medium mb-1.5" style="color: var(--text-muted);">
@@ -835,48 +906,24 @@
 						<!-- Identifiers Tab -->
 						{#if activeTab === 'identifiers'}
 							<div class="space-y-3">
-								<!-- Book Lookup -->
+								<!-- Metadata Search -->
 								<div class="rounded-lg p-4" style="background: linear-gradient(135deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 70%, purple) 100%);">
 									<div class="flex items-center gap-2 mb-2">
-										<Search class="w-4 h-4 text-white" />
-										<h3 class="font-medium text-sm text-white">Auto-fill Book Data</h3>
+										<Database class="w-4 h-4 text-white" />
+										<h3 class="font-medium text-sm text-white">Metadata Lookup</h3>
 									</div>
-									<div class="flex gap-2">
-										<button
-											type="button"
-											onclick={autoSearch}
-											disabled={lookupLoading}
-											class="flex-1 py-2 rounded-md text-sm font-medium flex items-center justify-center gap-2"
-											style="background-color: white; color: var(--accent);"
-										>
-											{#if lookupLoading}
-												<Loader2 class="w-3.5 h-3.5 animate-spin" />
-											{:else}
-												<Search class="w-3.5 h-3.5" />
-											{/if}
-											Search Title
-										</button>
-										<input
-											type="text"
-											placeholder="ISBN..."
-											bind:value={lookupIsbn}
-											class="w-32 px-3 py-2 rounded-md text-sm"
-											style="background-color: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;"
-										/>
-										<button
-											type="button"
-											onclick={lookupByIsbn}
-											disabled={lookupLoading}
-											class="px-3 py-2 rounded-md text-sm font-medium"
-											style="background-color: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);"
-										>
-											{#if lookupLoading}
-												<Loader2 class="w-3.5 h-3.5 animate-spin" />
-											{:else}
-												Lookup
-											{/if}
-										</button>
-									</div>
+									<p class="text-xs text-white/80 mb-3">
+										Search Google Books, Open Library, Goodreads, and Hardcover for book information
+									</p>
+									<button
+										type="button"
+										onclick={() => showMetadataModal = true}
+										class="w-full py-2.5 rounded-md text-sm font-medium flex items-center justify-center gap-2"
+										style="background-color: white; color: var(--accent);"
+									>
+										<Search class="w-4 h-4" />
+										Search Metadata Providers
+									</button>
 								</div>
 
 								<!-- Identifier Fields -->
@@ -1153,3 +1200,13 @@
 		</div>
 	</div>
 </div>
+
+<!-- Metadata Search Modal -->
+<MetadataSearchModal
+	open={showMetadataModal}
+	initialTitle={title}
+	initialAuthor={selectedAuthors[0]?.name || ''}
+	initialIsbn={isbn13 || isbn10 || ''}
+	onClose={() => showMetadataModal = false}
+	onApply={applyMetadataResult}
+/>

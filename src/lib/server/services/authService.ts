@@ -205,3 +205,94 @@ export async function validateCredentials(email: string, password: string): Prom
 		isAdmin: role === 'admin'
 	};
 }
+
+// Password Reset Functions
+const RESET_TOKEN_EXPIRY_HOURS = 1;
+
+export function generateResetToken(): string {
+	return crypto.randomBytes(32).toString('hex');
+}
+
+export async function createPasswordResetToken(email: string): Promise<string | null> {
+	const user = await getUserByEmail(email);
+
+	if (!user) {
+		// Don't reveal whether user exists
+		return null;
+	}
+
+	const resetToken = generateResetToken();
+	const resetTokenExpires = new Date(
+		Date.now() + RESET_TOKEN_EXPIRY_HOURS * 60 * 60 * 1000
+	).toISOString();
+
+	await db
+		.update(users)
+		.set({
+			resetToken,
+			resetTokenExpires,
+			updatedAt: new Date().toISOString()
+		})
+		.where(eq(users.id, user.id));
+
+	return resetToken;
+}
+
+export async function validateResetToken(
+	token: string
+): Promise<{ valid: boolean; userId?: number; error?: string }> {
+	const result = await db
+		.select()
+		.from(users)
+		.where(eq(users.resetToken, token))
+		.limit(1);
+
+	const user = result[0];
+
+	if (!user) {
+		return { valid: false, error: 'Invalid or expired reset token' };
+	}
+
+	if (!user.resetTokenExpires) {
+		return { valid: false, error: 'Invalid or expired reset token' };
+	}
+
+	const expiresAt = new Date(user.resetTokenExpires);
+	if (expiresAt < new Date()) {
+		// Token expired, clear it
+		await db
+			.update(users)
+			.set({ resetToken: null, resetTokenExpires: null })
+			.where(eq(users.id, user.id));
+		return { valid: false, error: 'Reset token has expired' };
+	}
+
+	return { valid: true, userId: user.id };
+}
+
+export async function resetPassword(
+	token: string,
+	newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+	const validation = await validateResetToken(token);
+
+	if (!validation.valid || !validation.userId) {
+		return { success: false, error: validation.error || 'Invalid token' };
+	}
+
+	const hashedPassword = await hashPassword(newPassword);
+
+	await db
+		.update(users)
+		.set({
+			password: hashedPassword,
+			resetToken: null,
+			resetTokenExpires: null,
+			failedLoginAttempts: 0,
+			lockoutUntil: null,
+			updatedAt: new Date().toISOString()
+		})
+		.where(eq(users.id, validation.userId));
+
+	return { success: true };
+}

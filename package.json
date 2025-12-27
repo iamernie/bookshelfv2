@@ -43,6 +43,7 @@
     "epubjs": "^0.3.93",
     "jszip": "^3.10.1",
     "lucide-svelte": "^0.468.0",
+    "pdfjs-dist": "^5.4.449",
     "swagger-ui-dist": "^5.31.0",
     "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"

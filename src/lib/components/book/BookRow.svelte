@@ -72,18 +72,12 @@
 	<!-- Cover + Title Column -->
 	<div class="col col-title">
 		<div class="cover-thumb">
-			{#if book.coverImageUrl}
-				<img
-					src={book.coverImageUrl}
-					alt={book.title}
-					loading="lazy"
-					onerror={(e) => { (e.currentTarget as HTMLImageElement).onerror = null; (e.currentTarget as HTMLImageElement).src = '/placeholder.png'; }}
-				/>
-			{:else}
-				<div class="cover-placeholder">
-					<BookOpen class="w-4 h-4" />
-				</div>
-			{/if}
+			<img
+				src={book.coverImageUrl || '/placeholder.png'}
+				alt={book.title}
+				loading="lazy"
+				onerror={(e) => { (e.currentTarget as HTMLImageElement).onerror = null; (e.currentTarget as HTMLImageElement).src = '/placeholder.png'; }}
+			/>
 			{#if book.ebookPath}
 				<div class="ebook-indicator" title="Has ebook">
 					<FileText class="w-2 h-2" />

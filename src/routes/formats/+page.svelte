@@ -87,10 +87,14 @@
 		await loadFormats();
 	}
 
-	async function deleteFormat() {
+	async function deleteFormat(reassignTo: number | null) {
 		if (!selectedFormat) return;
 
-		const response = await fetch(`/api/formats/${selectedFormat.id}`, { method: 'DELETE' });
+		const response = await fetch(`/api/formats/${selectedFormat.id}`, {
+			method: 'DELETE',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ reassignTo })
+		});
 
 		if (!response.ok) {
 			const error = await response.json();
@@ -194,6 +198,7 @@
 	<FormatModal
 		format={selectedFormat}
 		books={formatBooks}
+		allFormats={formats}
 		mode={modalMode}
 		onClose={() => showModal = false}
 		onSave={saveFormat}

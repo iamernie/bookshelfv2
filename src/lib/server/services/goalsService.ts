@@ -4,6 +4,18 @@ import type { ReadingGoal, NewReadingGoal } from '$lib/server/db/schema';
 
 const STATUS_READ = 'READ';
 
+// Available icons for goals/challenges (lucide icon names)
+export const GOAL_ICONS = [
+	'book', 'book-open', 'library', 'bookmark', 'bookmarks',
+	'target', 'trophy', 'award', 'medal', 'star',
+	'layers', 'users', 'shapes', 'file-text', 'calendar-check',
+	'flame', 'zap', 'rocket', 'sparkles', 'crown',
+	'heart', 'thumbs-up', 'check-circle', 'flag', 'mountain',
+	'sunrise', 'moon', 'sun', 'cloud', 'compass',
+	'map', 'globe', 'graduation-cap', 'brain', 'lightbulb',
+	'music', 'headphones', 'mic', 'coffee', 'glasses'
+] as const;
+
 // Challenge type definitions
 export const CHALLENGE_TYPES = {
 	books: {
@@ -84,6 +96,7 @@ export interface ChallengeProgress {
 	progress: number;
 	remaining: number;
 	isComplete: boolean;
+	icon: string; // Custom icon or default from typeInfo
 }
 
 // Helper to get READ status ID
@@ -473,7 +486,8 @@ export async function getChallengesForYear(
 			target,
 			progress: Math.min(progress, 100),
 			remaining: Math.max(0, target - current),
-			isComplete: current >= target
+			isComplete: current >= target,
+			icon: challenge.icon || typeInfo.icon
 		});
 	}
 
@@ -542,8 +556,9 @@ export async function createChallenge(data: {
 	challengeType: ChallengeType;
 	target: number;
 	name?: string;
+	icon?: string;
 }): Promise<ReadingGoal> {
-	const { year, challengeType, target, name } = data;
+	const { year, challengeType, target, name, icon } = data;
 
 	// Check if challenge type already exists for this year
 	const existing = await db
@@ -570,6 +585,7 @@ export async function createChallenge(data: {
 		year,
 		challengeType,
 		name,
+		icon: icon || null,
 		isActive: true,
 		createdAt: now,
 		updatedAt: now

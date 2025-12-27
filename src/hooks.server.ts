@@ -2,9 +2,10 @@ import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { redirect, error } from '@sveltejs/kit';
 import { getSession, validateCredentials } from '$lib/server/services/authService';
 import { createLogger, logRequest, logError } from '$lib/server/services/loggerService';
+import { checkSetupNeeded } from '$lib/server/services/setupService';
 
 const log = createLogger('hooks');
-const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/docs', '/docs'];
+const PUBLIC_PATHS = ['/login', '/reset-password', '/api/auth/login', '/api/auth/forgot-password', '/api/auth/reset-password', '/api/docs', '/docs', '/setup', '/api/setup', '/health', '/widgets'];
 
 // Handle Basic Auth for OPDS routes
 async function handleOPDSAuth(event: Parameters<Handle>[0]['event']): Promise<boolean> {
@@ -69,6 +70,24 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Check if route requires authentication
 	const isPublicPath = PUBLIC_PATHS.some((path) => event.url.pathname.startsWith(path));
+	const isSetupPath = event.url.pathname.startsWith('/setup') || event.url.pathname.startsWith('/api/setup');
+
+	// Check if setup is needed (only for non-setup paths)
+	if (!isSetupPath) {
+		try {
+			const setupStatus = await checkSetupNeeded();
+			if (setupStatus.needsSetup) {
+				throw redirect(303, '/setup');
+			}
+		} catch (e) {
+			// If it's a redirect, rethrow it
+			if (e instanceof Response || (e && typeof e === 'object' && 'status' in e)) {
+				throw e;
+			}
+			// Otherwise log and continue (database might not be ready)
+			log.warn('Setup check failed:', e);
+		}
+	}
 
 	if (!event.locals.user && !isPublicPath) {
 		throw redirect(303, '/login');

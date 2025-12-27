@@ -4,6 +4,497 @@ This document details all completed features with their implementation specifics
 
 ---
 
+## AI Recommendations (Completed)
+
+OpenAI-powered book suggestions based on your reading history, plus rule-based recommendations.
+
+### AI-Powered Recommendations
+
+**Features:**
+- Integration with OpenAI API (GPT-3.5 Turbo, GPT-4, GPT-4 Turbo)
+- Personalized recommendations based on your library
+- Analyzes up to 50 books (genres, authors, read dates, ratings)
+- Shows reasoning for each recommendation
+- Checks if suggested books already exist in library
+- Add recommendations directly to wishlist
+- Google search lookup for unfamiliar books
+- Configurable API key and model selection
+
+**Settings:**
+- Enable/disable AI recommendations
+- API key management with secure storage
+- Model selection (gpt-3.5-turbo, gpt-4, gpt-4-turbo)
+- Connection test functionality
+
+### Rule-Based Recommendations
+
+**Types:**
+- **Series Continuation** - Next unread book in series you're reading
+- **Author Exploration** - Unread books by authors you've rated highly
+- **Genre Discovery** - Books in genres you read frequently
+
+### Files Created
+
+**Service (`src/lib/server/services/recommendationService.ts`):**
+- `getAISettings()` - Retrieve AI configuration
+- `saveAISettings()` - Store API key and model
+- `testAIConnection()` - Verify API key works
+- `getAIRecommendations()` - Get AI suggestions with library analysis
+- `getRuleBasedRecommendations()` - Get algorithmic suggestions
+- `addRecommendationToLibrary()` - Add suggestion as wishlist book
+
+**API Endpoints:**
+- `src/routes/api/recommendations/+server.ts` - GET rule-based recommendations
+- `src/routes/api/recommendations/ai/+server.ts` - GET AI recommendations, POST add to library
+- `src/routes/api/recommendations/ai/settings/+server.ts` - GET/PUT AI settings, POST test connection
+
+**UI:**
+- `src/routes/recommendations/+page.svelte` - Recommendations page with AI and rule-based sections
+- `src/routes/recommendations/+page.server.ts` - Page data loader
+
+### UI Features
+
+- Gradient AI section (purple/indigo) with sparkle icon
+- Refresh button to regenerate AI recommendations
+- "Powered by [model] • Based on X books" indicator
+- Per-recommendation action buttons: Add to Wishlist, Look Up
+- "In Library" badge for books already owned
+- Rule-based sections with series/author/genre icons
+- Book cards with covers, titles, authors, series info
+
+---
+
+## Public Widgets (Completed)
+
+Embeddable reading widgets for blogs and external websites, matching V1 functionality.
+
+### Widget Types
+
+| Type | Description | Options |
+|------|-------------|---------|
+| **Currently Reading** | Books you're actively reading | Limit (3, 5, 10) |
+| **Recent Reads** | Recently completed books with ratings | Limit (3, 5, 10) |
+| **Reading Stats** | Overview statistics (total, read, this year, avg rating) | - |
+| **Reading Goal** | Yearly goal progress with visual ring | - |
+
+### Security
+
+- Token-based authentication (32-character secure random token)
+- Enable/disable toggle for all widgets
+- Token regeneration with confirmation dialog
+- Public paths don't require login session
+
+### Embed Options
+
+- **Theme**: Light or Dark
+- **Size**: Customizable width and height
+- **Limit**: Number of books for list widgets
+- **Output**: iframe embed code or JSON API URL
+
+### Files Created
+
+**Service (`src/lib/server/services/widgetService.ts`):**
+- `getWidgetToken()` - Get or create widget token
+- `regenerateWidgetToken()` - Generate new token
+- `validateWidgetToken()` - Verify token validity
+- `areWidgetsEnabled()` - Check if widgets are enabled
+- `setWidgetsEnabled()` - Toggle widget access
+- `getCurrentlyReading()` - Get currently reading books
+- `getRecentReads()` - Get recently completed books
+- `getWidgetStats()` - Get library statistics
+- `getWidgetGoal()` - Get reading goal progress
+- `getWidgetData()` - Unified data fetcher by type
+
+**API Endpoints:**
+- `src/routes/widgets/api/[type]/+server.ts` - JSON data endpoint
+- `src/routes/widgets/embed/+server.ts` - HTML embed endpoint
+
+**Admin Page:**
+- `src/routes/admin/widgets/+page.svelte` - Widget management UI
+- `src/routes/admin/widgets/+page.server.ts` - Page data and form actions
+
+### Widget Embed Features
+
+- Self-contained HTML with inline CSS
+- SVG icons for visual appeal
+- Book covers with fallback placeholder
+- Star ratings display
+- Series and author information
+- Progress ring for goals (SVG with animation)
+- Responsive design within iframe
+- No external dependencies
+
+### API Response Format
+
+```typescript
+// JSON API response
+{
+  books: [{ title, author, coverUrl, series, bookNum, rating }],
+  stats: { totalBooks, booksRead, booksThisYear, avgRating, totalAuthors, completionPercent },
+  goal: { current, target, percent, remaining }
+}
+```
+
+### Embed Code Example
+
+```html
+<iframe
+  src="https://your-bookshelf.com/widgets/embed?type=currently-reading&token=xxx&theme=dark&limit=5"
+  width="400px"
+  height="300px"
+  style="border: none; border-radius: 8px;">
+</iframe>
+```
+
+---
+
+## Better Login Page & Password Reset (Completed)
+
+Redesigned login page with logo, improved UX, and full password reset flow.
+
+### Login Page Redesign
+
+**Features:**
+- Logo display with BookShelf branding
+- Icon-enhanced input fields (email, password)
+- Show/hide password toggle
+- Gradient background styling
+- Loading states with spinner
+- "Forgot password?" link
+
+### Password Reset Flow
+
+Complete password reset system with email support.
+
+**Features:**
+- Forgot password form on login page
+- Email-based reset with secure tokens
+- 1-hour token expiration
+- Reset password page with validation
+- Password confirmation field
+- Success confirmation with auto-redirect
+
+**Email Service:**
+- SMTP configuration via environment variables
+- HTML email templates with responsive design
+- Graceful degradation when SMTP not configured
+
+**Files Created:**
+- `src/lib/server/services/emailService.ts` - Nodemailer-based email service
+- `src/routes/api/auth/forgot-password/+server.ts` - Request password reset
+- `src/routes/api/auth/reset-password/+server.ts` - Validate token and reset password
+- `src/routes/reset-password/+page.svelte` - Password reset UI
+- `static/bookshelflogo.png` - Application logo (from V1)
+
+**Files Modified:**
+- `src/routes/login/+page.svelte` - Redesigned with logo and forgot password
+- `src/lib/server/services/authService.ts` - Added reset token functions
+- `src/hooks.server.ts` - Added reset-password to public paths
+
+**Environment Variables (optional):**
+```env
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=user
+SMTP_PASS=password
+SMTP_FROM=BookShelf <noreply@example.com>
+```
+
+---
+
+## Setup Wizard & System Diagnostics (Completed)
+
+Added first-run setup wizard for Docker deployments and comprehensive system diagnostics with repair tools.
+
+### Setup Wizard
+
+Multi-step wizard that appears on first run when no users exist in the database.
+
+**Features:**
+- Welcome screen with feature highlights
+- Automatic database connection verification
+- Admin account creation with validation
+- Completion screen with redirect to login
+- Automatic detection via SvelteKit hooks
+
+**Files Created:**
+- `src/lib/server/services/setupService.ts` - Setup logic (check status, create admin, initialize defaults)
+- `src/routes/setup/+page.svelte` - Multi-step wizard UI
+- `src/routes/setup/+page.server.ts` - Page data loader with redirect if setup complete
+- `src/routes/api/setup/+server.ts` - GET status check, POST complete setup
+
+**Files Modified:**
+- `src/hooks.server.ts` - Added setup check and redirect to `/setup` when needed
+
+### System Diagnostics
+
+Admin-only diagnostics page for monitoring system health and repairing database issues.
+
+**Features:**
+- System status overview (healthy/warning/error)
+- Database information (size, path, connection)
+- Storage usage (covers and ebooks counts/sizes)
+- Data summary counts (books, authors, series, genres, users, sessions)
+- Issue detection:
+  - Orphaned book-author relationships
+  - Orphaned book-series relationships
+  - Orphaned book-tag relationships
+  - Authors with no books
+  - Series with no books
+  - Tags not used by any books
+  - Books with invalid genre/status references
+  - Expired user sessions
+- One-click repair for each issue type
+- "Repair All" button for bulk fixes
+
+**Files Created:**
+- `src/lib/server/services/diagnosticService.ts` - Health checks and repair functions
+- `src/routes/admin/diagnostics/+page.svelte` - Diagnostics UI
+- `src/routes/admin/diagnostics/+page.server.ts` - Page data loader (admin only)
+- `src/routes/api/admin/diagnostics/+server.ts` - GET diagnostics data
+- `src/routes/api/admin/diagnostics/repair/+server.ts` - POST repair actions
+
+**Repair Functions:**
+- `repairOrphanedRelationships()` - Clean orphaned junction table entries
+- `cleanExpiredSessions()` - Remove expired user sessions
+- `fixInvalidBookReferences()` - Clear invalid foreign key references
+- `removeOrphanedAuthors()` - Delete authors with no books
+- `removeOrphanedSeries()` - Delete series with no books
+- `removeOrphanedTags()` - Delete unused tags
+- `runAllRepairs()` - Execute all repairs in sequence
+
+---
+
+## Amazon & ComicVine Metadata Providers (Completed)
+
+Added two new metadata providers for enhanced book discovery and comic book support.
+
+### Amazon Provider
+
+Scrapes book metadata from Amazon's website (no API key required).
+
+**Features:**
+- Search by title, author, or ISBN
+- Multi-region support (US, UK, DE, FR, IT, ES, CA, AU, JP, IN)
+- Extracts: title, subtitle, authors, description, cover image, ISBN-10/13, ASIN
+- Series information, page count, language, publisher
+- Amazon ratings and review counts
+- Rate-limited with caching to avoid blocks
+
+**Files Created:**
+- `src/lib/server/services/metadataProviders/amazonProvider.ts`
+
+### ComicVine Provider
+
+Fetches comic book metadata from ComicVine API (requires API key from https://comicvine.gamespot.com/api/).
+
+**Features:**
+- Search comic volumes and issues
+- Extracts: title, description, cover images, series info
+- Issue numbers, publication dates
+- Writer/author credits from person_credits
+- Publisher information
+
+**Files Created:**
+- `src/lib/server/services/metadataProviders/comicVineProvider.ts`
+
+### Integration
+
+Both providers are registered in the metadata provider registry and can be enabled in settings:
+- Amazon: Disabled by default (web scraping may be unreliable)
+- ComicVine: Disabled by default (requires API key)
+
+Updated files:
+- `src/lib/server/services/metadataProviders/types.ts` - Added 'amazon' | 'comicvine' to MetadataProvider type
+- `src/lib/server/services/metadataProviders/index.ts` - Registered new providers with configuration options
+
+---
+
+## Reading Activity Heatmap (Completed)
+
+GitHub-style reading activity visualization that tracks reading sessions and displays them as a yearly calendar heatmap.
+
+### Features
+
+- **Session Tracking**: Automatically tracks reading time when using any reader (EPUB, PDF, CBZ)
+- **Yearly Heatmap**: Visual calendar showing daily reading activity intensity
+- **Streak Tracking**: Displays current streak and longest streak
+- **Statistics**: Total reading time, session count, and activity metrics
+- **Year Navigation**: Browse heatmaps for previous years
+- **Responsive Design**: Works on mobile with horizontal scroll
+
+### Files Created
+
+**Database:**
+- `reading_sessions` table with bookId, userId, startedAt, endedAt, durationMinutes, progress tracking
+
+**Services:**
+- `src/lib/server/services/readingSessionService.ts` - Session CRUD, heatmap data aggregation, streak calculation
+
+**Components:**
+- `src/lib/components/stats/ReadingHeatmap.svelte` - Full heatmap visualization with tooltip and legend
+
+**API Endpoints:**
+- `src/routes/api/reading-sessions/+server.ts` - GET heatmap data, POST start session
+- `src/routes/api/reading-sessions/[id]/+server.ts` - PATCH end session, DELETE session
+
+### Integration
+
+All three reader components (EPUB, PDF, CBZ) now automatically:
+1. Start a reading session on mount
+2. End the session on destroy/navigation away
+3. Track progress percentage for each session
+
+The heatmap is displayed prominently on the Statistics page, showing reading activity at a glance.
+
+---
+
+## PDF & CBZ Reader Support (Completed)
+
+Extended the ebook reader to support PDF documents and CBZ comic archives, in addition to the existing EPUB support.
+
+### Features
+
+**PDF Reader:**
+- PDF.js integration for rendering PDF documents
+- Page navigation with prev/next buttons and keyboard shortcuts
+- Zoom controls (50% - 300%)
+- Page number input for direct navigation
+- Progress bar with percentage display
+- Responsive design with touch/swipe support
+- Theme options (light/dark/sepia background)
+- Automatic progress saving
+
+**CBZ/Comic Reader:**
+- JSZip-based CBZ extraction
+- Single and double-page viewing modes
+- Fit-to-width, fit-to-height, and fit-both options
+- Natural page ordering (handles page1, page2, page10 correctly)
+- Click-to-advance navigation (left third = back, right = forward)
+- Image preloading for smooth navigation
+- Progress tracking with page numbers
+
+### Files Created
+
+**Services:**
+- `src/lib/server/services/cbzService.ts` - CBZ extraction and caching
+
+**Components:**
+- `src/lib/components/reader/PdfReader.svelte` - Full PDF reader UI
+- `src/lib/components/reader/CbzReader.svelte` - Comic viewer UI
+
+**API Endpoints:**
+- `src/routes/api/cbz/[id]/metadata/+server.ts` - Get CBZ page count and metadata
+- `src/routes/api/cbz/[id]/page/[page]/+server.ts` - Serve individual comic pages
+
+**Static Assets:**
+- `static/pdfjs/pdf.worker.mjs` - PDF.js web worker
+
+### Usage
+
+Users can now read PDF and CBZ files directly in the browser by navigating to any book with an attached PDF or CBZ file and clicking "Read". The reader automatically detects the format and uses the appropriate viewer.
+
+---
+
+## Enhanced Metadata Providers (Completed)
+
+Multi-source book metadata lookup system inspired by BookLore, providing better cover images, descriptions, series info, and ratings.
+
+### Supported Providers
+
+| Provider | Type | Auth Required | Best For |
+|----------|------|---------------|----------|
+| Google Books | API | No | General metadata, official API |
+| Open Library | API | No | Classic/older books, free covers |
+| Goodreads | Scraping | No | Ratings, reviews, series info |
+| Hardcover | GraphQL | API Key | Modern catalog, moods, tags |
+
+### Features
+
+- **Unified Search API**: `/api/metadata/search` - Search all enabled providers at once
+- **Provider Configuration**: Enable/disable providers in Settings page
+- **Caching**: 15-minute cache for API responses to reduce load
+- **Rate Limiting**: 1-second delay for Goodreads to respect their limits
+- **Result Scoring**: Automatic ranking by match quality
+
+### Settings Integration
+
+New "Metadata Providers" section in Settings page with toggles for:
+- Google Books (enabled by default)
+- Open Library (enabled by default)
+- Goodreads (enabled by default)
+- Hardcover (requires API key from hardcover.app/account/api)
+
+### Files Created
+
+**Types (`src/lib/server/services/metadataProviders/types.ts`):**
+- `BookMetadataResult` - unified metadata result interface
+- `MetadataProviderInterface` - base interface for all providers
+- Helper functions: `normalizeIsbn`, `isValidIsbn`, `extractYear`, etc.
+
+**Providers:**
+- `googleBooksProvider.ts` - Google Books API integration
+- `openLibraryProvider.ts` - Open Library API integration
+- `goodreadsProvider.ts` - Goodreads page scraping with JSON extraction
+- `hardcoverProvider.ts` - Hardcover GraphQL API integration
+
+**Registry (`src/lib/server/services/metadataProviders/index.ts`):**
+- `MetadataProviderRegistry` - manages all providers
+- `searchAll()` - search all enabled providers in parallel
+- `findBest()` - find best match across all providers
+
+**API Endpoints:**
+- `src/routes/api/metadata/search/+server.ts` - Search endpoint (GET & POST)
+- `src/routes/api/metadata/providers/+server.ts` - List/configure providers
+- `src/routes/api/metadata/[provider]/[id]/+server.ts` - Fetch details by ID
+
+**Settings:**
+- Added metadata provider settings to `settingsService.ts`
+- Added `getMetadataProviderSettings()` helper function
+- Updated Settings page with Metadata Providers category
+
+### UI Integration
+
+**MetadataSearchModal (`src/lib/components/book/MetadataSearchModal.svelte`):**
+- Full-screen modal with search form and results preview
+- Provider tabs showing results from each source with counts
+- Result preview with cover image, title, authors, rating
+- Field selection checkboxes to choose which data to apply
+- Loads full details when a result is selected
+
+**Book Edit Page (`src/routes/books/[id]/edit/+page.svelte`):**
+- "Search Metadata Providers" button in Identifiers tab
+- Opens MetadataSearchModal pre-filled with book's title/author/ISBN
+- Applies selected fields and stores provider IDs (Goodreads/Google Books)
+
+**BookModal (`src/lib/components/book/BookModal.svelte`):**
+- Same metadata search integration for add/edit book modal
+- Available in both "add new book" and "edit book" modes
+
+### Bug Fixes
+
+- **Goodreads Title Parsing** - Fixed search results showing "Untitled" instead of actual book titles. Updated regex patterns in `parseSearchResults()` to handle nested HTML elements and strip tags from title text.
+- **Summary Display** - Summary now displays prominently on book view page in a styled card without requiring edit mode. Only shown when summary exists.
+
+### API Usage Examples
+
+```typescript
+// Search by title
+GET /api/metadata/search?q=The+Name+of+the+Wind
+
+// Search by ISBN
+GET /api/metadata/search?isbn=9780756404741
+
+// Search specific provider
+GET /api/metadata/search?q=mistborn&provider=goodreads
+
+// Get details from a specific result
+GET /api/metadata/goodreads/12345
+```
+
+---
+
 ## Reading Goals V1 Parity (Completed)
 
 Enhanced reading goals system with full challenge types support, matching V1 functionality.
@@ -29,6 +520,8 @@ Six challenge types to track diverse reading goals:
 - Add/edit/delete challenges with visual feedback
 - Challenge type selection with descriptions
 - Progress bars and completion badges
+- Custom icon selection for challenges (40 Lucide icons available)
+- Goals shortcut in top navbar
 
 ### Dashboard Integration
 
@@ -41,6 +534,7 @@ Six challenge types to track diverse reading goals:
 
 **Service (`src/lib/server/services/goalsService.ts`):**
 - Added `CHALLENGE_TYPES` constant with all challenge definitions
+- Added `GOAL_ICONS` constant with 40 available Lucide icon names
 - Added `ChallengeType` and `ChallengeProgress` types
 - Added progress calculation functions for each challenge type:
   - `calculateGenresProgress()` - distinct genres read
@@ -50,18 +544,25 @@ Six challenge types to track diverse reading goals:
   - `calculateMonthlyProgress()` - months meeting target
 - Added `getChallengesForYear()` - get all challenges with progress
 - Added `getGoalForDashboard()` - dashboard data formatter
-- Added `createChallenge()` - create new challenge with type
+- Added `createChallenge()` - create new challenge with type and icon
 
 **Server (`src/routes/stats/goals/+page.server.ts`):**
-- Added `challenges` and `challengeTypes` to page data
-- Added `createChallenge` form action
-- Updated `updateGoal` to handle all challenge target fields
+- Added `challenges`, `challengeTypes`, and `goalIcons` to page data
+- Added `createChallenge` form action with icon support
+- Updated `updateGoal` to handle all challenge target fields and icon
 
 **UI (`src/routes/stats/goals/+page.svelte`):**
 - Added challenge cards section with progress visualization
-- Added "Add Challenge" form with type selection
-- Added inline editing for challenge targets
-- Added challenge-specific icons (Book, Layers, Users, Shapes, FileText, CalendarCheck)
+- Added "Add Challenge" form with type and icon selection
+- Added inline editing for challenge targets and icons
+- Dynamic icon display using LucideIcon component
+
+**Components:**
+- Added `LucideIcon.svelte` - renders Lucide icons by name string
+- Added `IconPicker.svelte` - searchable icon selection dropdown
+
+**Layout (`src/lib/components/layout/TopNavbar.svelte`):**
+- Added Goals shortcut icon (Target) next to Stats and Favorites
 
 **Dashboard (`src/routes/+page.svelte` & `+page.server.ts`):**
 - Added `getGoalForDashboard()` call to load data

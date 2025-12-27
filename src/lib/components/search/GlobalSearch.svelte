@@ -165,13 +165,12 @@
 									onmouseenter={() => selectedIndex = flatIndex}
 								>
 									<div class="w-10 h-14 rounded overflow-hidden flex-shrink-0" style="background-color: var(--bg-tertiary);">
-										{#if book.coverImageUrl}
-											<img src={book.coverImageUrl} alt="" class="w-full h-full object-cover" />
-										{:else}
-											<div class="w-full h-full flex items-center justify-center">
-												<BookOpen class="w-5 h-5" style="color: var(--text-muted);" />
-											</div>
-										{/if}
+										<img
+											src={book.coverImageUrl || '/placeholder.png'}
+											alt=""
+											class="w-full h-full object-cover"
+											onerror={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+										/>
 									</div>
 									<div class="flex-1 min-w-0">
 										<div class="font-medium truncate" style="color: var(--text-primary);">{book.title}</div>

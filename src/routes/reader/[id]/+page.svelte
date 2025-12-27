@@ -12,6 +12,8 @@
 		X,
 		Loader2
 	} from 'lucide-svelte';
+	import PdfReader from '$lib/components/reader/PdfReader.svelte';
+	import CbzReader from '$lib/components/reader/CbzReader.svelte';
 
 	interface PageData {
 		book: {
@@ -27,11 +29,16 @@
 			location: string;
 			percentage: number;
 			chapter?: string;
+			currentPage?: number;
+			totalPages?: number;
 		} | null;
 		ebookUrl: string;
 	}
 
 	let { data }: { data: PageData } = $props();
+
+	// Determine which reader to use
+	const format = data.book.ebookFormat?.toLowerCase();
 
 	// State
 	let loading = $state(true);
@@ -45,6 +52,9 @@
 	let toc = $state<any[]>([]);
 	let chapterTitle = $state('Loading...');
 	let progressPercent = $state(0);
+
+	// Reading session tracking
+	let sessionId = $state<number | null>(null);
 
 	// Settings
 	let theme = $state<'light' | 'sepia' | 'dark'>('light');
@@ -89,8 +99,14 @@
 
 	// Initialize EPUB reader
 	async function initReader() {
-		if (data.book.ebookFormat !== 'epub') {
-			errorMessage = `${data.book.ebookFormat?.toUpperCase()} reader is not yet supported. Only EPUB files can be read.`;
+		// PDF and CBZ are handled by their own components
+		if (format === 'pdf' || format === 'cbz') {
+			loading = false;
+			return;
+		}
+
+		if (format !== 'epub') {
+			errorMessage = `${data.book.ebookFormat?.toUpperCase()} reader is not yet supported. Only EPUB, PDF, and CBZ files can be read.`;
 			loading = false;
 			return;
 		}
@@ -283,8 +299,47 @@
 		}
 	});
 
+	// Start a reading session
+	async function startReadingSession() {
+		// Only start session for EPUB (PDF/CBZ have their own tracking)
+		if (format !== 'epub') return;
+
+		try {
+			const res = await fetch('/api/reading-sessions', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					bookId: data.book.id,
+					startProgress: data.progress?.percentage || 0
+				})
+			});
+			const result = await res.json();
+			sessionId = result.sessionId;
+		} catch (err) {
+			console.error('Failed to start reading session:', err);
+		}
+	}
+
+	// End a reading session
+	async function endReadingSession() {
+		if (!sessionId) return;
+
+		try {
+			await fetch(`/api/reading-sessions/${sessionId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					endProgress: progressPercent
+				})
+			});
+		} catch (err) {
+			console.error('Failed to end reading session:', err);
+		}
+	}
+
 	onMount(() => {
 		initReader();
+		startReadingSession();
 
 		// Global keyboard handler
 		document.addEventListener('keyup', handleKeyboard);
@@ -295,6 +350,8 @@
 	});
 
 	onDestroy(() => {
+		// End reading session
+		endReadingSession();
 		// Save progress before leaving
 		if (currentLocation) {
 			saveProgress();
@@ -322,6 +379,23 @@
 	<title>Reading: {data.book.title}</title>
 </svelte:head>
 
+<!-- Use dedicated readers for PDF and CBZ -->
+{#if format === 'pdf'}
+	<PdfReader
+		bookId={data.book.id}
+		bookTitle={data.book.title}
+		ebookUrl={data.ebookUrl}
+		initialProgress={data.progress}
+	/>
+{:else if format === 'cbz'}
+	<CbzReader
+		bookId={data.book.id}
+		bookTitle={data.book.title}
+		ebookPath={data.book.ebookPath || ''}
+		initialProgress={data.progress}
+	/>
+{:else}
+<!-- EPUB Reader -->
 <div
 	class="reader-wrapper"
 	style="--reader-bg: {colors.bg}; --reader-text: {colors.text}; --reader-ui: {colors.ui}; --reader-border: {colors.border}"
@@ -486,6 +560,7 @@
 		<span class="progress-text">{progressPercent}%</span>
 	</div>
 </div>
+{/if}
 
 <style>
 	.reader-wrapper {

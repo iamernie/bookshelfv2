@@ -186,6 +186,21 @@
 			throw new Error(err.message);
 		}
 	}
+
+	async function handleQuickEdit(bookId: number, field: string, value: any) {
+		const res = await fetch(`/api/books/${bookId}`, {
+			method: 'PATCH',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ [field]: value })
+		});
+		if (res.ok) {
+			toasts.success(`Updated ${field === 'statusId' ? 'status' : field}`);
+			invalidateAll();
+		} else {
+			const err = await res.json();
+			toasts.error(err.message || `Failed to update ${field}`);
+		}
+	}
 </script>
 
 <svelte:head>
@@ -333,8 +348,11 @@
 								book={toBookCardData(book)}
 								selectable={selectMode}
 								selected={$selectedBooks.has(book.id)}
+								quickEdit={!selectMode}
+								statuses={data.options.statuses}
 								onSelect={(id) => selectedBooks.toggle(id)}
 								onClick={() => openBook(book)}
+								onQuickEdit={handleQuickEdit}
 							/>
 						{/each}
 					</div>

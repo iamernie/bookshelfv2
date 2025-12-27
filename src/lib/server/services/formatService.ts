@@ -120,7 +120,7 @@ export async function updateFormat(id: number, name: string): Promise<FormatType
 	return updated || null;
 }
 
-export async function deleteFormat(id: number): Promise<boolean> {
+export async function deleteFormat(id: number, reassignToId?: number): Promise<boolean> {
 	// Check if any books are using this format
 	const bookCount = await db
 		.select({ count: sql<number>`count(*)` })
@@ -128,7 +128,23 @@ export async function deleteFormat(id: number): Promise<boolean> {
 		.where(eq(books.formatId, id));
 
 	if (bookCount[0]?.count > 0) {
-		throw new Error(`Cannot delete format: ${bookCount[0].count} book(s) assigned. Please reassign or delete books first.`);
+		if (reassignToId === undefined) {
+			throw new Error(`Cannot delete format: ${bookCount[0].count} book(s) assigned. Please choose a format to reassign them to.`);
+		}
+
+		// Verify the target format exists (unless reassigning to null)
+		if (reassignToId !== null) {
+			const targetFormat = await db.select().from(formats).where(eq(formats.id, reassignToId)).limit(1);
+			if (!targetFormat[0]) {
+				throw new Error('Target format for reassignment not found');
+			}
+		}
+
+		// Reassign all books to the new format
+		await db
+			.update(books)
+			.set({ formatId: reassignToId, updatedAt: new Date().toISOString() })
+			.where(eq(books.formatId, id));
 	}
 
 	const result = await db.delete(formats).where(eq(formats.id, id));

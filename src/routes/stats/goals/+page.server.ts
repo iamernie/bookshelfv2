@@ -10,6 +10,7 @@ import {
 	getChallengesForYear,
 	createChallenge,
 	CHALLENGE_TYPES,
+	GOAL_ICONS,
 	type ChallengeType
 } from '$lib/server/services/goalsService';
 
@@ -35,6 +36,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		allGoals,
 		challenges,
 		challengeTypes: CHALLENGE_TYPES,
+		goalIcons: GOAL_ICONS,
 		currentYear
 	};
 };
@@ -46,13 +48,17 @@ export const actions: Actions = {
 		const target = parseInt(formData.get('target') as string, 10);
 		const challengeType = (formData.get('challengeType') as ChallengeType) || 'books';
 		const name = formData.get('name') as string;
+		const icon = formData.get('icon') as string;
 
 		if (isNaN(id) || isNaN(target) || target < 1) {
 			return fail(400, { error: 'Invalid input' });
 		}
 
 		// Build update data based on challenge type
-		const updateData: Record<string, unknown> = { name: name || null };
+		const updateData: Record<string, unknown> = {
+			name: name || null,
+			icon: icon || null
+		};
 		switch (challengeType) {
 			case 'books':
 				updateData.targetBooks = target;
@@ -105,6 +111,7 @@ export const actions: Actions = {
 		const challengeType = formData.get('challengeType') as ChallengeType;
 		const target = parseInt(formData.get('target') as string, 10);
 		const name = formData.get('name') as string;
+		const icon = formData.get('icon') as string;
 
 		if (isNaN(year) || !challengeType || isNaN(target) || target < 1) {
 			return fail(400, { error: 'Invalid input' });
@@ -119,7 +126,8 @@ export const actions: Actions = {
 				year,
 				challengeType,
 				target,
-				name: name || undefined
+				name: name || undefined,
+				icon: icon || undefined
 			});
 			return { success: true };
 		} catch (error) {

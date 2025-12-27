@@ -143,7 +143,7 @@
 	<div class="flex items-center justify-between mb-6">
 		<div class="flex items-center gap-3">
 			<div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: var(--bg-tertiary);">
-				<Terminal class="w-5 h-5" style="color: var(--accent-primary);" />
+				<Terminal class="w-5 h-5" style="color: var(--accent);" />
 			</div>
 			<div>
 				<h1 class="text-2xl font-bold" style="color: var(--text-primary);">Console</h1>
@@ -155,7 +155,7 @@
 			<button
 				onclick={toggleAutoRefresh}
 				class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors"
-				style="background: var(--bg-tertiary); color: {autoRefresh ? 'var(--accent-primary)' : 'var(--text-muted)'};"
+				style="background: var(--bg-tertiary); color: {autoRefresh ? 'var(--accent)' : 'var(--text-muted)'};"
 			>
 				{#if autoRefresh}
 					<Pause class="w-4 h-4" />
@@ -232,7 +232,7 @@
 			<button
 				onclick={() => { selectedLevel = ''; selectedContext = ''; }}
 				class="text-sm px-2 py-1 rounded"
-				style="color: var(--accent-primary);"
+				style="color: var(--accent);"
 			>
 				Clear filters
 			</button>

@@ -15,6 +15,7 @@
 		Library
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
+	import { formatDate, toInputDate } from '$lib/utils/date';
 
 	interface WikiSearchResult {
 		title: string;
@@ -41,8 +42,8 @@
 	// Form fields
 	let name = $state(author.name || '');
 	let bio = $state(author.bio || '');
-	let birthDate = $state(author.birthDate || '');
-	let deathDate = $state(author.deathDate || '');
+	let birthDate = $state(toInputDate(author.birthDate));
+	let deathDate = $state(toInputDate(author.deathDate));
 	let birthPlace = $state(author.birthPlace || '');
 	let photoUrl = $state(author.photoUrl || '');
 	let website = $state(author.website || '');
@@ -166,15 +167,6 @@
 			}
 		} finally {
 			importing = false;
-		}
-	}
-
-	function formatDate(dateStr: string | null): string {
-		if (!dateStr) return '';
-		try {
-			return new Date(dateStr).toLocaleDateString();
-		} catch {
-			return dateStr;
 		}
 	}
 </script>
@@ -659,18 +651,14 @@
 											class="flex items-center gap-2 px-2 py-1 rounded text-sm transition-colors hover:opacity-80"
 											style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
 										>
-											{#if book.coverImageUrl}
 												<img
-													src={book.coverImageUrl}
-													alt=""
-													class="w-6 h-9 object-cover rounded"
-													onerror={(e) => {
-														const img = e.currentTarget as HTMLImageElement;
-														img.onerror = null;
-														img.style.display = 'none';
-													}}
-												/>
-											{/if}
+												src={book.coverImageUrl || '/placeholder.png'}
+												alt=""
+												class="w-6 h-9 object-cover rounded"
+												onerror={(e) => {
+													(e.currentTarget as HTMLImageElement).src = '/placeholder.png';
+												}}
+											/>
 											{book.title}
 										</a>
 									{/each}

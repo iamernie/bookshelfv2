@@ -151,8 +151,8 @@
 			icon: data.shelf.icon || 'bookmark',
 			iconColor: data.shelf.iconColor || '#6c757d',
 			filterJson: data.shelf.filterJson as FilterConfig,
-			sortField: data.shelf.sortField,
-			sortOrder: data.shelf.sortOrder,
+			sortField: data.shelf.sortField || 'title',
+			sortOrder: data.shelf.sortOrder || 'asc',
 			isPublic: Boolean(data.shelf.isPublic)
 		}}
 		statuses={data.statuses}

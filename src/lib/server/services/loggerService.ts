@@ -35,9 +35,9 @@ class MemoryTransport extends winston.transports.Stream {
 	log(info: winston.Logform.TransformableInfo, callback: () => void) {
 		const entry: LogEntry = {
 			id: `log_${++logIdCounter}_${Date.now()}`,
-			timestamp: info.timestamp || new Date().toISOString(),
-			level: info.level,
-			message: info.message,
+			timestamp: (info.timestamp as string) || new Date().toISOString(),
+			level: info.level as string,
+			message: info.message as string,
 			context: info.context as string | undefined,
 			meta: { ...info }
 		};

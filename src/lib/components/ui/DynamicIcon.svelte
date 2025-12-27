@@ -9,10 +9,12 @@
 	let {
 		icon,
 		size = 16,
+		color,
 		class: className = ''
 	}: {
 		icon: string | null | undefined;
 		size?: number;
+		color?: string;
 		class?: string;
 	} = $props();
 
@@ -22,5 +24,5 @@
 
 <i
 	class="{iconClass} {className}"
-	style="font-size: {size}px; width: {size}px; height: {size}px; display: inline-flex; align-items: center; justify-content: center;"
+	style="font-size: {size}px; width: {size}px; height: {size}px; display: inline-flex; align-items: center; justify-content: center;{color ? ` color: ${color};` : ''}"
 ></i>

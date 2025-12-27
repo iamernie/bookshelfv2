@@ -16,6 +16,8 @@
 		Target,
 		TrendingUp
 	} from 'lucide-svelte';
+	import { formatDate } from '$lib/utils/date';
+	import ReadingHeatmap from '$lib/components/stats/ReadingHeatmap.svelte';
 
 	let { data } = $props();
 	const stats = data.stats;
@@ -140,6 +142,21 @@
 				</div>
 			</div>
 		</a>
+	</div>
+
+	<!-- Reading Activity Heatmap -->
+	<div class="mb-6">
+		<div class="chart-card">
+			<div class="chart-header">
+				<div class="flex items-center gap-2">
+					<Calendar class="w-5 h-5" style="color: var(--accent);" />
+					<h2 class="font-semibold" style="color: var(--text-primary);">Reading Activity</h2>
+				</div>
+			</div>
+			<div class="chart-body">
+				<ReadingHeatmap initialYear={stats.currentYear} />
+			</div>
+		</div>
 	</div>
 
 	<!-- Charts Row 1 -->
@@ -374,18 +391,15 @@
 								<div class="flex gap-3 overflow-x-auto pb-2">
 									{#each month.books as book}
 										<a href="/books/{book.id}" class="flex-shrink-0 group">
-											<div class="w-16 h-24 rounded overflow-hidden shadow-sm group-hover:shadow-md transition-shadow">
-												{#if book.coverImageUrl}
-													<img
-														src={book.coverImageUrl}
-														alt={book.title}
-														class="w-full h-full object-cover"
-													/>
-												{:else}
-													<div class="w-full h-full flex items-center justify-center" style="background-color: var(--bg-tertiary);">
-														<BookOpen class="w-6 h-6" style="color: var(--text-muted);" />
-													</div>
-												{/if}
+											<div class="w-16 h-24 rounded overflow-hidden shadow-sm group-hover:shadow-md transition-shadow" style="background-color: var(--bg-tertiary);">
+												<img
+													src={book.coverImageUrl || '/placeholder.png'}
+													alt={book.title}
+													class="w-full h-full object-cover"
+													onerror={(e) => {
+														(e.target as HTMLImageElement).src = '/placeholder.png';
+													}}
+												/>
 											</div>
 											<div class="mt-1 w-16">
 												<div class="text-xs truncate" style="color: var(--text-primary);" title={book.title}>
@@ -421,17 +435,15 @@
 			<a href="/books/{stats.latestReadBook.id}" class="highlight-card hover:shadow-lg transition-shadow">
 				<div class="text-xs uppercase tracking-wide mb-3" style="color: var(--text-muted);">Latest Read</div>
 				<div class="flex gap-3">
-					{#if stats.latestReadBook.coverImageUrl}
-						<img
-							src={stats.latestReadBook.coverImageUrl}
-							alt={stats.latestReadBook.title}
-							class="w-12 h-16 object-cover rounded"
-						/>
-					{:else}
-						<div class="w-12 h-16 rounded flex items-center justify-center" style="background-color: var(--bg-tertiary);">
-							<BookOpen class="w-6 h-6" style="color: var(--text-muted);" />
-						</div>
-					{/if}
+					<img
+						src={stats.latestReadBook.coverImageUrl || '/placeholder.png'}
+						alt={stats.latestReadBook.title}
+						class="w-12 h-16 object-cover rounded"
+						style="background-color: var(--bg-tertiary);"
+						onerror={(e) => {
+							(e.target as HTMLImageElement).src = '/placeholder.png';
+						}}
+					/>
 					<div class="flex-1 min-w-0">
 						<div class="font-medium truncate" style="color: var(--text-primary);">
 							{stats.latestReadBook.title}
@@ -441,7 +453,7 @@
 						{/if}
 						{#if stats.latestReadBook.completedDate}
 							<div class="text-xs mt-1" style="color: var(--text-muted);">
-								{new Date(stats.latestReadBook.completedDate).toLocaleDateString()}
+								{formatDate(stats.latestReadBook.completedDate)}
 							</div>
 						{/if}
 					</div>

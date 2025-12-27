@@ -106,7 +106,8 @@ export async function startWatcher(
 		}
 	});
 
-	watcher.on('error', (error: Error) => {
+	watcher.on('error', (err: unknown) => {
+		const error = err instanceof Error ? err : new Error(String(err));
 		log.error(`Watcher error: ${error.message}`, { userId, folderPath });
 	});
 

@@ -193,13 +193,12 @@
 					<div class="books-list">
 						{#each books as book}
 							<a href="/books/{book.id}" class="book-item">
-								{#if book.coverImageUrl}
-									<img src={book.coverImageUrl} alt={book.title} class="book-cover" />
-								{:else}
-									<div class="book-cover-placeholder">
-										<BookOpen class="w-4 h-4" />
-									</div>
-								{/if}
+								<img
+									src={book.coverImageUrl || '/placeholder.png'}
+									alt={book.title}
+									class="book-cover"
+									onerror={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+								/>
 								<div class="book-info">
 									<span class="book-num">#{book.bookNum || '?'}</span>
 									<span class="book-title">{book.title}</span>

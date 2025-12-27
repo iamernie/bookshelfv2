@@ -182,7 +182,7 @@ export interface AdvancedSearchBook {
 	releaseDate: string | null;
 	authors: { id: number; name: string }[];
 	series: { id: number; title: string; bookNum: number | null }[];
-	status: { id: number; name: string; color: string | null } | null;
+	status: { id: number; name: string; color: string | null; icon: string | null } | null;
 	genre: { id: number; name: string } | null;
 	format: { id: number; name: string } | null;
 	narrator: { id: number; name: string } | null;
@@ -452,7 +452,7 @@ export async function advancedSearch(filters: AdvancedSearchFilters): Promise<Ad
 				authors: authorData,
 				series: seriesData,
 				tags: tagData,
-				status: statusData[0] ? { id: statusData[0].id, name: statusData[0].name, color: statusData[0].color } : null,
+				status: statusData[0] ? { id: statusData[0].id, name: statusData[0].name, color: statusData[0].color, icon: statusData[0].icon } : null,
 				genre: genreData[0] ? { id: genreData[0].id, name: genreData[0].name } : null,
 				format: formatData[0] ? { id: formatData[0].id, name: formatData[0].name } : null,
 				narrator: narratorData[0] ? { id: narratorData[0].id, name: narratorData[0].name } : null

@@ -542,7 +542,9 @@
 
 <!-- Bulk Action Bar -->
 <BulkActionBar
+	totalCount={data.books.length}
 	onSelectAll={handleSelectAll}
+	onClearSelection={() => selectedBooks.clear()}
 	onAddTags={() => showBulkTagModal = true}
 	onChangeStatus={() => showBulkStatusModal = true}
 	onDelete={() => showBulkDeleteModal = true}

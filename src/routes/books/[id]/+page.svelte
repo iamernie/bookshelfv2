@@ -16,6 +16,7 @@
 		Check
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
+	import { formatDate } from '$lib/utils/date';
 
 	let { data } = $props();
 
@@ -24,12 +25,15 @@
 	// Inline editing state
 	let editingSummary = $state(false);
 	let editingNotes = $state(false);
+	let editingSeriesNotes = $state<number | null>(null); // series ID being edited
 	let savingSummary = $state(false);
 	let savingNotes = $state(false);
+	let savingSeriesNotes = $state(false);
 
 	// Local editable copies
 	let editSummaryValue = $state('');
 	let editNotesValue = $state('');
+	let editSeriesNotesValue = $state('');
 
 	// Initialize edit values when editing starts
 	function startEditSummary() {
@@ -40,6 +44,11 @@
 	function startEditNotes() {
 		editNotesValue = data.book.comments || '';
 		editingNotes = true;
+	}
+
+	function startEditSeriesNotes(seriesId: number, currentNotes: string | null) {
+		editSeriesNotesValue = currentNotes || '';
+		editingSeriesNotes = seriesId;
 	}
 
 	async function saveSummary() {
@@ -92,6 +101,32 @@
 		editingNotes = false;
 	}
 
+	async function saveSeriesNotes() {
+		if (editingSeriesNotes === null) return;
+		savingSeriesNotes = true;
+		try {
+			const res = await fetch(`/api/series/${editingSeriesNotes}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ comments: editSeriesNotesValue })
+			});
+			if (res.ok) {
+				toasts.success('Series notes saved');
+				editingSeriesNotes = null;
+				invalidateAll();
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to save series notes');
+			}
+		} finally {
+			savingSeriesNotes = false;
+		}
+	}
+
+	function cancelSeriesNotesEdit() {
+		editingSeriesNotes = null;
+	}
+
 	async function handleDelete() {
 		const res = await fetch(`/api/books/${data.book.id}`, {
 			method: 'DELETE'
@@ -105,18 +140,6 @@
 		}
 	}
 
-	function formatDate(dateStr: string | null): string {
-		if (!dateStr) return '';
-		try {
-			return new Date(dateStr).toLocaleDateString('en-US', {
-				year: 'numeric',
-				month: 'long',
-				day: 'numeric'
-			});
-		} catch {
-			return dateStr;
-		}
-	}
 
 	function formatSeriesNumber(s: { bookNum: number | null; bookNumEnd: number | null }): string {
 		if (!s.bookNum) return '';
@@ -289,6 +312,68 @@
 							{/each}
 						</div>
 					</div>
+
+					<!-- Series Notes (Inline Editable) -->
+					{#each data.book.series as s}
+						<div class="mb-4 pl-7">
+							<div class="flex items-center justify-between mb-1">
+								<span class="text-sm font-medium" style="color: var(--text-muted);">
+									{s.title} Notes
+								</span>
+								{#if editingSeriesNotes !== s.id}
+									<button
+										type="button"
+										class="inline-edit-btn"
+										onclick={() => startEditSeriesNotes(s.id, s.comments)}
+										title="Edit series notes"
+									>
+										<Pencil class="w-3.5 h-3.5" />
+									</button>
+								{/if}
+							</div>
+							{#if editingSeriesNotes === s.id}
+								<div class="inline-edit-container">
+									<textarea
+										class="inline-edit-textarea"
+										bind:value={editSeriesNotesValue}
+										placeholder="Add notes about this series..."
+										rows="3"
+									></textarea>
+									<div class="inline-edit-actions">
+										<button
+											type="button"
+											class="inline-save-btn"
+											onclick={saveSeriesNotes}
+											disabled={savingSeriesNotes}
+										>
+											<Check class="w-4 h-4" />
+											{savingSeriesNotes ? 'Saving...' : 'Save'}
+										</button>
+										<button
+											type="button"
+											class="inline-cancel-btn"
+											onclick={cancelSeriesNotesEdit}
+											disabled={savingSeriesNotes}
+										>
+											Cancel
+										</button>
+									</div>
+								</div>
+							{:else}
+								<button
+									type="button"
+									class="inline-edit-content text-sm"
+									onclick={() => startEditSeriesNotes(s.id, s.comments)}
+								>
+									{#if s.comments}
+										<p class="whitespace-pre-wrap" style="color: var(--text-secondary);">{s.comments}</p>
+									{:else}
+										<p class="text-placeholder">Click to add series notes...</p>
+									{/if}
+								</button>
+							{/if}
+						</div>
+					{/each}
 				{/if}
 
 				<!-- Genre & Format Pills -->
@@ -336,63 +421,55 @@
 					</div>
 				{/if}
 
-				<!-- Summary (Inline Editable) -->
-				<div class="mb-6">
-					<div class="flex items-center justify-between mb-2">
-						<h2 class="text-lg font-semibold" style="color: var(--text-primary);">Summary</h2>
-						{#if !editingSummary}
-							<button
-								type="button"
-								class="inline-edit-btn"
-								onclick={startEditSummary}
-								title="Edit summary"
-							>
-								<Pencil class="w-4 h-4" />
-							</button>
+				<!-- Summary Section -->
+				{#if data.book.summary || editingSummary}
+					<div class="card p-6 mb-6">
+						<div class="flex items-center justify-between mb-3">
+							<h2 class="text-lg font-semibold" style="color: var(--text-primary);">Summary</h2>
+							{#if !editingSummary}
+								<button
+									type="button"
+									class="inline-edit-btn"
+									onclick={startEditSummary}
+									title="Edit summary"
+								>
+									<Pencil class="w-4 h-4" />
+								</button>
+							{/if}
+						</div>
+						{#if editingSummary}
+							<div class="inline-edit-container">
+								<textarea
+									class="inline-edit-textarea"
+									bind:value={editSummaryValue}
+									placeholder="Add a summary..."
+									rows="6"
+								></textarea>
+								<div class="inline-edit-actions">
+									<button
+										type="button"
+										class="inline-save-btn"
+										onclick={saveSummary}
+										disabled={savingSummary}
+									>
+										<Check class="w-4 h-4" />
+										{savingSummary ? 'Saving...' : 'Save'}
+									</button>
+									<button
+										type="button"
+										class="inline-cancel-btn"
+										onclick={cancelSummaryEdit}
+										disabled={savingSummary}
+									>
+										Cancel
+									</button>
+								</div>
+							</div>
+						{:else}
+							<p class="whitespace-pre-wrap leading-relaxed" style="color: var(--text-secondary);">{data.book.summary}</p>
 						{/if}
 					</div>
-					{#if editingSummary}
-						<div class="inline-edit-container">
-							<textarea
-								class="inline-edit-textarea"
-								bind:value={editSummaryValue}
-								placeholder="Add a summary..."
-								rows="6"
-							></textarea>
-							<div class="inline-edit-actions">
-								<button
-									type="button"
-									class="inline-save-btn"
-									onclick={saveSummary}
-									disabled={savingSummary}
-								>
-									<Check class="w-4 h-4" />
-									{savingSummary ? 'Saving...' : 'Save'}
-								</button>
-								<button
-									type="button"
-									class="inline-cancel-btn"
-									onclick={cancelSummaryEdit}
-									disabled={savingSummary}
-								>
-									Cancel
-								</button>
-							</div>
-						</div>
-					{:else}
-						<button
-							type="button"
-							class="inline-edit-content"
-							onclick={startEditSummary}
-						>
-							{#if data.book.summary}
-								<p class="whitespace-pre-wrap" style="color: var(--text-secondary);">{data.book.summary}</p>
-							{:else}
-								<p class="text-placeholder">Click to add a summary...</p>
-							{/if}
-						</button>
-					{/if}
-				</div>
+				{/if}
 
 				<!-- Metadata Grid -->
 				<div class="card p-6">

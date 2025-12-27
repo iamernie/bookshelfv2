@@ -2,12 +2,37 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import BookCard from '$lib/components/book/BookCard.svelte';
+	import BookRow from '$lib/components/book/BookRow.svelte';
+	import BookListHeader from '$lib/components/book/BookListHeader.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import EbookUpload from '$lib/components/book/EbookUpload.svelte';
 	import { Library, BookOpen, Search, Plus, Check, Grid, List, Upload, ChevronLeft, ChevronRight } from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
+	import type { BookCardData } from '$lib/types';
 
 	let { data } = $props();
+
+	// Convert library book to BookCardData for row/card components
+	function toBookCardData(book: typeof data.books[0]): BookCardData {
+		return {
+			id: book.id,
+			title: book.title,
+			coverImageUrl: book.coverImageUrl,
+			rating: book.rating,
+			authorName: book.authors[0] || null,
+			seriesName: null,
+			bookNum: null,
+			ebookPath: null,
+			status: null,
+			genre: book.genreId && book.genreName ? { id: book.genreId, name: book.genreName } : null,
+			format: null,
+			tags: []
+		};
+	}
+
+	function handleRowClick(book: BookCardData) {
+		goto(`/books/${book.id}`);
+	}
 
 	let searchQuery = $state(data.filters.search);
 	let viewMode = $state<'grid' | 'list'>('grid');
@@ -68,9 +93,15 @@
 			params.set('order', currentOrder === 'desc' ? 'asc' : 'desc');
 		} else {
 			params.set('sort', field);
-			params.set('order', 'desc');
+			params.set('order', field === 'title' ? 'asc' : 'desc');
 		}
 		goto(`?${params.toString()}`);
+	}
+
+	// Handle column header sort click (for list view)
+	type SortField = 'title' | 'series' | 'status' | 'format' | 'rating' | 'genre' | 'createdAt' | 'completedDate';
+	function handleHeaderSort(field: SortField) {
+		setSort(field);
 	}
 
 	async function addToLibrary(bookId: number) {
@@ -301,7 +332,7 @@
 			{/if}
 		</p>
 
-		<!-- Books Grid -->
+		<!-- Books Grid/List -->
 		{#if data.books.length === 0}
 			<div class="text-center py-12">
 				<Library class="w-16 h-16 mx-auto mb-4" style="color: var(--text-muted);" />
@@ -326,23 +357,12 @@
 					</button>
 				{/if}
 			</div>
-		{:else}
+		{:else if viewMode === 'grid'}
 			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
 				{#each data.books as book}
 					<div class="relative group">
 						<BookCard
-							book={{
-								id: book.id,
-								title: book.title,
-								coverImageUrl: book.coverImageUrl,
-								rating: book.rating,
-								authorName: book.authors[0] || null,
-								seriesName: null,
-								bookNum: null,
-								ebookPath: null,
-								status: null,
-								tags: []
-							}}
+							book={toBookCardData(book)}
 							onClick={() => goto(`/books/${book.id}`)}
 						/>
 
@@ -380,6 +400,61 @@
 						{/if}
 					</div>
 				{/each}
+			</div>
+		{:else}
+			<!-- List View -->
+			<div class="card overflow-hidden">
+				<BookListHeader
+					showSeries={false}
+					showStatus={false}
+					showTags={false}
+					sortField={data.filters.sort as SortField}
+					sortOrder={data.filters.order as 'asc' | 'desc'}
+					onSort={handleHeaderSort}
+				/>
+				<div class="divide-y" style="border-color: var(--border-color);">
+					{#each data.books as book}
+						<div class="relative">
+							<BookRow
+								book={toBookCardData(book)}
+								showSeries={false}
+								showStatus={false}
+								showTags={false}
+								onClick={handleRowClick}
+							/>
+							<!-- Library action buttons for list view -->
+							<div class="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+								{#if book.libraryType === 'public'}
+									<span class="px-2 py-0.5 rounded text-[10px] font-medium text-white" style="background-color: rgba(59, 130, 246, 0.9);">
+										Public
+									</span>
+								{/if}
+								{#if book.inUserLibrary}
+									<button
+										type="button"
+										class="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-white transition-colors"
+										style="background-color: #22c55e;"
+										onclick={(e) => { e.stopPropagation(); removeFromLibrary(book.id); }}
+									>
+										<Check class="w-3 h-3" />
+										In Library
+									</button>
+								{:else}
+									<button
+										type="button"
+										class="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-white transition-colors"
+										style="background-color: var(--accent);"
+										disabled={addingBookId === book.id}
+										onclick={(e) => { e.stopPropagation(); addToLibrary(book.id); }}
+									>
+										<Plus class="w-3 h-3" />
+										Add
+									</button>
+								{/if}
+							</div>
+						</div>
+					{/each}
+				</div>
 			</div>
 		{/if}
 

@@ -24,6 +24,8 @@
 	} from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 	import type { ChallengeProgress } from '$lib/server/services/goalsService';
+	import IconPicker from '$lib/components/ui/IconPicker.svelte';
+	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
 
 	let { data } = $props();
 
@@ -31,6 +33,7 @@
 	const allGoals = data.allGoals;
 	const challenges = data.challenges as ChallengeProgress[];
 	const challengeTypes = data.challengeTypes;
+	const goalIcons = data.goalIcons;
 	const currentYear = data.currentYear;
 
 	// UI state
@@ -41,10 +44,12 @@
 	let newGoalYear = $state(currentYear + 1);
 	let newGoalTarget = $state(12);
 	let editTarget = $state(12);
+	let editIcon = $state('');
 	let newChallengeType = $state<string>('genres');
 	let newChallengeTarget = $state(6);
+	let newChallengeIcon = $state('');
 
-	// Get icon component for challenge type
+	// Get icon component for challenge type (fallback for when LucideIcon can't be used)
 	function getChallengeIcon(iconName: string) {
 		const icons: Record<string, typeof Book> = {
 			book: Book,
@@ -252,6 +257,7 @@
 					return async ({ result, update }) => {
 						if (result.type === 'success') {
 							showNewChallengeForm = false;
+							newChallengeIcon = '';
 						}
 						await update();
 					};
@@ -260,7 +266,7 @@
 				style="background-color: var(--bg-tertiary); border-color: var(--border-color);"
 			>
 				<input type="hidden" name="year" value={currentYear} />
-				<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
 					<div>
 						<label class="text-xs block mb-1" style="color: var(--text-muted);">Challenge Type</label>
 						<select
@@ -296,6 +302,10 @@
 							class="input w-full"
 						/>
 					</div>
+					<div>
+						<label class="text-xs block mb-1" style="color: var(--text-muted);">Icon (optional)</label>
+						<IconPicker icons={goalIcons} bind:value={newChallengeIcon} placeholder="Default icon" />
+					</div>
 				</div>
 				{#if challengeTypes[newChallengeType as keyof typeof challengeTypes]}
 					<p class="text-sm mb-4" style="color: var(--text-muted);">
@@ -324,7 +334,6 @@
 			{:else}
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 					{#each challenges as challenge}
-						{@const IconComponent = getChallengeIcon(challenge.typeInfo.icon)}
 						<div
 							class="challenge-card p-4 rounded-lg relative"
 							class:complete={challenge.isComplete}
@@ -341,9 +350,9 @@
 							<div class="flex items-start gap-3 mb-3">
 								<div
 									class="w-10 h-10 rounded-lg flex items-center justify-center"
-									style="background-color: var(--accent); opacity: 0.15;"
+									style="background-color: color-mix(in srgb, var(--accent) 15%, transparent);"
 								>
-									<svelte:component this={IconComponent} class="w-5 h-5" style="color: var(--accent);" />
+									<LucideIcon name={challenge.icon} size={20} color="var(--accent)" />
 								</div>
 								<div class="flex-1 min-w-0">
 									<h4 class="font-medium truncate" style="color: var(--text-primary);">
@@ -381,10 +390,11 @@
 										onclick={() => {
 											editingChallenge = challenge.challenge.id;
 											editTarget = challenge.target;
+											editIcon = challenge.challenge.icon || '';
 										}}
 										class="p-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
 										style="color: var(--text-muted);"
-										title="Edit target"
+										title="Edit challenge"
 									>
 										<Pencil class="w-3.5 h-3.5" />
 									</button>
@@ -415,6 +425,7 @@
 										return async ({ result, update }) => {
 											if (result.type === 'success') {
 												editingChallenge = null;
+												editIcon = '';
 											}
 											await update();
 										};
@@ -424,20 +435,32 @@
 								>
 									<input type="hidden" name="id" value={challenge.challenge.id} />
 									<input type="hidden" name="challengeType" value={challenge.type} />
-									<div class="flex gap-2">
-										<input
-											type="number"
-											name="target"
-											bind:value={editTarget}
-											min="1"
-											class="input flex-1"
-										/>
-										<button type="submit" class="p-2 rounded-lg hover:bg-emerald-500/20" style="color: #22c55e;">
-											<Check class="w-4 h-4" />
-										</button>
-										<button type="button" onclick={() => (editingChallenge = null)} class="p-2 rounded-lg hover:bg-red-500/20" style="color: #ef4444;">
-											<X class="w-4 h-4" />
-										</button>
+									<div class="space-y-3">
+										<div class="flex gap-2">
+											<div class="flex-1">
+												<label class="text-xs block mb-1" style="color: var(--text-muted);">Target</label>
+												<input
+													type="number"
+													name="target"
+													bind:value={editTarget}
+													min="1"
+													class="input w-full"
+												/>
+											</div>
+										</div>
+										<div>
+											<label class="text-xs block mb-1" style="color: var(--text-muted);">Icon</label>
+											<IconPicker icons={goalIcons} bind:value={editIcon} placeholder="Default icon" />
+										</div>
+										<div class="flex gap-2">
+											<button type="submit" class="btn-primary text-sm flex-1">
+												<Check class="w-4 h-4" />
+												Save
+											</button>
+											<button type="button" onclick={() => { editingChallenge = null; editIcon = ''; }} class="btn-secondary text-sm">
+												Cancel
+											</button>
+										</div>
 									</div>
 								</form>
 							{/if}

@@ -111,13 +111,12 @@
 					<div class="grid grid-cols-4 sm:grid-cols-6 gap-3">
 						{#each books.slice(0, 12) as book}
 							<a href="/books?id={book.id}" class="block">
-								{#if book.coverImageUrl}
-									<img src={book.coverImageUrl} alt={book.title} class="w-full aspect-[2/3] object-cover rounded shadow-sm hover:shadow-md transition-shadow" />
-								{:else}
-									<div class="w-full aspect-[2/3] bg-gray-200 rounded flex items-center justify-center">
-										<BookOpen class="w-6 h-6 text-gray-400" />
-									</div>
-								{/if}
+								<img
+									src={book.coverImageUrl || '/placeholder.png'}
+									alt={book.title}
+									class="w-full aspect-[2/3] object-cover rounded shadow-sm hover:shadow-md transition-shadow"
+									onerror={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+								/>
 							</a>
 						{/each}
 					</div>

@@ -16,7 +16,10 @@
 		Sun,
 		Terminal,
 		Shield,
-		FolderDown
+		FolderDown,
+		Target,
+		Code,
+		Activity
 	} from 'lucide-svelte';
 	import GlobalSearch from '$lib/components/search/GlobalSearch.svelte';
 	import { theme } from '$lib/stores/theme';
@@ -123,6 +126,11 @@
 			<BarChart2 class="w-5 h-5" />
 		</a>
 
+		<!-- Goals shortcut -->
+		<a href="/stats/goals" class="btn-ghost btn-icon rounded-lg hidden sm:flex" aria-label="Reading Goals">
+			<Target class="w-5 h-5" />
+		</a>
+
 		<!-- Favorites shortcut -->
 		<a href="/books?tag=favorite" class="btn-ghost btn-icon rounded-lg hidden sm:flex" aria-label="Favorites">
 			<Heart class="w-5 h-5" />
@@ -178,6 +186,14 @@
 							<a href="/admin/bookdrop" class="dropdown-item" onclick={closeMenus}>
 								<FolderDown class="w-4 h-4" />
 								<span>BookDrop</span>
+							</a>
+							<a href="/admin/widgets" class="dropdown-item" onclick={closeMenus}>
+								<Code class="w-4 h-4" />
+								<span>Widgets</span>
+							</a>
+							<a href="/admin/diagnostics" class="dropdown-item" onclick={closeMenus}>
+								<Activity class="w-4 h-4" />
+								<span>Diagnostics</span>
 							</a>
 						{/if}
 						<div class="border-t my-1" style="border-color: var(--border-color);"></div>

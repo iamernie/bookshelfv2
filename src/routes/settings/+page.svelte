@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Settings, FolderOpen, BookOpen, Monitor, Rss, Upload, Save, Check, AlertCircle, Loader2 } from 'lucide-svelte';
+	import { Settings, FolderOpen, BookOpen, Monitor, Rss, Upload, Save, Check, AlertCircle, Loader2, Database, Sparkles, Eye, EyeOff } from 'lucide-svelte';
 
 	interface Setting {
 		key: string;
@@ -17,6 +17,16 @@
 	let isSaving = $state(false);
 	let saveSuccess = $state(false);
 	let saveError = $state('');
+
+	// AI settings state
+	let aiEnabled = $state(data.aiSettings.enabled);
+	let aiApiKey = $state(data.aiSettings.apiKey || '');
+	let aiModel = $state(data.aiSettings.model);
+	let showApiKey = $state(false);
+	let testingConnection = $state(false);
+	let testResult = $state<{ success: boolean; message: string } | null>(null);
+	let savingAI = $state(false);
+	let aiSaveSuccess = $state(false);
 
 	// Initialize edited settings from data
 	$effect(() => {
@@ -55,6 +65,11 @@
 			icon: Upload,
 			title: 'Import',
 			description: 'Configure import behavior'
+		},
+		metadata: {
+			icon: Database,
+			title: 'Metadata Providers',
+			description: 'Configure book metadata lookup sources'
 		}
 	};
 
@@ -110,6 +125,62 @@
 			value
 		};
 	}
+
+	async function testAIConnection() {
+		if (!aiApiKey.trim()) {
+			testResult = { success: false, message: 'Please enter an API key' };
+			return;
+		}
+
+		testingConnection = true;
+		testResult = null;
+
+		try {
+			const res = await fetch('/api/recommendations/ai/settings', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ apiKey: aiApiKey })
+			});
+
+			const result = await res.json();
+			testResult = {
+				success: result.success,
+				message: result.success ? 'Connection successful!' : result.error || 'Connection failed'
+			};
+		} catch {
+			testResult = { success: false, message: 'Failed to test connection' };
+		} finally {
+			testingConnection = false;
+		}
+	}
+
+	async function saveAISettings() {
+		savingAI = true;
+		aiSaveSuccess = false;
+
+		try {
+			const res = await fetch('/api/recommendations/ai/settings', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					enabled: aiEnabled,
+					apiKey: aiApiKey,
+					model: aiModel
+				})
+			});
+
+			if (!res.ok) {
+				throw new Error('Failed to save');
+			}
+
+			aiSaveSuccess = true;
+			setTimeout(() => aiSaveSuccess = false, 3000);
+		} catch {
+			saveError = 'Failed to save AI settings';
+		} finally {
+			savingAI = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -126,7 +197,7 @@
 		{#if data.isAdmin}
 			<button
 				class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors"
-				style="background: var(--accent-primary); color: white;"
+				style="background: var(--accent); color: white;"
 				onclick={saveSettings}
 				disabled={isSaving}
 			>
@@ -168,7 +239,7 @@
 				<!-- Category Header -->
 				<div class="p-4 border-b flex items-center gap-3" style="border-color: var(--border-color);">
 					<div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: var(--bg-tertiary);">
-						<svelte:component this={info.icon} class="w-5 h-5" style="color: var(--accent-primary);" />
+						<svelte:component this={info.icon} class="w-5 h-5" style="color: var(--accent);" />
 					</div>
 					<div>
 						<h2 class="text-lg font-semibold" style="color: var(--text-primary);">
@@ -195,20 +266,16 @@
 							</div>
 							<div class="w-72">
 								{#if setting.type === 'boolean'}
-									<label class="relative inline-flex items-center cursor-pointer">
-										<input
-											type="checkbox"
-											id={setting.key}
-											checked={editedSettings[setting.key] === 'true'}
-											onchange={(e) => updateSetting(setting.key, (e.target as HTMLInputElement).checked ? 'true' : 'false')}
-											disabled={!data.isAdmin}
-											class="sr-only peer"
-										/>
-										<div
-											class="w-11 h-6 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:rounded-full after:h-5 after:w-5 after:transition-all"
-											style="background: {editedSettings[setting.key] === 'true' ? 'var(--accent-primary)' : 'var(--bg-tertiary)'}; after:background: white;"
-										></div>
-									</label>
+									<button
+										type="button"
+										class="toggle-switch {editedSettings[setting.key] === 'true' ? 'active' : ''}"
+										onclick={() => updateSetting(setting.key, editedSettings[setting.key] === 'true' ? 'false' : 'true')}
+										disabled={!data.isAdmin}
+										role="switch"
+										aria-checked={editedSettings[setting.key] === 'true'}
+									>
+										<span class="toggle-knob"></span>
+									</button>
 								{:else}
 									<input
 										type={inputProps.type}
@@ -226,6 +293,153 @@
 				</div>
 			</div>
 		{/each}
+
+		<!-- AI Recommendations Settings -->
+		<div class="rounded-xl overflow-hidden" style="background: var(--bg-secondary);">
+			<!-- Category Header -->
+			<div class="p-4 border-b flex items-center justify-between" style="border-color: var(--border-color);">
+				<div class="flex items-center gap-3">
+					<div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #4f46e5, #7c3aed);">
+						<Sparkles class="w-5 h-5 text-white" />
+					</div>
+					<div>
+						<h2 class="text-lg font-semibold" style="color: var(--text-primary);">
+							AI Recommendations
+						</h2>
+						<p class="text-sm" style="color: var(--text-muted);">Configure OpenAI-powered book suggestions</p>
+					</div>
+				</div>
+				{#if data.isAdmin}
+					<button
+						class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors"
+						style="background: var(--accent); color: white;"
+						onclick={saveAISettings}
+						disabled={savingAI}
+					>
+						{#if savingAI}
+							<Loader2 class="w-4 h-4 animate-spin" />
+							Saving...
+						{:else if aiSaveSuccess}
+							<Check class="w-4 h-4" />
+							Saved!
+						{:else}
+							<Save class="w-4 h-4" />
+							Save
+						{/if}
+					</button>
+				{/if}
+			</div>
+
+			<!-- AI Settings -->
+			<div class="divide-y" style="border-color: var(--border-color);">
+				<!-- Enable Toggle -->
+				<div class="p-4 flex items-start gap-4">
+					<div class="flex-1">
+						<label class="font-medium" style="color: var(--text-primary);">
+							Enable AI Recommendations
+						</label>
+						<p class="text-sm mt-0.5" style="color: var(--text-muted);">
+							Get personalized book recommendations powered by ChatGPT
+						</p>
+					</div>
+					<div class="w-72">
+						<button
+							type="button"
+							class="toggle-switch {aiEnabled ? 'active' : ''}"
+							onclick={() => aiEnabled = !aiEnabled}
+							disabled={!data.isAdmin}
+							role="switch"
+							aria-checked={aiEnabled}
+						>
+							<span class="toggle-knob"></span>
+						</button>
+					</div>
+				</div>
+
+				<!-- API Key -->
+				<div class="p-4 flex items-start gap-4">
+					<div class="flex-1">
+						<label for="ai-api-key" class="font-medium" style="color: var(--text-primary);">
+							OpenAI API Key
+						</label>
+						<p class="text-sm mt-0.5" style="color: var(--text-muted);">
+							Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener" class="underline" style="color: var(--accent);">platform.openai.com</a>
+						</p>
+					</div>
+					<div class="w-72">
+						<div class="relative">
+							<input
+								type={showApiKey ? 'text' : 'password'}
+								id="ai-api-key"
+								bind:value={aiApiKey}
+								disabled={!data.isAdmin}
+								placeholder="sk-..."
+								class="w-full px-3 py-2 pr-20 rounded-lg text-sm font-mono"
+								style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+							/>
+							<div class="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">
+								<button
+									type="button"
+									class="p-1.5 rounded hover:bg-black/10"
+									onclick={() => showApiKey = !showApiKey}
+								>
+									{#if showApiKey}
+										<EyeOff class="w-4 h-4" style="color: var(--text-muted);" />
+									{:else}
+										<Eye class="w-4 h-4" style="color: var(--text-muted);" />
+									{/if}
+								</button>
+							</div>
+						</div>
+						<button
+							type="button"
+							class="mt-2 text-sm px-3 py-1 rounded"
+							style="background: var(--bg-tertiary); color: var(--text-secondary);"
+							onclick={testAIConnection}
+							disabled={testingConnection || !data.isAdmin}
+						>
+							{#if testingConnection}
+								<Loader2 class="w-3 h-3 inline animate-spin mr-1" />
+								Testing...
+							{:else}
+								Test Connection
+							{/if}
+						</button>
+						{#if testResult}
+							<p class="mt-2 text-sm" style="color: {testResult.success ? '#22c55e' : '#ef4444'};">
+								{testResult.message}
+							</p>
+						{/if}
+					</div>
+				</div>
+
+				<!-- Model Selection -->
+				<div class="p-4 flex items-start gap-4">
+					<div class="flex-1">
+						<label for="ai-model" class="font-medium" style="color: var(--text-primary);">
+							AI Model
+						</label>
+						<p class="text-sm mt-0.5" style="color: var(--text-muted);">
+							Choose the OpenAI model for recommendations
+						</p>
+					</div>
+					<div class="w-72">
+						<select
+							id="ai-model"
+							bind:value={aiModel}
+							disabled={!data.isAdmin}
+							class="w-full px-3 py-2 rounded-lg text-sm"
+							style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+						>
+							<option value="gpt-4o-mini">GPT-4o Mini (Fastest, Cheapest)</option>
+							<option value="gpt-4o">GPT-4o (Best Quality)</option>
+							<option value="gpt-4-turbo">GPT-4 Turbo (High Quality)</option>
+							<option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy)</option>
+						</select>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<!-- Info Section -->
@@ -272,3 +486,41 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.toggle-switch {
+		position: relative;
+		width: 44px;
+		height: 24px;
+		border-radius: 12px;
+		background: var(--bg-tertiary);
+		border: none;
+		cursor: pointer;
+		transition: background-color 0.2s ease;
+	}
+
+	.toggle-switch:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.toggle-switch.active {
+		background: var(--accent);
+	}
+
+	.toggle-knob {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: white;
+		transition: transform 0.2s ease;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+	}
+
+	.toggle-switch.active .toggle-knob {
+		transform: translateX(20px);
+	}
+</style>

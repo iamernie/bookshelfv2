@@ -712,7 +712,7 @@
 		<button
 			class="px-4 py-2 font-medium transition-colors rounded-t-lg"
 			class:active={activeTab === 'ebooks'}
-			style="color: {activeTab === 'ebooks' ? 'var(--accent-primary)' : 'var(--text-secondary)'}; border-bottom: 2px solid {activeTab === 'ebooks' ? 'var(--accent-primary)' : 'transparent'};"
+			style="color: {activeTab === 'ebooks' ? 'var(--accent)' : 'var(--text-secondary)'}; border-bottom: 2px solid {activeTab === 'ebooks' ? 'var(--accent)' : 'transparent'};"
 			onclick={() => activeTab = 'ebooks'}
 		>
 			<HardDrive class="w-4 h-4 inline mr-2" />
@@ -721,7 +721,7 @@
 		<button
 			class="px-4 py-2 font-medium transition-colors rounded-t-lg"
 			class:active={activeTab === 'csv'}
-			style="color: {activeTab === 'csv' ? 'var(--accent-primary)' : 'var(--text-secondary)'}; border-bottom: 2px solid {activeTab === 'csv' ? 'var(--accent-primary)' : 'transparent'};"
+			style="color: {activeTab === 'csv' ? 'var(--accent)' : 'var(--text-secondary)'}; border-bottom: 2px solid {activeTab === 'csv' ? 'var(--accent)' : 'transparent'};"
 			onclick={() => activeTab = 'csv'}
 		>
 			<FileText class="w-4 h-4 inline mr-2" />
@@ -730,7 +730,7 @@
 		<button
 			class="px-4 py-2 font-medium transition-colors rounded-t-lg"
 			class:active={activeTab === 'audible'}
-			style="color: {activeTab === 'audible' ? 'var(--accent-primary)' : 'var(--text-secondary)'}; border-bottom: 2px solid {activeTab === 'audible' ? 'var(--accent-primary)' : 'transparent'};"
+			style="color: {activeTab === 'audible' ? 'var(--accent)' : 'var(--text-secondary)'}; border-bottom: 2px solid {activeTab === 'audible' ? 'var(--accent)' : 'transparent'};"
 			onclick={() => activeTab = 'audible'}
 		>
 			<Headphones class="w-4 h-4 inline mr-2" />
@@ -739,7 +739,7 @@
 		<button
 			class="px-4 py-2 font-medium transition-colors rounded-t-lg"
 			class:active={activeTab === 'lookup'}
-			style="color: {activeTab === 'lookup' ? 'var(--accent-primary)' : 'var(--text-secondary)'}; border-bottom: 2px solid {activeTab === 'lookup' ? 'var(--accent-primary)' : 'transparent'};"
+			style="color: {activeTab === 'lookup' ? 'var(--accent)' : 'var(--text-secondary)'}; border-bottom: 2px solid {activeTab === 'lookup' ? 'var(--accent)' : 'transparent'};"
 			onclick={() => activeTab = 'lookup'}
 		>
 			<Search class="w-4 h-4 inline mr-2" />
@@ -784,7 +784,7 @@
 				<div class="flex gap-4">
 					<button
 						class="px-4 py-2 rounded-lg font-medium"
-						style="background: var(--accent-primary); color: white;"
+						style="background: var(--accent); color: white;"
 						onclick={resetEbookImport}
 					>
 						Import More Ebooks
@@ -930,7 +930,7 @@
 						</button>
 						<button
 							class="px-4 py-2 rounded-lg font-medium flex items-center gap-2"
-							style="background: var(--accent-primary); color: white;"
+							style="background: var(--accent); color: white;"
 							onclick={executeEbookImport}
 							disabled={isEbookImporting || ebookSelectedIndexes.size === 0}
 						>
@@ -949,7 +949,7 @@
 			<div class="rounded-xl p-8" style="background: var(--bg-secondary);">
 				<div class="max-w-2xl mx-auto text-center">
 					<div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background: var(--bg-tertiary);">
-						<HardDrive class="w-8 h-8" style="color: var(--accent-primary);" />
+						<HardDrive class="w-8 h-8" style="color: var(--accent);" />
 					</div>
 					<h2 class="text-xl font-semibold mb-2" style="color: var(--text-primary);">
 						Import Ebook Files
@@ -971,7 +971,7 @@
 					<!-- Drop zone -->
 					<div
 						class="border-2 border-dashed rounded-xl p-8 mb-4 transition-colors cursor-pointer"
-						style="border-color: {isDragging ? 'var(--accent-primary)' : 'var(--border-color)'}; background: {isDragging ? 'var(--accent-primary)' : 'var(--bg-tertiary)'}; opacity: {isDragging ? 0.1 : 1};"
+						style="border-color: {isDragging ? 'var(--accent)' : 'var(--border-color)'}; background: {isDragging ? 'var(--accent)' : 'var(--bg-tertiary)'}; opacity: {isDragging ? 0.1 : 1};"
 						ondragover={handleEbookDragOver}
 						ondragleave={handleEbookDragLeave}
 						ondrop={handleEbookDrop}
@@ -1025,7 +1025,7 @@
 
 					<button
 						class="px-6 py-2 rounded-lg font-medium flex items-center gap-2 mx-auto"
-						style="background: var(--accent-primary); color: white;"
+						style="background: var(--accent); color: white;"
 						onclick={uploadEbooks}
 						disabled={ebookFiles.length === 0 || isEbookUploading}
 					>
@@ -1083,7 +1083,7 @@
 				<div class="flex gap-4">
 					<button
 						class="px-4 py-2 rounded-lg font-medium"
-						style="background: var(--accent-primary); color: white;"
+						style="background: var(--accent); color: white;"
 						onclick={resetCSVImport}
 					>
 						Import More Books
@@ -1106,7 +1106,7 @@
 						<h2 class="text-lg font-semibold" style="color: var(--text-primary);">
 							Preview ({displayedBooks.length} books)
 							{#if isGoodreads}
-								<span class="ml-2 text-sm px-2 py-0.5 rounded" style="background: var(--accent-primary); color: white;">
+								<span class="ml-2 text-sm px-2 py-0.5 rounded" style="background: var(--accent); color: white;">
 									Goodreads Format
 								</span>
 							{/if}
@@ -1220,7 +1220,7 @@
 						</button>
 						<button
 							class="px-4 py-2 rounded-lg font-medium flex items-center gap-2"
-							style="background: var(--accent-primary); color: white;"
+							style="background: var(--accent); color: white;"
 							onclick={executeImport}
 							disabled={isImporting || validSelectedCount === 0}
 						>
@@ -1239,7 +1239,7 @@
 			<div class="rounded-xl p-8" style="background: var(--bg-secondary);">
 				<div class="max-w-lg mx-auto text-center">
 					<div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background: var(--bg-tertiary);">
-						<FileText class="w-8 h-8" style="color: var(--accent-primary);" />
+						<FileText class="w-8 h-8" style="color: var(--accent);" />
 					</div>
 					<h2 class="text-xl font-semibold mb-2" style="color: var(--text-primary);">
 						Import from CSV
@@ -1286,7 +1286,7 @@
 
 					<button
 						class="px-6 py-2 rounded-lg font-medium"
-						style="background: var(--accent-primary); color: white;"
+						style="background: var(--accent); color: white;"
 						onclick={uploadCSV}
 						disabled={!csvFile || isUploading}
 					>
@@ -1342,7 +1342,7 @@
 				<div class="flex gap-4">
 					<button
 						class="px-4 py-2 rounded-lg font-medium"
-						style="background: var(--accent-primary); color: white;"
+						style="background: var(--accent); color: white;"
 						onclick={resetAudibleImport}
 					>
 						Import More Books
@@ -1668,7 +1668,7 @@
 					<div class="mb-4 p-4 rounded-lg text-left" style="background: var(--bg-tertiary);">
 						<h3 class="font-medium mb-2" style="color: var(--text-primary);">How to export from Audible:</h3>
 						<ol class="text-sm space-y-1" style="color: var(--text-secondary);">
-							<li>1. Go to <a href="https://www.audible.com/library/listening-history" target="_blank" rel="noopener" class="underline" style="color: var(--accent-primary);">audible.com/library/listening-history</a></li>
+							<li>1. Go to <a href="https://www.audible.com/library/listening-history" target="_blank" rel="noopener" class="underline" style="color: var(--accent);">audible.com/library/listening-history</a></li>
 							<li>2. Scroll to load all your books</li>
 							<li>3. Right-click and select "Save As..." or Ctrl+S</li>
 							<li>4. Save as "Webpage, Complete" or "HTML only"</li>
@@ -1752,7 +1752,7 @@
 					/>
 					<button
 						class="px-4 py-2 rounded-lg font-medium flex items-center gap-2"
-						style="background: var(--accent-primary); color: white;"
+						style="background: var(--accent); color: white;"
 						onclick={searchBooks}
 						disabled={isSearching || !searchQuery.trim()}
 					>
@@ -1780,7 +1780,7 @@
 						{#each searchResults as result}
 							<button
 								class="w-full text-left p-4 rounded-lg border transition-colors"
-								style="background: {selectedResult === result ? 'var(--bg-tertiary)' : 'var(--bg-secondary)'}; border-color: {selectedResult === result ? 'var(--accent-primary)' : 'var(--border-color)'};"
+								style="background: {selectedResult === result ? 'var(--bg-tertiary)' : 'var(--bg-secondary)'}; border-color: {selectedResult === result ? 'var(--accent)' : 'var(--border-color)'};"
 								onclick={() => selectSearchResult(result)}
 							>
 								<div class="flex gap-4">
@@ -1839,7 +1839,7 @@
 						<a
 							href="/books/new?title={encodeURIComponent(selectedResult.title || '')}&author={encodeURIComponent(selectedResult.authors?.join(', ') || '')}&isbn={encodeURIComponent(selectedResult.isbn13 || selectedResult.isbn10 || '')}&coverUrl={encodeURIComponent(selectedResult.coverUrl || '')}&publisher={encodeURIComponent(selectedResult.publisher || '')}&pageCount={selectedResult.pageCount || ''}&publishYear={selectedResult.publishYear || ''}"
 							class="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium"
-							style="background: var(--accent-primary); color: white;"
+							style="background: var(--accent); color: white;"
 						>
 							<BookOpen class="w-4 h-4" />
 							Add to Library

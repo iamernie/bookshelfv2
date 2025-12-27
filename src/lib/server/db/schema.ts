@@ -178,6 +178,7 @@ export const readingGoals = sqliteTable('readinggoals', {
 	isActive: integer('isActive', { mode: 'boolean' }).default(true),
 	challengeType: text('challengeType'), // books, genres, authors, formats, pages, monthly
 	name: text('name'),
+	icon: text('icon'), // Custom icon override (lucide icon name)
 	targetGenres: integer('targetGenres'),
 	targetAuthors: integer('targetAuthors'),
 	targetFormats: integer('targetFormats'),
@@ -357,6 +358,20 @@ export const metadataSuggestions = sqliteTable('metadata_suggestions', {
 	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
 });
 
+// Reading sessions for heatmap tracking
+export const readingSessions = sqliteTable('reading_sessions', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	bookId: integer('bookId').notNull().references(() => books.id, { onDelete: 'cascade' }),
+	userId: integer('userId').references(() => users.id, { onDelete: 'cascade' }),
+	startedAt: text('startedAt').notNull(), // ISO timestamp when reading started
+	endedAt: text('endedAt'), // ISO timestamp when reading ended (null if still active)
+	durationMinutes: integer('durationMinutes'), // Calculated duration in minutes
+	pagesRead: integer('pagesRead'), // Optional: pages read during session
+	startProgress: real('startProgress'), // Progress % when session started
+	endProgress: real('endProgress'), // Progress % when session ended
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP')
+});
+
 // ============================================
 // Relations
 // ============================================
@@ -371,7 +386,8 @@ export const booksRelations = relations(books, ({ one, many }) => ({
 	bookTags: many(bookTags),
 	userBooks: many(userBooks),
 	userBookTags: many(userBookTags),
-	metadataSuggestions: many(metadataSuggestions)
+	metadataSuggestions: many(metadataSuggestions),
+	readingSessions: many(readingSessions)
 }));
 
 export const authorsRelations = relations(authors, ({ many }) => ({
@@ -414,7 +430,13 @@ export const tagsRelations = relations(tags, ({ many }) => ({
 export const usersRelations = relations(users, ({ many }) => ({
 	userBooks: many(userBooks),
 	userBookTags: many(userBookTags),
-	metadataSuggestions: many(metadataSuggestions)
+	metadataSuggestions: many(metadataSuggestions),
+	readingSessions: many(readingSessions)
+}));
+
+export const readingSessionsRelations = relations(readingSessions, ({ one }) => ({
+	book: one(books, { fields: [readingSessions.bookId], references: [books.id] }),
+	user: one(users, { fields: [readingSessions.userId], references: [users.id] })
 }));
 
 export const userBooksRelations = relations(userBooks, ({ one }) => ({
@@ -470,6 +492,8 @@ export type UserBookTag = typeof userBookTags.$inferSelect;
 export type NewUserBookTag = typeof userBookTags.$inferInsert;
 export type MetadataSuggestion = typeof metadataSuggestions.$inferSelect;
 export type NewMetadataSuggestion = typeof metadataSuggestions.$inferInsert;
+export type ReadingSession = typeof readingSessions.$inferSelect;
+export type NewReadingSession = typeof readingSessions.$inferInsert;
 
 // Library type values
 export type LibraryType = 'personal' | 'public';

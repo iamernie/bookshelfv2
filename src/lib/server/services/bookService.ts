@@ -4,7 +4,7 @@ import type { Book, NewBook } from '$lib/server/db/schema';
 
 export interface BookWithRelations extends Book {
 	authors: { id: number; name: string; role: string | null; isPrimary: boolean | null }[];
-	series: { id: number; title: string; bookNum: number | null; bookNumEnd: number | null }[];
+	series: { id: number; title: string; bookNum: number | null; bookNumEnd: number | null; comments: string | null }[];
 	tags: { id: number; name: string; color: string | null; icon: string | null }[];
 	status: { id: number; name: string; color: string | null; icon: string | null } | null;
 	genre: { id: number; name: string } | null;
@@ -182,7 +182,8 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 				id: series.id,
 				title: series.title,
 				bookNum: bookSeries.bookNum,
-				bookNumEnd: bookSeries.bookNumEnd
+				bookNumEnd: bookSeries.bookNumEnd,
+				comments: series.comments
 			}).from(bookSeries)
 				.innerJoin(series, eq(bookSeries.seriesId, series.id))
 				.where(eq(bookSeries.bookId, book.id)),
@@ -232,7 +233,8 @@ export async function getBookById(id: number): Promise<BookWithRelations | null>
 			id: series.id,
 			title: series.title,
 			bookNum: bookSeries.bookNum,
-			bookNumEnd: bookSeries.bookNumEnd
+			bookNumEnd: bookSeries.bookNumEnd,
+			comments: series.comments
 		}).from(bookSeries)
 			.innerJoin(series, eq(bookSeries.seriesId, series.id))
 			.where(eq(bookSeries.bookId, id)),

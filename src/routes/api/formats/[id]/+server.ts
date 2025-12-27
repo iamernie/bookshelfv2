@@ -43,7 +43,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	return json(format);
 };
 
-export const DELETE: RequestHandler = async ({ params, locals }) => {
+export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
 	}
@@ -53,8 +53,19 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		throw error(400, { message: 'Invalid format ID' });
 	}
 
+	// Check for reassignTo in request body
+	let reassignToId: number | null | undefined = undefined;
 	try {
-		const deleted = await deleteFormat(id);
+		const body = await request.json();
+		if (body.reassignTo !== undefined) {
+			reassignToId = body.reassignTo === null ? null : parseInt(body.reassignTo);
+		}
+	} catch {
+		// No body or invalid JSON - proceed without reassignment
+	}
+
+	try {
+		const deleted = await deleteFormat(id, reassignToId);
 		if (!deleted) {
 			throw error(404, { message: 'Format not found' });
 		}
@@ -62,6 +73,9 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		return json({ success: true });
 	} catch (err) {
 		if (err instanceof Error && err.message.includes('Cannot delete format')) {
+			throw error(400, { message: err.message });
+		}
+		if (err instanceof Error && err.message.includes('Target format')) {
 			throw error(400, { message: err.message });
 		}
 		throw err;

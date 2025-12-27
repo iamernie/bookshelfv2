@@ -512,13 +512,12 @@
 						>
 							<!-- Cover -->
 							<div class="w-12 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-								{#if book.coverImageUrl}
-									<img src={book.coverImageUrl} alt={book.title} class="w-full h-full object-cover" />
-								{:else}
-									<div class="w-full h-full flex items-center justify-center">
-										<BookOpen class="w-6 h-6 text-gray-300" />
-									</div>
-								{/if}
+								<img
+									src={book.coverImageUrl || '/placeholder.png'}
+									alt={book.title}
+									class="w-full h-full object-cover"
+									onerror={(e) => { (e.target as HTMLImageElement).src = '/placeholder.png'; }}
+								/>
 							</div>
 
 							<!-- Info -->

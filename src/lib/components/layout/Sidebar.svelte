@@ -25,7 +25,8 @@
 		Download,
 		Layers,
 		ListChecks,
-		Wand2
+		Wand2,
+		Lightbulb
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 
@@ -262,6 +263,10 @@
 				<a href="/stats" class="sidebar-item text-sm" class:active={isActive('/stats')}>
 					<BarChart2 class="w-4 h-4" />
 					<span>Statistics</span>
+				</a>
+				<a href="/recommendations" class="sidebar-item text-sm" class:active={isActive('/recommendations')}>
+					<Lightbulb class="w-4 h-4" />
+					<span>Recommendations</span>
 				</a>
 				<a href="/search" class="sidebar-item text-sm" class:active={isActive('/search')}>
 					<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

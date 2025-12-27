@@ -238,6 +238,7 @@ function runMigrations() {
 	if (tableExists('readinggoals')) {
 		safeAddColumn('readinggoals', 'challengeType', 'TEXT');
 		safeAddColumn('readinggoals', 'name', 'TEXT');
+		safeAddColumn('readinggoals', 'icon', 'TEXT');
 		safeAddColumn('readinggoals', 'targetGenres', 'INTEGER');
 		safeAddColumn('readinggoals', 'targetAuthors', 'INTEGER');
 		safeAddColumn('readinggoals', 'targetFormats', 'INTEGER');
@@ -387,6 +388,31 @@ function runMigrations() {
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_metadata_suggestions_book ON metadata_suggestions(bookId)');
 	} catch {
 		// Index may already exist
+	}
+
+	// ========== Reading Sessions table (for heatmap) ==========
+	safeCreateTable('reading_sessions', `
+		CREATE TABLE reading_sessions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			bookId INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+			userId INTEGER REFERENCES users(id) ON DELETE CASCADE,
+			startedAt TEXT NOT NULL,
+			endedAt TEXT,
+			durationMinutes INTEGER,
+			pagesRead INTEGER,
+			startProgress REAL,
+			endProgress REAL,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Create indexes for reading_sessions queries
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_reading_sessions_book ON reading_sessions(bookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_reading_sessions_user ON reading_sessions(userId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_reading_sessions_started ON reading_sessions(startedAt)');
+	} catch {
+		// Indexes may already exist
 	}
 
 	// ========== User role column for permissions ==========

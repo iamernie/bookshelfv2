@@ -106,6 +106,42 @@ export const DEFAULT_SETTINGS = {
 		category: 'import',
 		label: 'Download Covers',
 		description: 'Automatically download cover images during import'
+	},
+	// Metadata provider settings
+	'metadata.googlebooks_enabled': {
+		value: 'true',
+		type: 'boolean',
+		category: 'metadata',
+		label: 'Google Books',
+		description: 'Enable Google Books API for metadata lookups'
+	},
+	'metadata.openlibrary_enabled': {
+		value: 'true',
+		type: 'boolean',
+		category: 'metadata',
+		label: 'Open Library',
+		description: 'Enable Open Library API for metadata lookups'
+	},
+	'metadata.goodreads_enabled': {
+		value: 'true',
+		type: 'boolean',
+		category: 'metadata',
+		label: 'Goodreads',
+		description: 'Enable Goodreads scraping for metadata (ratings, reviews, series)'
+	},
+	'metadata.hardcover_enabled': {
+		value: 'false',
+		type: 'boolean',
+		category: 'metadata',
+		label: 'Hardcover',
+		description: 'Enable Hardcover API for metadata (requires API key)'
+	},
+	'metadata.hardcover_api_key': {
+		value: '',
+		type: 'string',
+		category: 'metadata',
+		label: 'Hardcover API Key',
+		description: 'API key from hardcover.app/account/api (required for Hardcover)'
 	}
 } as const;
 
@@ -234,6 +270,30 @@ export async function initializeSettings(): Promise<void> {
 			});
 		}
 	}
+}
+
+// Get metadata provider settings
+export async function getMetadataProviderSettings(): Promise<{
+	googlebooks: { enabled: boolean };
+	openlibrary: { enabled: boolean };
+	goodreads: { enabled: boolean };
+	hardcover: { enabled: boolean; apiKey: string };
+}> {
+	const [googleEnabled, openLibraryEnabled, goodreadsEnabled, hardcoverEnabled, hardcoverApiKey] =
+		await Promise.all([
+			getSettingAs<boolean>('metadata.googlebooks_enabled', 'boolean'),
+			getSettingAs<boolean>('metadata.openlibrary_enabled', 'boolean'),
+			getSettingAs<boolean>('metadata.goodreads_enabled', 'boolean'),
+			getSettingAs<boolean>('metadata.hardcover_enabled', 'boolean'),
+			getSetting('metadata.hardcover_api_key')
+		]);
+
+	return {
+		googlebooks: { enabled: googleEnabled as boolean },
+		openlibrary: { enabled: openLibraryEnabled as boolean },
+		goodreads: { enabled: goodreadsEnabled as boolean },
+		hardcover: { enabled: hardcoverEnabled as boolean, apiKey: hardcoverApiKey }
+	};
 }
 
 // Get storage paths helper

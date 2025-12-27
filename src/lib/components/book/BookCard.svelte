@@ -1,7 +1,15 @@
 <script lang="ts">
-	import { BookOpen, Star } from 'lucide-svelte';
+	import { BookOpen, Star, Edit3 } from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
+	import QuickEditOverlay from './QuickEditOverlay.svelte';
 	import type { BookCardData } from '$lib/types';
+
+	interface Status {
+		id: number;
+		name: string;
+		color: string | null;
+		icon: string | null;
+	}
 
 	let {
 		book,
@@ -11,8 +19,11 @@
 		showTags = true,
 		showAuthor = true,
 		showSeries = true,
+		quickEdit = false,
+		statuses = [],
 		onSelect,
-		onClick
+		onClick,
+		onQuickEdit
 	}: {
 		book: BookCardData;
 		selected?: boolean;
@@ -21,12 +32,21 @@
 		showTags?: boolean;
 		showAuthor?: boolean;
 		showSeries?: boolean;
+		quickEdit?: boolean;
+		statuses?: Status[];
 		onSelect?: (id: number) => void;
 		onClick?: (book: BookCardData) => void;
+		onQuickEdit?: (bookId: number, field: string, value: any) => Promise<void>;
 	} = $props();
 
+	let showQuickEditOverlay = $state(false);
+
 	function handleClick(e: MouseEvent) {
+		if (showQuickEditOverlay) return;
 		if (selectable && (e.target as HTMLElement).closest('input[type=checkbox]')) {
+			return;
+		}
+		if ((e.target as HTMLElement).closest('.quick-edit-btn')) {
 			return;
 		}
 		onClick?.(book);
@@ -38,9 +58,30 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
+		if (showQuickEditOverlay && e.key === 'Escape') {
+			showQuickEditOverlay = false;
+			return;
+		}
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
 			onClick?.(book);
+		}
+	}
+
+	function handleQuickEditClick(e: MouseEvent) {
+		e.stopPropagation();
+		showQuickEditOverlay = true;
+	}
+
+	async function handleRatingChange(bookId: number, rating: number) {
+		if (onQuickEdit) {
+			await onQuickEdit(bookId, 'rating', rating);
+		}
+	}
+
+	async function handleStatusChange(bookId: number, statusId: number) {
+		if (onQuickEdit) {
+			await onQuickEdit(bookId, 'statusId', statusId);
 		}
 	}
 
@@ -81,6 +122,31 @@
 			onerror={(e) => { (e.currentTarget as HTMLImageElement).onerror = null; (e.currentTarget as HTMLImageElement).src = '/placeholder.png'; }}
 		/>
 
+		<!-- Quick Edit Overlay -->
+		{#if showQuickEditOverlay && quickEdit}
+			<QuickEditOverlay
+				bookId={book.id}
+				currentRating={book.rating}
+				currentStatusId={book.status?.id}
+				{statuses}
+				onRatingChange={handleRatingChange}
+				onStatusChange={handleStatusChange}
+				onClose={() => showQuickEditOverlay = false}
+			/>
+		{/if}
+
+		<!-- Quick Edit Button (shows on hover) -->
+		{#if quickEdit && !showQuickEditOverlay}
+			<button
+				type="button"
+				class="quick-edit-btn absolute top-1 right-1 p-1.5 rounded bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/90"
+				onclick={handleQuickEditClick}
+				title="Quick edit"
+			>
+				<Edit3 class="w-3.5 h-3.5" />
+			</button>
+		{/if}
+
 		<!-- Selection Checkbox -->
 		{#if selectable}
 			<div class="absolute top-2 left-2">
@@ -94,8 +160,8 @@
 			</div>
 		{/if}
 
-		<!-- Rating Badge -->
-		{#if book.rating}
+		<!-- Rating Badge (move to bottom when quick edit is enabled to avoid overlap) -->
+		{#if book.rating && !quickEdit}
 			<div class="absolute top-1 right-1 bg-black/70 text-white px-1.5 py-0.5 rounded flex items-center gap-0.5 text-xs">
 				<Star class="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
 				{book.rating.toFixed(1)}

@@ -29,6 +29,7 @@
 	import BulkDeleteModal from '$lib/components/bulk/BulkDeleteModal.svelte';
 	import { toasts } from '$lib/stores/toast';
 	import { selectedBooks, selectedIds } from '$lib/stores/selection';
+	import { formatDate } from '$lib/utils/date';
 
 	let { data } = $props();
 
@@ -174,16 +175,6 @@
 		}
 	}
 
-	// Format date for display
-	function formatDate(dateStr: string | null): string {
-		if (!dateStr) return '';
-		try {
-			const date = new Date(dateStr);
-			return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-		} catch {
-			return dateStr;
-		}
-	}
 </script>
 
 <svelte:head>
@@ -392,7 +383,7 @@
 			<div class="series-display">
 				{#if data.series.length > 0}
 					{#each data.series as seriesItem (seriesItem.id)}
-						<a href="/series/{seriesItem.id}" class="series-badge">
+						<a href="/series/{seriesItem.id}" class="series-link">
 							<Library class="w-3 h-3" />
 							{seriesItem.title}
 							<span class="series-count">({seriesItem.bookCount})</span>
@@ -503,7 +494,9 @@
 
 <!-- Bulk Action Bar -->
 <BulkActionBar
+	totalCount={data.books.length}
 	onSelectAll={handleSelectAll}
+	onClearSelection={() => selectedBooks.clear()}
 	onAddTags={() => showTagModal = true}
 	onChangeStatus={() => showStatusModal = true}
 	onDelete={() => showDeleteModal = true}
@@ -978,7 +971,7 @@
 		align-items: center;
 	}
 
-	.series-badge {
+	.series-link {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.25rem;
@@ -992,11 +985,11 @@
 		transition: all 0.2s;
 	}
 
-	.series-badge:hover {
+	.series-link:hover {
 		background-color: rgba(var(--accent-rgb), 0.2);
 	}
 
-	.series-badge .series-count {
+	.series-link .series-count {
 		color: var(--text-muted);
 		font-weight: 400;
 	}
