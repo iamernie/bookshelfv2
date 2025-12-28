@@ -6,7 +6,10 @@ import { createWriteStream } from 'fs';
 import { randomBytes } from 'crypto';
 import { mkdir } from 'fs/promises';
 import { getStoragePaths, resolvePathPattern, type PathPatternContext } from './settingsService';
+import { createLogger } from './loggerService';
 import type AdmZip from 'adm-zip';
+
+const log = createLogger('ebook-metadata');
 
 type IZipEntry = ReturnType<InstanceType<typeof import('adm-zip')>['getEntries']>[number];
 
@@ -434,6 +437,8 @@ export async function saveCoverImage(
 	const hash = randomBytes(4).toString('hex');
 	const baseFilename = `${context.title.toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 50)}_${hash}${ext}`;
 
+	log.debug(`Saving cover: title="${context.title}", author="${context.author}", filename="${baseFilename}"`);
+
 	// Resolve the path pattern
 	const patternContext: PathPatternContext = {
 		author: context.author,
@@ -446,11 +451,20 @@ export async function saveCoverImage(
 	const fullPath = path.join(coversPath, resolvedPath);
 	const directory = path.dirname(fullPath);
 
-	// Create directory structure
-	await mkdir(directory, { recursive: true });
+	log.debug(`Cover path: resolved="${resolvedPath}", full="${fullPath}", dir="${directory}"`);
 
-	// Write the file
-	await import('fs/promises').then(fs => fs.writeFile(fullPath, coverBuffer));
+	try {
+		// Create directory structure
+		await mkdir(directory, { recursive: true });
+
+		// Write the file
+		await import('fs/promises').then(fs => fs.writeFile(fullPath, coverBuffer));
+
+		log.info(`Cover saved: ${fullPath} (${coverBuffer.length} bytes)`);
+	} catch (err) {
+		log.error(`Failed to save cover: ${fullPath}`, { error: err });
+		throw err;
+	}
 
 	// Return web-accessible path
 	const webBasePath = coversPath.startsWith('./static') ? coversPath.slice(8) : '/covers';
