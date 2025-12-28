@@ -4,11 +4,17 @@
 
 set -e
 
+# Get version from package.json
+VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "unknown")
+
 # Default to UID/GID 1000 if not specified
 PUID=${PUID:-1000}
 PGID=${PGID:-1000}
 
-echo "Starting BookShelf V2 with UID: $PUID, GID: $PGID"
+echo "============================================"
+echo "  BookShelf V2 - v${VERSION}"
+echo "============================================"
+echo "Starting with UID: $PUID, GID: $PGID"
 
 # Find or create a group with the target GID
 EXISTING_GROUP=$(getent group "$PGID" | cut -d: -f1 || true)
