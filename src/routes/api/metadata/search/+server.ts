@@ -22,6 +22,16 @@ async function configureProviders() {
 			enabled: settings.hardcover.enabled,
 			priority: 4,
 			apiKey: settings.hardcover.apiKey
+		},
+		amazon: {
+			enabled: settings.amazon.enabled,
+			priority: 5,
+			domain: settings.amazon.domain as 'com' | 'co.uk' | 'de' | 'fr' | 'it' | 'es' | 'ca' | 'com.au' | 'co.jp' | 'in'
+		},
+		comicvine: {
+			enabled: settings.comicvine.enabled,
+			priority: 6,
+			apiKey: settings.comicvine.apiKey
 		}
 	});
 }
@@ -81,19 +91,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	}
 
 	// Configure providers from settings before each request
-	const settings = await getMetadataProviderSettings();
-	console.log('[metadata-search] Provider settings:', JSON.stringify(settings));
-
-	metadataProviders.configure({
-		googlebooks: { enabled: settings.googlebooks.enabled, priority: 1 },
-		openlibrary: { enabled: settings.openlibrary.enabled, priority: 2 },
-		goodreads: { enabled: settings.goodreads.enabled, priority: 3 },
-		hardcover: {
-			enabled: settings.hardcover.enabled,
-			priority: 4,
-			apiKey: settings.hardcover.apiKey
-		}
-	});
+	await configureProviders();
 
 	const query = url.searchParams.get('q');
 	const provider = url.searchParams.get('provider') as MetadataProvider | null;

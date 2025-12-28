@@ -185,6 +185,34 @@ export const DEFAULT_SETTINGS = {
 		category: 'metadata',
 		label: 'Hardcover API Key',
 		description: 'API key from hardcover.app/account/api (required for Hardcover)'
+	},
+	'metadata.amazon_enabled': {
+		value: 'false',
+		type: 'boolean',
+		category: 'metadata',
+		label: 'Amazon',
+		description: 'Enable Amazon for metadata lookups (web scraping, may be unreliable)'
+	},
+	'metadata.amazon_domain': {
+		value: 'com',
+		type: 'string',
+		category: 'metadata',
+		label: 'Amazon Domain',
+		description: 'Amazon domain to use (com, co.uk, de, fr, it, es, ca, com.au, co.jp, in)'
+	},
+	'metadata.comicvine_enabled': {
+		value: 'false',
+		type: 'boolean',
+		category: 'metadata',
+		label: 'Comic Vine',
+		description: 'Enable Comic Vine for comic/graphic novel metadata (requires API key)'
+	},
+	'metadata.comicvine_api_key': {
+		value: '',
+		type: 'string',
+		category: 'metadata',
+		label: 'Comic Vine API Key',
+		description: 'API key from comicvine.gamespot.com/api (required for Comic Vine)'
 	}
 } as const;
 
@@ -321,21 +349,38 @@ export async function getMetadataProviderSettings(): Promise<{
 	openlibrary: { enabled: boolean };
 	goodreads: { enabled: boolean };
 	hardcover: { enabled: boolean; apiKey: string };
+	amazon: { enabled: boolean; domain: string };
+	comicvine: { enabled: boolean; apiKey: string };
 }> {
-	const [googleEnabled, openLibraryEnabled, goodreadsEnabled, hardcoverEnabled, hardcoverApiKey] =
-		await Promise.all([
-			getSettingAs<boolean>('metadata.googlebooks_enabled', 'boolean'),
-			getSettingAs<boolean>('metadata.openlibrary_enabled', 'boolean'),
-			getSettingAs<boolean>('metadata.goodreads_enabled', 'boolean'),
-			getSettingAs<boolean>('metadata.hardcover_enabled', 'boolean'),
-			getSetting('metadata.hardcover_api_key')
-		]);
+	const [
+		googleEnabled,
+		openLibraryEnabled,
+		goodreadsEnabled,
+		hardcoverEnabled,
+		hardcoverApiKey,
+		amazonEnabled,
+		amazonDomain,
+		comicvineEnabled,
+		comicvineApiKey
+	] = await Promise.all([
+		getSettingAs<boolean>('metadata.googlebooks_enabled', 'boolean'),
+		getSettingAs<boolean>('metadata.openlibrary_enabled', 'boolean'),
+		getSettingAs<boolean>('metadata.goodreads_enabled', 'boolean'),
+		getSettingAs<boolean>('metadata.hardcover_enabled', 'boolean'),
+		getSetting('metadata.hardcover_api_key'),
+		getSettingAs<boolean>('metadata.amazon_enabled', 'boolean'),
+		getSetting('metadata.amazon_domain'),
+		getSettingAs<boolean>('metadata.comicvine_enabled', 'boolean'),
+		getSetting('metadata.comicvine_api_key')
+	]);
 
 	return {
 		googlebooks: { enabled: googleEnabled as boolean },
 		openlibrary: { enabled: openLibraryEnabled as boolean },
 		goodreads: { enabled: goodreadsEnabled as boolean },
-		hardcover: { enabled: hardcoverEnabled as boolean, apiKey: hardcoverApiKey }
+		hardcover: { enabled: hardcoverEnabled as boolean, apiKey: hardcoverApiKey },
+		amazon: { enabled: amazonEnabled as boolean, domain: amazonDomain },
+		comicvine: { enabled: comicvineEnabled as boolean, apiKey: comicvineApiKey }
 	};
 }
 
