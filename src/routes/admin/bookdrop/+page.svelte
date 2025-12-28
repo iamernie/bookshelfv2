@@ -62,11 +62,14 @@
 	);
 
 	// File upload
+	let uploadError = $state<string | null>(null);
+
 	async function handleFileUpload(event: Event) {
 		const input = event.target as HTMLInputElement;
 		if (!input.files?.length) return;
 
 		uploading = true;
+		uploadError = null;
 
 		const formData = new FormData();
 		for (const file of input.files) {
@@ -81,7 +84,12 @@
 
 			if (res.ok) {
 				await invalidateAll();
+			} else {
+				const errorData = await res.json().catch(() => ({ message: res.statusText }));
+				uploadError = errorData.message || `Upload failed: ${res.status}`;
 			}
+		} catch (err) {
+			uploadError = err instanceof Error ? err.message : 'Upload failed';
 		} finally {
 			uploading = false;
 			input.value = '';
@@ -99,6 +107,7 @@
 		if (!files?.length) return;
 
 		uploading = true;
+		uploadError = null;
 
 		const formData = new FormData();
 		for (const file of files) {
@@ -113,7 +122,12 @@
 
 			if (res.ok) {
 				await invalidateAll();
+			} else {
+				const errorData = await res.json().catch(() => ({ message: res.statusText }));
+				uploadError = errorData.message || `Upload failed: ${res.status}`;
 			}
+		} catch (err) {
+			uploadError = err instanceof Error ? err.message : 'Upload failed';
 		} finally {
 			uploading = false;
 		}
@@ -435,6 +449,17 @@
 				<button class="btn-secondary" onclick={() => (showSettings = false)}>Cancel</button>
 				<button class="btn-accent" onclick={saveSettings}>Save Settings</button>
 			</div>
+		</div>
+	{/if}
+
+	<!-- Upload Error Message -->
+	{#if uploadError}
+		<div class="mb-4 p-4 rounded-lg flex items-center gap-3" style="background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);">
+			<AlertCircle class="w-5 h-5 text-red-500 shrink-0" />
+			<span class="text-red-500">{uploadError}</span>
+			<button class="ml-auto text-red-400 hover:text-red-300" onclick={() => uploadError = null}>
+				<X class="w-4 h-4" />
+			</button>
 		</div>
 	{/if}
 
