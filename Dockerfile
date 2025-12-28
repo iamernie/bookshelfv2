@@ -51,6 +51,9 @@ COPY --from=builder /app/build ./build
 # Copy static assets
 COPY --from=builder /app/static ./static
 
+# Keep a backup of placeholder.png (volumes will overwrite static/covers)
+RUN cp /app/static/placeholder.png /app/placeholder.png.default
+
 # Copy entrypoint script
 COPY docker-entrypoint.sh ./
 

@@ -44,6 +44,18 @@ else
     echo "Created user '$TARGET_USER' with UID $PUID"
 fi
 
+# Copy placeholder.png if it doesn't exist (volumes overwrite the directory)
+if [ ! -f /app/static/placeholder.png ]; then
+    echo "Copying placeholder.png to static directory..."
+    cp /app/placeholder.png.default /app/static/placeholder.png
+fi
+
+# Ensure placeholder.png exists in covers directory too (for direct access)
+if [ ! -f /app/static/covers/placeholder.png ]; then
+    echo "Copying placeholder.png to covers directory..."
+    cp /app/placeholder.png.default /app/static/covers/placeholder.png
+fi
+
 # Set ownership on data directories
 echo "Setting ownership on data directories..."
 chown -R "$PUID:$PGID" /data /logs /app/static/covers /app/static/ebooks 2>/dev/null || true
