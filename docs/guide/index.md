@@ -34,7 +34,7 @@ You've discovered **BookShelf V2** — your personal literary command center! Wh
 
 ### Your Personal Library, Supercharged
 
-![Dashboard Overview](../images/dashboard-overview.png)
+![Dashboard Overview](../images/dashboard.png)
 *Your dashboard — where your reading journey begins each day*
 
 - **Track Everything**: From that dog-eared paperback to your latest Audible addiction
@@ -44,7 +44,7 @@ You've discovered **BookShelf V2** — your personal literary command center! Wh
 
 ### Read Right in the App
 
-![Ebook Reader](../images/ebook-reader-preview.png)
+![Ebook Reader](../images/epub-reader.png)
 *The built-in reader — no app-switching required*
 
 - **EPUB Support**: Full-featured with themes, fonts, and bookmarks
