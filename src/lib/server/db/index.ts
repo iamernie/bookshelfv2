@@ -177,6 +177,61 @@ function safeCreateTable(tableName: string, createSQL: string): boolean {
 	return false;
 }
 
+// Migrate old settings table schema (id-based) to new schema (key-based)
+function migrateSettingsTableSchema(): boolean {
+	if (!tableExists('settings')) {
+		return false;
+	}
+
+	// Check if the table has the old schema (has 'id' column)
+	const hasIdColumn = columnExists('settings', 'id');
+	const hasKeyAsPrimary = !hasIdColumn || columnExists('settings', 'type');
+
+	if (hasIdColumn && !hasKeyAsPrimary) {
+		ensureBackup();
+		try {
+			console.log('[db] Migrating settings table from old schema to new schema...');
+
+			// Create new table with correct schema
+			sqlite.exec(`
+				CREATE TABLE settings_new (
+					key TEXT PRIMARY KEY,
+					value TEXT,
+					type TEXT DEFAULT 'string',
+					category TEXT DEFAULT 'general',
+					label TEXT,
+					description TEXT,
+					isSystem INTEGER DEFAULT 0,
+					createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+					updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+				)
+			`);
+
+			// Copy data from old table (only key, value, category exist in old schema)
+			sqlite.exec(`
+				INSERT OR IGNORE INTO settings_new (key, value, category, createdAt, updatedAt)
+				SELECT key, value, category, createdAt, updatedAt FROM settings
+			`);
+
+			// Drop old table and rename new one
+			sqlite.exec('DROP TABLE settings');
+			sqlite.exec('ALTER TABLE settings_new RENAME TO settings');
+
+			console.log('[db] Settings table migrated successfully');
+			migrationsMade = true;
+			return true;
+		} catch (e) {
+			console.error('[db] Failed to migrate settings table:', e);
+			// Try to clean up
+			try {
+				sqlite.exec('DROP TABLE IF EXISTS settings_new');
+			} catch {}
+			return false;
+		}
+	}
+	return false;
+}
+
 // Rename table if old name exists and new name doesn't
 // Handles case-insensitive SQLite table names properly
 function safeRenameTable(oldName: string, newName: string): boolean {
@@ -516,17 +571,31 @@ function runMigrations() {
 		)
 	`);
 
-	// Settings table
+	// Settings table - first migrate old schema if needed
+	migrateSettingsTableSchema();
+
+	// Create settings table if it doesn't exist (fresh install)
 	safeCreateTable('settings', `
 		CREATE TABLE settings (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			key TEXT NOT NULL UNIQUE,
+			key TEXT PRIMARY KEY,
 			value TEXT,
+			type TEXT DEFAULT 'string',
 			category TEXT DEFAULT 'general',
+			label TEXT,
+			description TEXT,
+			isSystem INTEGER DEFAULT 0,
 			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
 			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
 		)
 	`);
+
+	// Add missing columns to settings table (for databases that were migrated but may still lack columns)
+	if (tableExists('settings')) {
+		safeAddColumn('settings', 'type', "TEXT DEFAULT 'string'");
+		safeAddColumn('settings', 'label', 'TEXT');
+		safeAddColumn('settings', 'description', 'TEXT');
+		safeAddColumn('settings', 'isSystem', 'INTEGER DEFAULT 0');
+	}
 	completeStep('Creating core tables');
 
 	// ========== Books table columns ==========
@@ -854,6 +923,24 @@ function runMigrations() {
 		safeAddColumn('users', 'approvedBy', 'INTEGER');
 		safeAddColumn('users', 'approvedAt', 'TEXT');
 		safeAddColumn('users', 'inviteCodeUsed', 'TEXT');
+
+		// Migrate passwordHash to password column for V1 databases
+		if (columnExists('users', 'passwordHash') && columnExists('users', 'password')) {
+			try {
+				const result = sqlite.prepare(`
+					UPDATE users
+					SET password = passwordHash
+					WHERE password IS NULL OR password = ''
+					  AND passwordHash IS NOT NULL AND passwordHash != ''
+				`).run();
+				if (result.changes > 0) {
+					console.log(`[db] Migrated passwordHash to password for ${result.changes} users`);
+					migrationsMade = true;
+				}
+			} catch (e) {
+				console.error('[db] Failed to migrate passwordHash to password:', e);
+			}
+		}
 	}
 
 	// ========== Invite Codes table ==========

@@ -30,7 +30,12 @@
 		Lightbulb,
 		PanelLeftClose,
 		PanelLeft,
-		Database
+		Database,
+		Shield,
+		Ticket,
+		Activity,
+		Inbox,
+		LayoutDashboard
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { APP_CONFIG } from '$lib/config/app';
@@ -48,6 +53,7 @@
 		statuses: { id: number; name: string; key: string | null; bookCount: number; color: string | null }[];
 		magicShelves?: MagicShelf[];
 		totalBooks: number;
+		isAdmin?: boolean;
 	}
 
 	let { data }: { data: SidebarData } = $props();
@@ -71,6 +77,7 @@
 	let librariesOpen = $state(true);
 	let statusesOpen = $state(true);
 	let smartCollectionsOpen = $state(true);
+	let adminOpen = $state(true);
 
 	// Active path
 	let currentPath = $derived($page.url.pathname);
@@ -295,7 +302,7 @@
 		</div>
 		{/if}
 
-		<!-- Stats & Settings -->
+		<!-- Stats & More -->
 		<div class="mt-6">
 			{#if !collapsed}<div class="sidebar-section">More</div>{/if}
 			<div class="mt-1 space-y-1">
@@ -315,19 +322,68 @@
 				</a>
 			</div>
 		</div>
+
+		<!-- Admin Section (only for admins) -->
+		{#if data.isAdmin}
+		{#if !collapsed}
+		<div class="mt-6">
+			<button
+				class="sidebar-section w-full flex items-center justify-between"
+				onclick={() => adminOpen = !adminOpen}
+			>
+				<span class="flex items-center gap-1">
+					<Shield class="w-3 h-3" style="color: var(--accent);" />
+					Admin
+				</span>
+				{#if adminOpen}
+					<ChevronDown class="w-4 h-4" />
+				{:else}
+					<ChevronRight class="w-4 h-4" />
+				{/if}
+			</button>
+
+			{#if adminOpen}
+				<div class="mt-1 space-y-1">
+					<a href="/admin/users" class="sidebar-item text-sm" class:active={isActive('/admin/users')}>
+						<Users class="w-4 h-4" />
+						<span>Users</span>
+					</a>
+					<a href="/admin/invite-codes" class="sidebar-item text-sm" class:active={isActive('/admin/invite-codes')}>
+						<Ticket class="w-4 h-4" />
+						<span>Invite Codes</span>
+					</a>
+					<a href="/admin/bookdrop" class="sidebar-item text-sm" class:active={isActive('/admin/bookdrop')}>
+						<Inbox class="w-4 h-4" />
+						<span>BookDrop</span>
+					</a>
+					<a href="/admin/diagnostics" class="sidebar-item text-sm" class:active={isActive('/admin/diagnostics')}>
+						<Activity class="w-4 h-4" />
+						<span>Diagnostics</span>
+					</a>
+					<a href="/admin/settings" class="sidebar-item text-sm" class:active={isActive('/admin/settings')}>
+						<Settings class="w-4 h-4" />
+						<span>Settings</span>
+					</a>
+				</div>
+			{/if}
+		</div>
+		{:else}
+			<!-- Collapsed admin view -->
+			<div class="mt-6 space-y-1">
+				<a href="/admin/settings" class="sidebar-item text-sm collapsed" class:active={isActive('/admin')} title="Admin">
+					<Shield class="w-4 h-4 flex-shrink-0" style="color: var(--accent);" />
+				</a>
+			</div>
+		{/if}
+		{/if}
 	</nav>
 
 	<!-- Bottom section -->
 	<div class="p-3 border-t" style="border-color: var(--border-color);">
-		<a href="/admin/settings" class="sidebar-item text-sm" class:active={isActive('/admin/settings')} class:collapsed title={collapsed ? 'System Settings' : undefined}>
-			<Settings class="w-4 h-4 flex-shrink-0" />
-			{#if !collapsed}<span>System Settings</span>{/if}
-		</a>
-
 		<!-- Collapse toggle button -->
 		<button
 			onclick={toggleCollapse}
-			class="sidebar-item text-sm w-full mt-2"
+			class="sidebar-item text-sm w-full"
 			class:collapsed
 			title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 		>

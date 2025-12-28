@@ -213,6 +213,49 @@ export const DEFAULT_SETTINGS = {
 		category: 'metadata',
 		label: 'Comic Vine API Key',
 		description: 'API key from comicvine.gamespot.com/api (required for Comic Vine)'
+	},
+	// Email/SMTP settings
+	'email.smtp_host': {
+		value: '',
+		type: 'string',
+		category: 'email',
+		label: 'SMTP Host',
+		description: 'SMTP server hostname (e.g., smtp.gmail.com, smtp.mailgun.org)'
+	},
+	'email.smtp_port': {
+		value: '587',
+		type: 'number',
+		category: 'email',
+		label: 'SMTP Port',
+		description: 'SMTP server port (587 for TLS, 465 for SSL, 25 for plain)'
+	},
+	'email.smtp_secure': {
+		value: 'false',
+		type: 'boolean',
+		category: 'email',
+		label: 'Use SSL/TLS',
+		description: 'Use implicit TLS (port 465). Leave off for STARTTLS (port 587)'
+	},
+	'email.smtp_user': {
+		value: '',
+		type: 'string',
+		category: 'email',
+		label: 'SMTP Username',
+		description: 'Username for SMTP authentication (often your email address)'
+	},
+	'email.smtp_pass': {
+		value: '',
+		type: 'password',
+		category: 'email',
+		label: 'SMTP Password',
+		description: 'Password or app-specific password for SMTP authentication'
+	},
+	'email.from_address': {
+		value: 'BookShelf <noreply@bookshelf.local>',
+		type: 'string',
+		category: 'email',
+		label: 'From Address',
+		description: 'Email address shown as sender (e.g., BookShelf <noreply@example.com>)'
 	}
 } as const;
 
@@ -381,6 +424,54 @@ export async function getMetadataProviderSettings(): Promise<{
 		hardcover: { enabled: hardcoverEnabled as boolean, apiKey: hardcoverApiKey },
 		amazon: { enabled: amazonEnabled as boolean, domain: amazonDomain },
 		comicvine: { enabled: comicvineEnabled as boolean, apiKey: comicvineApiKey }
+	};
+}
+
+// Get email/SMTP settings (environment variables take precedence)
+export async function getEmailSettings(): Promise<{
+	host: string;
+	port: number;
+	secure: boolean;
+	user: string;
+	pass: string;
+	from: string;
+	configuredViaEnv: boolean;
+}> {
+	// Check if environment variables are set
+	const envHost = process.env.SMTP_HOST;
+	const envConfigured = !!envHost;
+
+	if (envConfigured) {
+		// Use environment variables
+		return {
+			host: envHost,
+			port: parseInt(process.env.SMTP_PORT || '587', 10),
+			secure: process.env.SMTP_SECURE === 'true',
+			user: process.env.SMTP_USER || '',
+			pass: process.env.SMTP_PASS || '',
+			from: process.env.SMTP_FROM || 'BookShelf <noreply@bookshelf.local>',
+			configuredViaEnv: true
+		};
+	}
+
+	// Use database settings
+	const [host, port, secure, user, pass, from] = await Promise.all([
+		getSetting('email.smtp_host'),
+		getSetting('email.smtp_port'),
+		getSettingAs<boolean>('email.smtp_secure', 'boolean'),
+		getSetting('email.smtp_user'),
+		getSetting('email.smtp_pass'),
+		getSetting('email.from_address')
+	]);
+
+	return {
+		host,
+		port: parseInt(port, 10) || 587,
+		secure: secure as boolean,
+		user,
+		pass,
+		from,
+		configuredViaEnv: false
 	};
 }
 

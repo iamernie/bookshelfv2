@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-12-27
+
+### Added
+- **Email/SMTP Settings in UI** - Configure email settings directly from the admin panel
+  - New "Email" tab in Settings with SMTP configuration (host, port, SSL/TLS, credentials)
+  - Hybrid configuration: environment variables take precedence over UI settings
+  - Shows "Configured via Environment Variables" notice when using env vars
+  - Test email functionality to verify SMTP configuration
+  - Supports common providers (Gmail, Mailgun, SendGrid, SES, etc.)
+
+### Changed
+- **Redesigned Settings Page** - New tabbed interface for cleaner navigation
+  - Tabs: General, Storage, Metadata, OPDS, Import, Users, Email, SSO, AI
+  - SSO tab links to dedicated OIDC provider management page
+  - Each tab contains only relevant settings, reducing clutter
+- **Reorganized Sidebar** - Cleaner admin navigation
+  - Added collapsible "Admin" section for admin users
+  - Admin section includes: Users, Invite Codes, BookDrop, Diagnostics, Settings
+  - Removed redundant "System Settings" from bottom of sidebar
+
+### Fixed
+- Database migration now properly handles settings table schema changes from V1
+- User password migration from V1 databases (passwordHash → password column)
+
 ## [0.4.4] - 2025-12-27
 
 ### Added

@@ -2,10 +2,15 @@
  * Email Service
  * Handles sending emails for password resets, notifications, etc.
  * Uses nodemailer with configurable SMTP settings.
+ *
+ * Configuration priority:
+ * 1. Environment variables (SMTP_HOST, SMTP_PORT, etc.) - if set, these override database settings
+ * 2. Database settings (email.smtp_host, etc.) - configurable via admin UI
  */
 
 import nodemailer from 'nodemailer';
 import { createLogger } from './loggerService';
+import { getEmailSettings } from './settingsService';
 
 const log = createLogger('email');
 
@@ -16,31 +21,39 @@ interface EmailConfig {
 	user: string;
 	pass: string;
 	from: string;
+	configuredViaEnv: boolean;
 }
 
-function getEmailConfig(): EmailConfig | null {
-	const host = process.env.SMTP_HOST;
-	const port = parseInt(process.env.SMTP_PORT || '587', 10);
-	const secure = process.env.SMTP_SECURE === 'true';
-	const user = process.env.SMTP_USER || '';
-	const pass = process.env.SMTP_PASS || '';
-	const from = process.env.SMTP_FROM || 'BookShelf <noreply@bookshelf.local>';
+let cachedConfig: EmailConfig | null = null;
+let transporter: nodemailer.Transporter | null = null;
 
-	if (!host) {
+// Clear cached config (useful when settings change)
+export function clearEmailCache(): void {
+	cachedConfig = null;
+	transporter = null;
+}
+
+async function getEmailConfig(): Promise<EmailConfig | null> {
+	if (cachedConfig) {
+		return cachedConfig;
+	}
+
+	const settings = await getEmailSettings();
+
+	if (!settings.host) {
 		return null;
 	}
 
-	return { host, port, secure, user, pass, from };
+	cachedConfig = settings;
+	return cachedConfig;
 }
 
-let transporter: nodemailer.Transporter | null = null;
-
-function getTransporter(): nodemailer.Transporter | null {
+async function getTransporter(): Promise<nodemailer.Transporter | null> {
 	if (transporter) {
 		return transporter;
 	}
 
-	const config = getEmailConfig();
+	const config = await getEmailConfig();
 	if (!config) {
 		log.warn('SMTP not configured - email features disabled');
 		return null;
@@ -61,8 +74,36 @@ function getTransporter(): nodemailer.Transporter | null {
 	return transporter;
 }
 
-export function isEmailConfigured(): boolean {
-	return getEmailConfig() !== null;
+export async function isEmailConfigured(): Promise<boolean> {
+	const config = await getEmailConfig();
+	return config !== null;
+}
+
+export async function getEmailConfigStatus(): Promise<{
+	configured: boolean;
+	configuredViaEnv: boolean;
+	host: string;
+	port: number;
+	from: string;
+}> {
+	const config = await getEmailConfig();
+	if (!config) {
+		return {
+			configured: false,
+			configuredViaEnv: false,
+			host: '',
+			port: 587,
+			from: ''
+		};
+	}
+
+	return {
+		configured: true,
+		configuredViaEnv: config.configuredViaEnv,
+		host: config.host,
+		port: config.port,
+		from: config.from
+	};
 }
 
 export async function sendEmail(
@@ -71,8 +112,8 @@ export async function sendEmail(
 	html: string,
 	text?: string
 ): Promise<boolean> {
-	const transport = getTransporter();
-	const config = getEmailConfig();
+	const transport = await getTransporter();
+	const config = await getEmailConfig();
 
 	if (!transport || !config) {
 		log.warn('Email not sent - SMTP not configured', { to, subject });
@@ -92,6 +133,86 @@ export async function sendEmail(
 	} catch (error) {
 		log.error('Failed to send email', { to, subject, error });
 		return false;
+	}
+}
+
+export async function sendTestEmail(to: string): Promise<{ success: boolean; error?: string }> {
+	const config = await getEmailConfig();
+
+	if (!config) {
+		return { success: false, error: 'SMTP not configured' };
+	}
+
+	// Create a fresh transporter for testing
+	const testTransporter = nodemailer.createTransport({
+		host: config.host,
+		port: config.port,
+		secure: config.secure,
+		auth: config.user
+			? {
+					user: config.user,
+					pass: config.pass
+				}
+			: undefined
+	});
+
+	try {
+		// Verify connection
+		await testTransporter.verify();
+
+		// Send test email
+		await testTransporter.sendMail({
+			from: config.from,
+			to,
+			subject: 'BookShelf Test Email',
+			html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #2563eb; margin: 0;">BookShelf</h1>
+  </div>
+
+  <h2 style="color: #1f2937;">Email Configuration Test</h2>
+
+  <p>This is a test email to verify your SMTP configuration is working correctly.</p>
+
+  <div style="background-color: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 16px; margin: 20px 0;">
+    <p style="color: #166534; margin: 0; font-weight: 500;">Success! Your email settings are configured correctly.</p>
+  </div>
+
+  <p style="color: #6b7280; font-size: 14px;">
+    Configuration source: ${config.configuredViaEnv ? 'Environment Variables' : 'Database Settings'}
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+  <p style="color: #9ca3af; font-size: 12px; text-align: center;">
+    This email was sent from your BookShelf instance.
+  </p>
+</body>
+</html>
+`,
+			text: `BookShelf Email Configuration Test
+
+This is a test email to verify your SMTP configuration is working correctly.
+
+Success! Your email settings are configured correctly.
+
+Configuration source: ${config.configuredViaEnv ? 'Environment Variables' : 'Database Settings'}
+`
+		});
+
+		log.info('Test email sent successfully', { to });
+		return { success: true };
+	} catch (error) {
+		const message = error instanceof Error ? error.message : 'Unknown error';
+		log.error('Test email failed', { to, error: message });
+		return { success: false, error: message };
 	}
 }
 

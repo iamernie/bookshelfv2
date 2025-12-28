@@ -23,6 +23,7 @@ This document outlines planned features, improvements, and future direction for 
 - [x] Admin approval workflow
 - [x] **OIDC/SSO authentication** (Authentik, Keycloak, Google, GitHub, etc.)
 - [x] Account linking for OIDC providers
+- [x] **SMTP/Email settings in UI** - Configure email via settings page or environment variables
 
 ### Import/Export
 - [x] CSV export (books, authors, series)
@@ -45,6 +46,9 @@ This document outlines planned features, improvements, and future direction for 
 - [x] API documentation (Swagger UI)
 - [x] Database migration system with automatic backups
 - [x] Upgrade progress page for V1 to V2 migrations
+- [x] **Tabbed settings page** - Cleaner admin settings with organized tabs
+- [x] **Collapsible admin sidebar** - Better navigation for admin users
+- [x] **AI-powered recommendations** - Book suggestions based on reading history and preferences
 
 ---
 
@@ -58,7 +62,6 @@ This document outlines planned features, improvements, and future direction for 
 
 ### Short Term
 - [ ] Barcode/ISBN scanner (mobile camera)
-- [ ] AI-powered recommendations
 - [ ] Public landing page (optional)
 - [ ] "What's New" changelog modal
 
