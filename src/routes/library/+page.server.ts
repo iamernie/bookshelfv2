@@ -2,6 +2,9 @@ import type { PageServerLoad } from './$types';
 import { db, books, authors, bookAuthors, genres, statuses, userBooks } from '$lib/server/db';
 import { eq, sql, and, desc, asc, or, like } from 'drizzle-orm';
 import { getLibraryOverview } from '$lib/server/services/statsService';
+import { createLogger } from '$lib/server/services/loggerService';
+
+const log = createLogger('library-page');
 
 export const load: PageServerLoad = async ({ url, locals }) => {
 	const page = parseInt(url.searchParams.get('page') || '1');
@@ -14,6 +17,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 
 	const userId = locals.user?.id;
 
+	log.debug(`Library page load: filter=${libraryFilter}, userId=${userId}`);
+
 	// Build base query
 	const conditions = [];
 
@@ -23,6 +28,15 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		conditions.push(eq(books.libraryType, 'public'));
 	} else if (libraryFilter === 'personal' && userId) {
 		// Show only books that the user has added to their personal library (user_books table)
+		log.debug(`Filtering personal library for user ${userId}`);
+
+		// Debug: Check how many books are in user's library
+		const userBookCount = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(userBooks)
+			.where(eq(userBooks.userId, userId));
+		log.debug(`User ${userId} has ${userBookCount[0]?.count || 0} books in their library`);
+
 		conditions.push(
 			sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
 		);

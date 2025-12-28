@@ -17,6 +17,9 @@ import {
 	type LibraryType
 } from '$lib/server/db/schema';
 import { eq, and, inArray, sql, desc, asc } from 'drizzle-orm';
+import { createLogger } from './loggerService';
+
+const log = createLogger('user-book-service');
 
 export interface UserBookWithDetails extends UserBook {
 	book?: {
@@ -67,6 +70,8 @@ export interface UpdateUserBookInput {
 export async function addBookToUserLibrary(input: AddToLibraryInput): Promise<UserBook> {
 	const now = new Date().toISOString();
 
+	log.info(`Adding book ${input.bookId} to user ${input.userId}'s library`);
+
 	// Check if already in user's library
 	const existing = await db
 		.select()
@@ -75,25 +80,31 @@ export async function addBookToUserLibrary(input: AddToLibraryInput): Promise<Us
 		.limit(1);
 
 	if (existing.length > 0) {
-		// Already in library, return existing
+		log.info(`Book ${input.bookId} already in user ${input.userId}'s library`);
 		return existing[0];
 	}
 
-	const [result] = await db
-		.insert(userBooks)
-		.values({
-			userId: input.userId,
-			bookId: input.bookId,
-			statusId: input.statusId,
-			rating: input.rating,
-			comments: input.comments,
-			addedAt: now,
-			createdAt: now,
-			updatedAt: now
-		})
-		.returning();
+	try {
+		const [result] = await db
+			.insert(userBooks)
+			.values({
+				userId: input.userId,
+				bookId: input.bookId,
+				statusId: input.statusId,
+				rating: input.rating,
+				comments: input.comments,
+				addedAt: now,
+				createdAt: now,
+				updatedAt: now
+			})
+			.returning();
 
-	return result;
+		log.info(`Successfully added book ${input.bookId} to user ${input.userId}'s library (userBook id: ${result.id})`);
+		return result;
+	} catch (error) {
+		log.error(`Failed to add book ${input.bookId} to user ${input.userId}'s library`, { error });
+		throw error;
+	}
 }
 
 /**
