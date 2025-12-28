@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2025-12-27
+
+### Fixed
+- Cover images and ebooks now properly served in Docker deployments
+  - Added dynamic file serving routes for `/covers/` and `/ebooks/`
+  - Fixes issue where runtime-mounted volumes weren't accessible via static paths
+
 ## [0.4.1] - 2025-12-27
 
 ### Fixed
