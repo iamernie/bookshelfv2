@@ -4,6 +4,103 @@ This document details all completed features with their implementation specifics
 
 ---
 
+## Per-User Personal Libraries (Completed)
+
+Multi-user private book collections with library sharing between users.
+
+### Core Features
+
+**Per-User Book Ownership:**
+- Each user has their own private book collection
+- New users start with 0 books (no shared global library)
+- Books are owned by the user who creates/imports them
+- All book operations respect ownership
+
+**Library Sharing:**
+- Share your library with other users (family, friends)
+- Three permission levels:
+  - `read` - View books and download ebooks
+  - `read_write` - Add/edit books (no delete)
+  - `full` - Complete access including delete
+- Change or revoke permissions anytime
+
+### Database Changes
+
+**Schema (`src/lib/server/db/schema.ts`):**
+- Added `ownerId` column to `books` table
+- Created `library_shares` table with:
+  - `ownerId` - User sharing their library
+  - `sharedWithId` - User receiving access
+  - `permission` - Access level (read/read_write/full)
+  - Timestamps for created/updated
+
+**Migration (`src/lib/server/db/index.ts`):**
+- Adds `ownerId` column to existing books
+- Assigns all existing books to admin user (id=1)
+- Creates `library_shares` table with indexes
+
+### Files Created
+
+**Service (`src/lib/server/services/libraryShareService.ts`):**
+- `shareLibrary(ownerId, sharedWithId, permission)` - Create a share
+- `removeShare(ownerId, sharedWithId)` - Remove a share
+- `getLibraryShares(ownerId)` - Get users you've shared with
+- `getSharedLibraries(userId)` - Get libraries shared with you
+- `getShareableUsers(userId)` - Get users available to share with
+- `updateSharePermission()` - Change permission level
+- `canAccessBook(userId, bookId)` - Check read access
+- `canModifyBook(userId, bookId)` - Check edit access
+- `canDeleteBook(userId, bookId)` - Check delete access
+- `getAccessibleBookOwners(userId)` - Get all owner IDs user can access
+
+**API Endpoints (`src/routes/api/library/shares/`):**
+- `GET /api/library/shares` - List shares (type=my_shares or shared_with_me)
+- `POST /api/library/shares` - Create new share
+- `PUT /api/library/shares` - Update share permission
+- `DELETE /api/library/shares?userId=X` - Remove share
+- `GET /api/library/shares/users` - Get shareable users
+
+### Files Modified
+
+**Book Service (`src/lib/server/services/bookService.ts`):**
+- `getBooks()` now filters by accessible owner IDs
+- `createBook()` requires ownerId parameter
+- Added `includeShared` option to include shared libraries
+
+**Dashboard Service (`src/lib/server/services/dashboardService.ts`):**
+- All stats filtered by user's accessible libraries
+- `getUserLibraryCondition()` now async for permission lookups
+
+**Search Service (`src/lib/server/services/searchService.ts`):**
+- Search results filtered to accessible books only
+
+**API Routes:**
+- `GET /api/books` - Filters by user's library
+- `POST /api/books` - Sets ownerId to current user
+- `PUT /api/books/[id]` - Checks modify permission
+- `DELETE /api/books/[id]` - Checks delete permission
+- `GET /ebooks/[...path]` - Checks ebook access permission
+
+### UI Features (`/account/settings`)
+
+**Library Sharing Section:**
+- Shows users you've shared your library with
+- Shows libraries shared with you
+- Permission level indicator (icons + labels)
+- Change permission dropdown
+- Remove share button with confirmation
+- Empty state with helpful message
+
+**Share Library Modal:**
+- User selection dropdown (only shows available users)
+- Permission level picker with descriptions:
+  - View Only (read)
+  - Can Edit (read_write)
+  - Full Access (full)
+- Share button creates the share
+
+---
+
 ## AI Recommendations (Completed)
 
 OpenAI-powered book suggestions based on your reading history, plus rule-based recommendations.

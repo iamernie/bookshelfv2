@@ -1,6 +1,7 @@
-import { db, books, bookAuthors, bookSeries, bookTags, authors, series, statuses, genres, formats, narrators, tags, userBooks, userBookTags, metadataSuggestions, readingSessions, bookdropQueue } from '$lib/server/db';
+import { db, books, bookAuthors, bookSeries, bookTags, authors, series, statuses, genres, formats, narrators, tags, userBooks, userBookTags, metadataSuggestions, readingSessions, bookdropQueue, libraryShares } from '$lib/server/db';
 import { eq, like, sql, desc, asc, and, or, inArray } from 'drizzle-orm';
 import type { Book, NewBook } from '$lib/server/db/schema';
+import { getAccessibleBookOwners } from './libraryShareService';
 
 export interface BookWithRelations extends Book {
 	authors: { id: number; name: string; role: string | null; isPrimary: boolean | null }[];
@@ -25,8 +26,9 @@ export interface GetBooksOptions {
 	sort?: 'title' | 'createdAt' | 'rating' | 'completedDate' | 'series' | 'status' | 'format' | 'genre';
 	order?: 'asc' | 'desc';
 	libraryType?: 'personal' | 'public' | 'all';
-	userId?: number; // When provided with libraryType='personal', includes books user added from public library
+	userId?: number; // Required for per-user library filtering - shows books owned by user and shared with user
 	filterMode?: 'and' | 'or'; // How to combine filter conditions (default: 'and')
+	includeShared?: boolean; // Whether to include books from shared libraries (default: true)
 }
 
 export async function getBooks(options: GetBooksOptions = {}): Promise<{
@@ -35,7 +37,7 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 	page: number;
 	limit: number;
 }> {
-	const { page = 1, limit = 24, search, statusId, genreId, formatId, tagId, authorId, seriesId, sort = 'createdAt', order = 'desc', libraryType = 'personal', userId, filterMode = 'and' } = options;
+	const { page = 1, limit = 24, search, statusId, genreId, formatId, tagId, authorId, seriesId, sort = 'createdAt', order = 'desc', libraryType = 'personal', userId, filterMode = 'and', includeShared = true } = options;
 	const offset = (page - 1) * limit;
 
 	// Build where conditions
@@ -44,18 +46,22 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 	// Filter conditions can use AND or OR based on filterMode
 	const filterConditions = [];
 
-	// Filter by library type (always AND)
-	// When libraryType='personal' and userId is provided, show:
-	//   - Books with libraryType='personal'
-	//   - OR books that are in the user's library (user_books table)
-	if (libraryType === 'personal' && userId) {
-		baseConditions.push(
-			or(
-				eq(books.libraryType, 'personal'),
-				sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
-			)
-		);
-	} else if (libraryType !== 'all') {
+	// Per-user library filtering: only show books owned by user or shared with user
+	if (userId) {
+		// Get all owner IDs whose books this user can access
+		const accessibleOwnerIds = includeShared
+			? await getAccessibleBookOwners(userId)
+			: [userId];
+
+		if (accessibleOwnerIds.length === 1) {
+			baseConditions.push(eq(books.ownerId, accessibleOwnerIds[0]));
+		} else if (accessibleOwnerIds.length > 1) {
+			baseConditions.push(inArray(books.ownerId, accessibleOwnerIds));
+		}
+	}
+
+	// Filter by library type (personal vs public within accessible books)
+	if (libraryType !== 'all') {
 		baseConditions.push(eq(books.libraryType, libraryType));
 	}
 
@@ -284,11 +290,17 @@ export interface CreateBookData extends Omit<NewBook, 'createdAt' | 'updatedAt'>
 	authors?: { id: number; role?: string; isPrimary?: boolean }[];
 	series?: { id: number; bookNum?: number; bookNumEnd?: number }[];
 	tagIds?: number[];
+	ownerId?: number; // Required for per-user libraries
 }
 
 export async function createBook(data: CreateBookData): Promise<Book> {
 	const now = new Date().toISOString();
 	const { authors: bookAuthorsList, series: bookSeriesList, tagIds, ...bookData } = data;
+
+	// Ensure ownerId is set - books must have an owner
+	if (!bookData.ownerId) {
+		throw new Error('ownerId is required to create a book');
+	}
 
 	const [newBook] = await db
 		.insert(books)

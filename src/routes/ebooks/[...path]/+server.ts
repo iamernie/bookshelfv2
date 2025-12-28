@@ -2,6 +2,9 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync, statSync } from 'fs';
 import { join, extname } from 'path';
+import { db, books } from '$lib/server/db';
+import { like } from 'drizzle-orm';
+import { canAccessBook } from '$lib/server/services/libraryShareService';
 
 // MIME types for ebook files
 const MIME_TYPES: Record<string, string> = {
@@ -47,6 +50,22 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	if (!existsSync(filePath)) {
 		throw error(404, 'Ebook not found');
 	}
+
+	// Find the book that owns this ebook file and check access permissions
+	const ebookPath = `/ebooks/${sanitizedPath}`;
+	const book = await db
+		.select({ id: books.id })
+		.from(books)
+		.where(like(books.ebookPath, `%${sanitizedPath}`))
+		.limit(1);
+
+	if (book.length > 0) {
+		const hasAccess = await canAccessBook(locals.user.id, book[0].id);
+		if (!hasAccess) {
+			throw error(403, 'You do not have access to this ebook');
+		}
+	}
+	// If no book found with this path, still serve it (might be an orphaned file or edge case)
 
 	// Get file stats
 	const stats = statSync(filePath);

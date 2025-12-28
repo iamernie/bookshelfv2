@@ -101,7 +101,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 			if (result.verificationToken) {
 				const baseUrl = `${url.protocol}//${url.host}`;
 
-				if (isEmailConfigured()) {
+				if (await isEmailConfigured()) {
 					const emailSent = await sendVerificationEmail(email, result.verificationToken, baseUrl);
 					if (!emailSent) {
 						log.warn('Failed to send verification email', { email, userId: result.userId });

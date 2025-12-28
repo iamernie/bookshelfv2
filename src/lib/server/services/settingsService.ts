@@ -56,11 +56,11 @@ export const DEFAULT_SETTINGS = {
 		description: 'Name displayed in the header and OPDS feed'
 	},
 	'library.default_status': {
-		value: '',
+		value: '1',
 		type: 'string',
 		category: 'library',
 		label: 'Default Status',
-		description: 'Default reading status for new books'
+		description: 'Default reading status for new books (Unread by default)'
 	},
 	// Registration settings
 	'registration.allow_signup': {

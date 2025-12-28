@@ -2,6 +2,7 @@ import type { PageServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { getUserPreferences } from '$lib/server/services/userPreferencesService';
 import { getUserOidcLinks, getEnabledProviders } from '$lib/server/services/oidcService';
+import { getLibraryShares, getSharedLibraries, getShareableUsers } from '$lib/server/services/libraryShareService';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -23,6 +24,13 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	// Check for success message from linking
 	const linked = url.searchParams.get('linked') === 'true';
 
+	// Get library sharing data
+	const [myShares, sharedWithMe, shareableUsers] = await Promise.all([
+		getLibraryShares(locals.user.id),
+		getSharedLibraries(locals.user.id),
+		getShareableUsers(locals.user.id)
+	]);
+
 	return {
 		preferences,
 		oidcLinks: oidcLinks.map((link) => ({
@@ -43,6 +51,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			buttonColor: p.buttonColor,
 			iconUrl: p.iconUrl
 		})),
-		justLinked: linked
+		justLinked: linked,
+		librarySharing: {
+			myShares,
+			sharedWithMe,
+			shareableUsers
+		}
 	};
 };

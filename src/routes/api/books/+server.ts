@@ -2,7 +2,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getBooks, createBook, getStatuses, getGenres, getFormats, getNarrators, getTags, getAllAuthors, getAllSeries } from '$lib/server/services/bookService';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
 	const page = parseInt(url.searchParams.get('page') || '1');
 	const limit = parseInt(url.searchParams.get('limit') || '24');
 	const search = url.searchParams.get('search') || url.searchParams.get('q') || undefined;
@@ -13,7 +13,9 @@ export const GET: RequestHandler = async ({ url }) => {
 	const sort = (url.searchParams.get('sort') as 'title' | 'createdAt' | 'rating' | 'completedDate') || 'createdAt';
 	const order = (url.searchParams.get('order') as 'asc' | 'desc') || 'desc';
 
-	const result = await getBooks({ page, limit, search, statusId, genreId, authorId, seriesId, sort, order });
+	// Pass userId for per-user library filtering
+	const userId = locals.user?.id;
+	const result = await getBooks({ page, limit, search, statusId, genreId, authorId, seriesId, sort, order, userId });
 	return json(result);
 };
 
@@ -54,7 +56,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		purchasePrice: data.purchasePrice || null,
 		authors: data.authors || [],
 		series: data.series || [],
-		tagIds: data.tagIds || []
+		tagIds: data.tagIds || [],
+		ownerId: locals.user.id // Set the book owner to the current user
 	});
 
 	return json(book, { status: 201 });

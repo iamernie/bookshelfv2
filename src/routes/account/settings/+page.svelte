@@ -19,7 +19,13 @@
 		Shield,
 		Link,
 		Unlink,
-		ExternalLink
+		ExternalLink,
+		Users,
+		UserPlus,
+		Trash2,
+		Eye,
+		Edit,
+		KeyRound
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
 	import { theme as themeStore, type Theme } from '$lib/stores/theme';
@@ -27,6 +33,93 @@
 	let { data } = $props();
 
 	let preferences = $state({ ...data.preferences });
+
+	// Library sharing state
+	let showShareModal = $state(false);
+	let selectedUserId = $state<number | null>(null);
+	let selectedPermission = $state<'read' | 'read_write' | 'full'>('read');
+	let sharingInProgress = $state(false);
+	let removingShareId = $state<number | null>(null);
+
+	const permissionLabels: Record<string, { label: string; description: string; icon: typeof Eye }> = {
+		read: { label: 'View Only', description: 'Can browse and read books', icon: Eye },
+		read_write: { label: 'Can Edit', description: 'Can edit book details', icon: Edit },
+		full: { label: 'Full Access', description: 'Can edit and delete books', icon: KeyRound }
+	};
+
+	async function shareLibrary() {
+		if (!selectedUserId) {
+			toasts.error('Please select a user');
+			return;
+		}
+
+		sharingInProgress = true;
+		try {
+			const res = await fetch('/api/library/shares', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ userId: selectedUserId, permission: selectedPermission })
+			});
+
+			if (res.ok) {
+				toasts.success('Library shared successfully');
+				showShareModal = false;
+				selectedUserId = null;
+				selectedPermission = 'read';
+				invalidateAll();
+			} else {
+				const result = await res.json();
+				toasts.error(result.message || 'Failed to share library');
+			}
+		} catch {
+			toasts.error('An error occurred');
+		} finally {
+			sharingInProgress = false;
+		}
+	}
+
+	async function removeLibraryShare(userId: number) {
+		if (!confirm('Are you sure you want to stop sharing your library with this user?')) {
+			return;
+		}
+
+		removingShareId = userId;
+		try {
+			const res = await fetch(`/api/library/shares?userId=${userId}`, {
+				method: 'DELETE'
+			});
+
+			if (res.ok) {
+				toasts.success('Library share removed');
+				invalidateAll();
+			} else {
+				toasts.error('Failed to remove share');
+			}
+		} catch {
+			toasts.error('An error occurred');
+		} finally {
+			removingShareId = null;
+		}
+	}
+
+	async function updateSharePermission(userId: number, permission: string) {
+		try {
+			const res = await fetch('/api/library/shares', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ userId, permission })
+			});
+
+			if (res.ok) {
+				toasts.success('Permission updated');
+				invalidateAll();
+			} else {
+				toasts.error('Failed to update permission');
+			}
+		} catch {
+			toasts.error('An error occurred');
+		}
+	}
 	let saving = $state(false);
 	let saved = $state(false);
 	let resetting = $state(false);
@@ -524,8 +617,223 @@
 				</div>
 			</section>
 		{/if}
+
+		<!-- Library Sharing Section -->
+		<section class="card p-6">
+			<div class="flex items-center justify-between mb-4">
+				<div class="flex items-center gap-2">
+					<Users class="w-5 h-5" style="color: var(--accent);" />
+					<h2 class="text-lg font-semibold" style="color: var(--text-primary);">Library Sharing</h2>
+				</div>
+				{#if data.librarySharing?.shareableUsers?.length > 0}
+					<button
+						type="button"
+						class="btn-primary flex items-center gap-2 text-sm"
+						onclick={() => showShareModal = true}
+					>
+						<UserPlus class="w-4 h-4" />
+						Share Library
+					</button>
+				{/if}
+			</div>
+
+			<p class="text-sm mb-4" style="color: var(--text-muted);">
+				Share your book library with family members or housemates. They'll be able to see your books based on the permission level you set.
+			</p>
+
+			<!-- My Shares (Who I'm sharing with) -->
+			{#if data.librarySharing?.myShares?.length > 0}
+				<div class="mb-6">
+					<h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary);">
+						People with access to your library
+					</h3>
+					<div class="space-y-2">
+						{#each data.librarySharing.myShares as share}
+							<div class="flex items-center justify-between p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+								<div class="flex items-center gap-3">
+									<div
+										class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+										style="background: var(--accent);"
+									>
+										{(share.sharedWithName || share.sharedWithEmail || '?').charAt(0).toUpperCase()}
+									</div>
+									<div>
+										<p class="font-medium" style="color: var(--text-primary);">
+											{share.sharedWithName || share.sharedWithEmail}
+										</p>
+										{#if share.sharedWithName && share.sharedWithEmail}
+											<p class="text-xs" style="color: var(--text-muted);">{share.sharedWithEmail}</p>
+										{/if}
+									</div>
+								</div>
+								<div class="flex items-center gap-3">
+									<select
+										class="form-input text-sm"
+										value={share.permission}
+										onchange={(e) => updateSharePermission(share.sharedWithId, (e.target as HTMLSelectElement).value)}
+									>
+										<option value="read">View Only</option>
+										<option value="read_write">Can Edit</option>
+										<option value="full">Full Access</option>
+									</select>
+									<button
+										type="button"
+										class="p-2 rounded-lg hover:bg-red-500/10 transition-colors"
+										title="Remove access"
+										onclick={() => removeLibraryShare(share.sharedWithId)}
+										disabled={removingShareId === share.sharedWithId}
+									>
+										{#if removingShareId === share.sharedWithId}
+											<Loader2 class="w-4 h-4 animate-spin" style="color: var(--text-muted);" />
+										{:else}
+											<Trash2 class="w-4 h-4 text-red-400" />
+										{/if}
+									</button>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			<!-- Libraries Shared With Me -->
+			{#if data.librarySharing?.sharedWithMe?.length > 0}
+				<div>
+					<h3 class="text-sm font-medium mb-3" style="color: var(--text-secondary);">
+						Libraries shared with you
+					</h3>
+					<div class="space-y-2">
+						{#each data.librarySharing.sharedWithMe as share}
+							{@const perm = permissionLabels[share.permission] || permissionLabels.read}
+							{@const PermIcon = perm.icon}
+							<div class="flex items-center justify-between p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+								<div class="flex items-center gap-3">
+									<div
+										class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+										style="background: #6366f1;"
+									>
+										{(share.ownerName || share.ownerEmail || '?').charAt(0).toUpperCase()}
+									</div>
+									<div>
+										<p class="font-medium" style="color: var(--text-primary);">
+											{share.ownerName || share.ownerEmail}'s Library
+										</p>
+										{#if share.ownerName && share.ownerEmail}
+											<p class="text-xs" style="color: var(--text-muted);">{share.ownerEmail}</p>
+										{/if}
+									</div>
+								</div>
+								<div class="flex items-center gap-2">
+									<span class="flex items-center gap-1 text-xs px-2 py-1 rounded-full" style="background: var(--bg-secondary); color: var(--text-secondary);">
+										<PermIcon class="w-3 h-3" />
+										{perm.label}
+									</span>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+
+			<!-- Empty State -->
+			{#if (!data.librarySharing?.myShares || data.librarySharing.myShares.length === 0) && (!data.librarySharing?.sharedWithMe || data.librarySharing.sharedWithMe.length === 0)}
+				<div class="text-center py-8" style="color: var(--text-muted);">
+					<Users class="w-12 h-12 mx-auto mb-3 opacity-30" />
+					<p class="font-medium">No shared libraries</p>
+					<p class="text-sm mt-1">Share your library with family or friends to get started</p>
+				</div>
+			{/if}
+		</section>
 	</div>
 </div>
+
+<!-- Share Library Modal -->
+{#if showShareModal}
+	<div class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+		<div class="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md" style="background-color: var(--bg-secondary);">
+			<div class="flex items-center justify-between px-6 py-4 border-b" style="border-color: var(--border-color);">
+				<h2 class="text-lg font-semibold" style="color: var(--text-primary);">Share Your Library</h2>
+				<button
+					type="button"
+					class="p-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+					onclick={() => showShareModal = false}
+				>
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
+				</button>
+			</div>
+
+			<div class="p-6 space-y-4">
+				<!-- User Selection -->
+				<div>
+					<label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">
+						Share with
+					</label>
+					<select class="form-input w-full" bind:value={selectedUserId}>
+						<option value={null}>Select a user...</option>
+						{#each data.librarySharing?.shareableUsers || [] as user}
+							<option value={user.id}>{user.username} ({user.email})</option>
+						{/each}
+					</select>
+				</div>
+
+				<!-- Permission Level -->
+				<div>
+					<label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">
+						Permission Level
+					</label>
+					<div class="space-y-2">
+						{#each Object.entries(permissionLabels) as [value, { label, description, icon: PermIcon }]}
+							<label
+								class="flex items-center gap-3 p-3 rounded-lg cursor-pointer border transition-all"
+								style="background-color: {selectedPermission === value ? 'var(--accent)' : 'var(--bg-tertiary)'};
+								       border-color: {selectedPermission === value ? 'var(--accent)' : 'var(--border-color)'};
+								       color: {selectedPermission === value ? 'white' : 'var(--text-primary)'};"
+							>
+								<input
+									type="radio"
+									name="permission"
+									{value}
+									bind:group={selectedPermission}
+									class="sr-only"
+								/>
+								<PermIcon class="w-5 h-5" />
+								<div>
+									<p class="font-medium">{label}</p>
+									<p class="text-xs opacity-75">{description}</p>
+								</div>
+							</label>
+						{/each}
+					</div>
+				</div>
+			</div>
+
+			<div class="flex justify-end gap-3 px-6 py-4 border-t" style="border-color: var(--border-color);">
+				<button
+					type="button"
+					class="btn-ghost"
+					onclick={() => showShareModal = false}
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					class="btn-primary flex items-center gap-2"
+					onclick={shareLibrary}
+					disabled={sharingInProgress || !selectedUserId}
+				>
+					{#if sharingInProgress}
+						<Loader2 class="w-4 h-4 animate-spin" />
+					{:else}
+						<UserPlus class="w-4 h-4" />
+					{/if}
+					Share Library
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 <style>
 	.form-input {
@@ -575,6 +883,7 @@
 
 	input[type="range"] {
 		-webkit-appearance: none;
+		appearance: none;
 		height: 6px;
 		border-radius: 3px;
 		background: var(--border-color);
@@ -591,6 +900,7 @@
 
 	input[type="color"] {
 		-webkit-appearance: none;
+		appearance: none;
 		border: none;
 		padding: 0;
 	}

@@ -54,7 +54,21 @@ This document outlines planned features, improvements, and future direction for 
 
 ## In Progress
 
-*Nothing currently in active development*
+### Per-User Personal Libraries (Multi-Library Support)
+- [x] Add `ownerId` to books table for book ownership
+- [x] Create `library_shares` table for sharing between users
+- [x] Database migration (assign existing books to admin user)
+- [x] Create libraryShareService for sharing management
+- [x] Update bookService with ownership filtering
+- [x] Update dashboardService to include shared books
+- [x] Update searchService to filter by accessible books
+- [x] Update API routes with userId context and permissions
+- [x] Add permission check to ebook serving route
+- [x] Library sharing API endpoints
+- [ ] Library sharing UI in user settings
+- [ ] Permission levels: read, read_write, full
+
+**Goal:** Each user has their own private book collection. Users can optionally share their library with other users (e.g., family members in the same household). New users start with 0 books.
 
 ---
 
@@ -75,7 +89,6 @@ This document outlines planned features, improvements, and future direction for 
 ### Long Term
 - [ ] Mobile app (PWA or native)
 - [ ] Social features (follow users, public profiles)
-- [ ] Multi-library support
 - [ ] Plugin/extension system
 - [ ] Audiobook playback integration
 

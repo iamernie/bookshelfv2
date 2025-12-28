@@ -37,7 +37,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 		}
 
 		// Send the verification email
-		if (result.token && isEmailConfigured()) {
+		if (result.token && (await isEmailConfigured())) {
 			const baseUrl = `${url.protocol}//${url.host}`;
 			const emailSent = await sendVerificationEmail(email, result.token, baseUrl);
 			if (!emailSent) {

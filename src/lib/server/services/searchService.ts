@@ -1,5 +1,6 @@
 import { db, books, authors, series, narrators, bookAuthors, bookSeries, statuses, genres, formats, tags, bookTags } from '$lib/server/db';
 import { like, eq, sql, asc, desc, and, or, gte, lte, ne, isNull, isNotNull, inArray } from 'drizzle-orm';
+import { getAccessibleBookOwners } from './libraryShareService';
 
 export interface AutocompleteResult {
 	books: {
@@ -31,23 +32,33 @@ export interface AutocompleteResult {
 	}[];
 }
 
-export async function autocomplete(query: string): Promise<AutocompleteResult> {
+export async function autocomplete(query: string, userId?: number): Promise<AutocompleteResult> {
 	if (!query || query.length < 2) {
 		return { books: [], authors: [], series: [], narrators: [] };
 	}
 
 	const searchTerm = `%${query}%`;
 
+	// Get accessible owner IDs for per-user library filtering
+	const accessibleOwnerIds = userId ? await getAccessibleBookOwners(userId) : null;
+
+	// Build book ownership filter
+	const ownershipFilter = accessibleOwnerIds
+		? accessibleOwnerIds.length === 1
+			? eq(books.ownerId, accessibleOwnerIds[0])
+			: inArray(books.ownerId, accessibleOwnerIds)
+		: undefined;
+
 	// Run all searches in parallel
 	const [booksResult, authorsResult, seriesResult, narratorsResult] = await Promise.all([
-		// Search books by title
+		// Search books by title (filtered by ownership)
 		db.select({
 			id: books.id,
 			title: books.title,
 			coverImageUrl: books.coverImageUrl
 		})
 			.from(books)
-			.where(like(books.title, searchTerm))
+			.where(ownershipFilter ? and(like(books.title, searchTerm), ownershipFilter) : like(books.title, searchTerm))
 			.orderBy(asc(books.title))
 			.limit(5),
 
@@ -134,6 +145,9 @@ export async function autocomplete(query: string): Promise<AutocompleteResult> {
 }
 
 export interface AdvancedSearchFilters {
+	// User context for per-user library filtering
+	userId?: number;
+
 	// Text filters
 	title?: string;
 	authorName?: string;
@@ -198,11 +212,21 @@ export interface AdvancedSearchResult {
 }
 
 export async function advancedSearch(filters: AdvancedSearchFilters): Promise<AdvancedSearchResult> {
-	const { page = 1, limit = 24 } = filters;
+	const { page = 1, limit = 24, userId } = filters;
 	const offset = (page - 1) * limit;
 
 	// Build where conditions
 	const conditions: ReturnType<typeof eq>[] = [];
+
+	// Per-user library filtering - only show books the user has access to
+	if (userId) {
+		const accessibleOwnerIds = await getAccessibleBookOwners(userId);
+		if (accessibleOwnerIds.length === 1) {
+			conditions.push(eq(books.ownerId, accessibleOwnerIds[0]));
+		} else if (accessibleOwnerIds.length > 1) {
+			conditions.push(inArray(books.ownerId, accessibleOwnerIds));
+		}
+	}
 
 	// Title search
 	if (filters.title) {

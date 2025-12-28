@@ -779,7 +779,21 @@
 									{/if}
 								</div>
 								<div class="w-72">
-									{#if setting.type === 'boolean'}
+									{#if setting.key === 'library.default_status'}
+										<select
+											id={setting.key}
+											value={editedSettings[setting.key] ?? ''}
+											onchange={(e) => updateSetting(setting.key, (e.target as HTMLSelectElement).value)}
+											disabled={!data.isAdmin}
+											class="w-full px-3 py-2 rounded-lg text-sm"
+											style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+										>
+											<option value="">None (no default)</option>
+											{#each data.statuses as status}
+												<option value={String(status.id)}>{status.name}</option>
+											{/each}
+										</select>
+									{:else if setting.type === 'boolean'}
 										<button
 											type="button"
 											class="toggle-switch {editedSettings[setting.key] === 'true' ? 'active' : ''}"

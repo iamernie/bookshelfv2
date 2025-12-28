@@ -3,10 +3,11 @@
  * Aggregates data for the enhanced dashboard with customizable widgets
  */
 
-import { db, books, authors, series, statuses, bookAuthors, bookSeries, genres, formats, tags, bookTags, settings, userBooks } from '$lib/server/db';
-import { eq, sql, desc, asc, and, isNotNull, ne, gte, lt, or, count } from 'drizzle-orm';
+import { db, books, authors, series, statuses, bookAuthors, bookSeries, genres, formats, tags, bookTags, settings, userBooks, libraryShares } from '$lib/server/db';
+import { eq, sql, desc, asc, and, isNotNull, ne, gte, lt, or, count, inArray } from 'drizzle-orm';
 import { getBooksCardData } from './bookService';
 import { getGoalForDashboard } from './goalsService';
+import { getAccessibleBookOwners } from './libraryShareService';
 import type { BookCardData } from '$lib/types';
 
 // Status keys
@@ -54,15 +55,26 @@ export const DEFAULT_WIDGET_CONFIG: DashboardWidgetConfig[] = [
 	{ id: 'monthly-chart', enabled: true, order: 10 }
 ];
 
-// User library filter helper
-function getUserLibraryCondition(userId?: number) {
+// User library filter helper - filters books by ownership and sharing
+// This is now async because we need to look up shared library access
+async function getUserLibraryCondition(userId?: number) {
 	if (!userId) {
-		return eq(books.libraryType, 'personal');
+		// No user context - return a condition that matches nothing for safety
+		// This shouldn't happen in practice as dashboard always has a user
+		return sql`1=0`;
 	}
-	return or(
-		eq(books.libraryType, 'personal'),
-		sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
-	);
+
+	// Get all owner IDs whose books this user can access
+	const accessibleOwnerIds = await getAccessibleBookOwners(userId);
+
+	if (accessibleOwnerIds.length === 1) {
+		return eq(books.ownerId, accessibleOwnerIds[0]);
+	} else if (accessibleOwnerIds.length > 1) {
+		return inArray(books.ownerId, accessibleOwnerIds);
+	}
+
+	// Fallback - only own books
+	return eq(books.ownerId, userId);
 }
 
 // Get status ID by key
@@ -93,7 +105,7 @@ export async function getStatsOverview(userId?: number): Promise<StatsOverview> 
 	const currentYear = new Date().getFullYear();
 	const yearStart = `${currentYear}-01-01`;
 	const yearEnd = `${currentYear + 1}-01-01`;
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 
 	const [readStatusId, currentStatusId, nextStatusId, wishlistStatusId] = await Promise.all([
 		getStatusId(STATUS_KEYS.READ),
@@ -164,7 +176,7 @@ export interface FormatBreakdown {
 }
 
 export async function getFormatBreakdown(userId?: number): Promise<FormatBreakdown[]> {
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 
 	const result = await db.select({
 		id: formats.id,
@@ -200,7 +212,7 @@ export interface GenreDistribution {
 }
 
 export async function getGenreDistribution(userId?: number, limit = 8): Promise<GenreDistribution[]> {
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 
 	const result = await db.select({
 		id: genres.id,
@@ -237,7 +249,7 @@ export async function getMonthlyReadingData(userId?: number, year?: number): Pro
 	const selectedYear = year || new Date().getFullYear();
 	const yearStart = `${selectedYear}-01-01`;
 	const yearEnd = `${selectedYear + 1}-01-01`;
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 
 	const readStatusId = await getStatusId(STATUS_KEYS.READ);
 	if (!readStatusId) {
@@ -296,7 +308,7 @@ export interface TopAuthor {
 }
 
 export async function getTopAuthors(userId?: number, limit = 5): Promise<TopAuthor[]> {
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 	const readStatusId = await getStatusId(STATUS_KEYS.READ);
 
 	const result = await db.select({
@@ -335,7 +347,7 @@ export async function getTopAuthors(userId?: number, limit = 5): Promise<TopAuth
 // Continue Reading (Currently Reading books)
 // ============================================
 export async function getContinueReading(userId?: number, limit = 6): Promise<BookCardData[]> {
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 	const currentStatusId = await getStatusId(STATUS_KEYS.CURRENT);
 
 	if (!currentStatusId) return [];
@@ -353,7 +365,7 @@ export async function getContinueReading(userId?: number, limit = 6): Promise<Bo
 // Recently Added
 // ============================================
 export async function getRecentlyAdded(userId?: number, limit = 12): Promise<BookCardData[]> {
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 
 	const bookIds = await db.select({ id: books.id })
 		.from(books)
@@ -368,7 +380,7 @@ export async function getRecentlyAdded(userId?: number, limit = 12): Promise<Boo
 // Recently Completed
 // ============================================
 export async function getRecentlyCompleted(userId?: number, limit = 6): Promise<BookCardData[]> {
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 	const readStatusId = await getStatusId(STATUS_KEYS.READ);
 
 	if (!readStatusId) return [];
@@ -404,7 +416,7 @@ export interface UpNextInSeries {
 }
 
 export async function getUpNextInSeries(userId?: number, limit = 6): Promise<UpNextInSeries[]> {
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 	const readStatusId = await getStatusId(STATUS_KEYS.READ);
 	const currentStatusId = await getStatusId(STATUS_KEYS.CURRENT);
 
@@ -478,7 +490,7 @@ export async function getUpNextInSeries(userId?: number, limit = 6): Promise<UpN
 // Random TBR Pick
 // ============================================
 export async function getRandomTbrPick(userId?: number): Promise<BookCardData | null> {
-	const libCond = getUserLibraryCondition(userId);
+	const libCond = await getUserLibraryCondition(userId);
 	const [nextStatusId, wishlistStatusId] = await Promise.all([
 		getStatusId(STATUS_KEYS.NEXT),
 		getStatusId(STATUS_KEYS.WISHLIST)

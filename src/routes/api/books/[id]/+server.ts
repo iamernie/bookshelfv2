@@ -3,10 +3,11 @@ import type { RequestHandler } from './$types';
 import { getBookById, updateBook, deleteBook } from '$lib/server/services/bookService';
 import { removeBookFromUserLibrary, getUserBook } from '$lib/server/services/userBookService';
 import { canManagePublicLibrary } from '$lib/server/services/permissionService';
+import { canAccessBook, canModifyBook, canDeleteBook } from '$lib/server/services/libraryShareService';
 import { db, books } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
 	const id = parseInt(params.id);
 	if (isNaN(id)) {
 		throw error(400, { message: 'Invalid book ID' });
@@ -15,6 +16,14 @@ export const GET: RequestHandler = async ({ params }) => {
 	const book = await getBookById(id);
 	if (!book) {
 		throw error(404, { message: 'Book not found' });
+	}
+
+	// Check if user has access to this book
+	if (locals.user) {
+		const hasAccess = await canAccessBook(locals.user.id, id);
+		if (!hasAccess) {
+			throw error(403, { message: 'You do not have access to this book' });
+		}
 	}
 
 	return json(book);
@@ -28,6 +37,12 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	const id = parseInt(params.id);
 	if (isNaN(id)) {
 		throw error(400, { message: 'Invalid book ID' });
+	}
+
+	// Check if user has permission to modify this book
+	const canModify = await canModifyBook(locals.user.id, id);
+	if (!canModify) {
+		throw error(403, { message: 'You do not have permission to modify this book' });
 	}
 
 	const data = await request.json();
@@ -155,12 +170,10 @@ export const DELETE: RequestHandler = async ({ params, request, url, locals }) =
 		});
 	}
 
-	// For personal library books, actually delete
-	// Only allow deletion if user owns the book or is admin
-	const userRole = locals.user.role;
-	if (userRole !== 'admin') {
-		// In the future, could check if user is the book creator
-		// For now, admins can delete, others cannot delete personal books they don't own
+	// For personal library books, check delete permission
+	const canDelete = await canDeleteBook(locals.user.id, id);
+	if (!canDelete) {
+		throw error(403, { message: 'You do not have permission to delete this book' });
 	}
 
 	const deleted = await deleteBook(id);

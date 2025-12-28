@@ -50,13 +50,15 @@ This document outlines feature status and planned improvements.
 | **User Signup Flow** | Public registration with email verification, invite codes, admin approval | ✅ Completed |
 | **Invite Code System** | Admin-managed invite codes with usage limits and expiration | ✅ Completed |
 | **Status Bar Quick Edit** | Clickable full-width status bar on BookCard with dropdown for quick status changes | ✅ Completed |
+| **OIDC/SSO Authentication** | Single Sign-On with Authentik, Keycloak, custom providers | ✅ Completed |
+| **Per-User Personal Libraries** | Each user has their own private book collection with sharing options | ✅ Completed |
+| **Library Sharing** | Share your library with family/friends with read, read_write, or full permissions | ✅ Completed |
 
 ---
 
 ## 🚧 In Progress / Planned
 
 ### Pre-Release Checklist
-
 - [x] Ebook Reader (EPUB, PDF, CBZ)
 - [x] Reading Progress Tracking
 - [x] Enhanced Metadata Providers
@@ -99,7 +101,9 @@ This document outlines feature status and planned improvements.
 | **KOReader Sync** | Sync progress with KOReader devices | Medium |
 | **Public Widgets** | Embeddable widgets for blogs (V1 feature) | ✅ Completed |
 | **AI Recommendations** | OpenAI-powered book suggestions (V1 feature) | ✅ Completed |
-| **OIDC Authentication** | SSO with Authentik, Keycloak, etc. | Medium |
+| **OIDC Authentication** | SSO with Authentik, Keycloak, etc. | ✅ Completed |
+| **Per-User Libraries** | Each user has their own private book collection | ✅ Completed |
+| **Library Sharing** | Share libraries with family/friends, permission levels | ✅ Completed |
 | **Email Book Sharing** | Send ebooks via email, Kindle support | Medium |
 | **Better Login Page** | Improved design, password reset flow | ✅ Completed |
 | **User Signup Flow** | Self-registration with email verification, invite codes, admin approval | ✅ Completed |
@@ -200,7 +204,9 @@ This document outlines feature status and planned improvements.
 | Infinite Scroll | ❌ | ✅ | ✅ |
 | KOReader Sync | ❌ | ❌ | ✅ |
 | Kobo Sync | ❌ | ❌ | ✅ |
-| OIDC/SSO | ❌ | ❌ | ✅ |
+| OIDC/SSO | ✅ | ❌ | ✅ |
+| Per-User Libraries | ✅ | ❌ | ✅ |
+| Library Sharing | ✅ | ❌ | ✅ |
 | Email Sharing | ❌ | ❌ | ✅ |
 | Docker | ✅ | ✅ | ✅ |
 | Dark Theme | ✅ | ✅ | ✅ |
@@ -343,6 +349,38 @@ Public registration system with multiple security options:
 - 24-hour token expiration
 - Resend verification option
 - Unverified users cannot log in
+
+### Per-User Personal Libraries ✅ (Completed)
+
+Multi-user private book collections with sharing capabilities:
+
+**Database Changes:**
+- Added `ownerId` column to books table (references users.id)
+- Created `library_shares` table for sharing permissions
+- Migration auto-assigns existing books to admin user (id=1)
+
+**Permission Levels:**
+- `read` - View books and download ebooks only
+- `read_write` - Add/edit/remove books (except delete)
+- `full` - Full access including delete permissions
+
+**Sharing Features:**
+- Share your library with other users
+- Accept/view libraries shared with you
+- Change permission levels anytime
+- Remove shares
+
+**Access Control:**
+- New users start with empty library
+- Users only see their own books + shared libraries
+- Permission checks on all book operations
+- Ebook downloads restricted to accessible books
+
+**UI (`/account/settings`):**
+- "Library Sharing" section in user settings
+- View/manage who you've shared with
+- View libraries shared with you
+- Share library modal with user selection and permission picker
 
 ---
 

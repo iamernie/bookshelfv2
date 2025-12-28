@@ -41,6 +41,8 @@ export const books = sqliteTable('books', {
 	lastReadAt: text('lastReadAt'),
 	// Library type: 'personal' or 'public'
 	libraryType: text('libraryType').default('personal'),
+	// Owner of the book (per-user library)
+	ownerId: integer('ownerId').references(() => users.id),
 	// Foreign keys
 	statusId: integer('statusId').references(() => statuses.id),
 	genreId: integer('genreId').references(() => genres.id),
@@ -328,6 +330,20 @@ export const seriesTags = sqliteTable('seriestags', {
 });
 
 // ============================================
+// Library Sharing (Per-User Libraries)
+// ============================================
+
+// Library sharing between users
+export const libraryShares = sqliteTable('library_shares', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	ownerId: integer('ownerId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	sharedWithId: integer('sharedWithId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	permission: text('permission').notNull().default('read'), // 'read' | 'read_write' | 'full'
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+// ============================================
 // User-Specific Book Data (Public Library Feature)
 // ============================================
 
@@ -472,6 +488,7 @@ export const booksRelations = relations(books, ({ one, many }) => ({
 	genre: one(genres, { fields: [books.genreId], references: [genres.id] }),
 	format: one(formats, { fields: [books.formatId], references: [formats.id] }),
 	narrator: one(narrators, { fields: [books.narratorId], references: [narrators.id] }),
+	owner: one(users, { fields: [books.ownerId], references: [users.id] }),
 	bookAuthors: many(bookAuthors),
 	bookSeries: many(bookSeries),
 	bookTags: many(bookTags),
@@ -524,7 +541,15 @@ export const usersRelations = relations(users, ({ one, many }) => ({
 	metadataSuggestions: many(metadataSuggestions),
 	readingSessions: many(readingSessions),
 	preferences: one(userPreferences, { fields: [users.id], references: [userPreferences.userId] }),
-	oidcLinks: many(userOidcLinks)
+	oidcLinks: many(userOidcLinks),
+	ownedBooks: many(books),
+	sharedLibraries: many(libraryShares, { relationName: 'sharedWith' }),
+	libraryShares: many(libraryShares, { relationName: 'owner' })
+}));
+
+export const librarySharesRelations = relations(libraryShares, ({ one }) => ({
+	owner: one(users, { fields: [libraryShares.ownerId], references: [users.id], relationName: 'owner' }),
+	sharedWith: one(users, { fields: [libraryShares.sharedWithId], references: [users.id], relationName: 'sharedWith' })
 }));
 
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
@@ -606,9 +631,14 @@ export type OidcProvider = typeof oidcProviders.$inferSelect;
 export type NewOidcProvider = typeof oidcProviders.$inferInsert;
 export type UserOidcLink = typeof userOidcLinks.$inferSelect;
 export type NewUserOidcLink = typeof userOidcLinks.$inferInsert;
+export type LibraryShare = typeof libraryShares.$inferSelect;
+export type NewLibraryShare = typeof libraryShares.$inferInsert;
 
 // Library type values
 export type LibraryType = 'personal' | 'public';
+
+// Library share permission levels
+export type LibrarySharePermission = 'read' | 'read_write' | 'full';
 
 // User roles
 export type UserRole = 'admin' | 'librarian' | 'member' | 'viewer' | 'guest';

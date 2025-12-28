@@ -277,6 +277,7 @@ function runMigrations() {
 		'Adding new columns',
 		'Creating V2 tables',
 		'Creating indexes',
+		'Setting up per-user libraries',
 		'Finalizing'
 	];
 
@@ -1047,6 +1048,77 @@ function runMigrations() {
 		// Indexes may already exist
 	}
 	completeStep('Creating indexes');
+
+	// ========== Per-User Libraries Feature ==========
+	updateStatus('Setting up per-user libraries...');
+
+	// Add ownerId column to books table for book ownership
+	if (tableExists('books')) {
+		safeAddColumn('books', 'ownerId', 'INTEGER REFERENCES users(id)');
+
+		// Migrate existing books to admin user (id=1) if they don't have an owner
+		try {
+			// Check if we have any books without an owner
+			const unownedBooks = sqlite.prepare(`
+				SELECT COUNT(*) as count FROM books WHERE ownerId IS NULL
+			`).get() as { count: number };
+
+			if (unownedBooks.count > 0) {
+				ensureBackup();
+				// Get the first admin user (or first user if no admin)
+				const adminUser = sqlite.prepare(`
+					SELECT id FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1
+				`).get() as { id: number } | undefined;
+
+				const fallbackUser = sqlite.prepare(`
+					SELECT id FROM users ORDER BY id ASC LIMIT 1
+				`).get() as { id: number } | undefined;
+
+				const ownerId = adminUser?.id || fallbackUser?.id || 1;
+
+				const result = sqlite.prepare(`
+					UPDATE books SET ownerId = ? WHERE ownerId IS NULL
+				`).run(ownerId);
+
+				if (result.changes > 0) {
+					console.log(`[db] Assigned ${result.changes} existing books to user ${ownerId}`);
+					migrationsMade = true;
+				}
+			}
+		} catch (e) {
+			console.error('[db] Failed to migrate book ownership:', e);
+		}
+
+		// Create index for ownerId queries
+		try {
+			sqlite.exec('CREATE INDEX IF NOT EXISTS idx_books_owner ON books(ownerId)');
+		} catch {
+			// Index may already exist
+		}
+	}
+
+	// Library Shares table - allows users to share their library with others
+	safeCreateTable('library_shares', `
+		CREATE TABLE library_shares (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			ownerId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			sharedWithId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			permission TEXT NOT NULL DEFAULT 'read',
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(ownerId, sharedWithId)
+		)
+	`);
+
+	// Create indexes for library_shares queries
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_library_shares_owner ON library_shares(ownerId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_library_shares_shared_with ON library_shares(sharedWithId)');
+	} catch {
+		// Indexes may already exist
+	}
+
+	completeStep('Setting up per-user libraries');
 
 	// ========== Data migrations for V1 compatibility ==========
 	updateStatus('Migrating V1 user data...');
