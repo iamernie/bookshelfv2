@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Settings, FolderOpen, BookOpen, Monitor, Rss, Upload, Save, Check, AlertCircle, Loader2, Database, Sparkles, Eye, EyeOff, FileText, HelpCircle, UserPlus } from 'lucide-svelte';
+	import { Settings, FolderOpen, BookOpen, Monitor, Rss, Upload, Save, Check, AlertCircle, Loader2, Database, Sparkles, Eye, EyeOff, FileText, HelpCircle, UserPlus, KeyRound } from 'lucide-svelte';
 
 	interface Placeholder {
 		placeholder: string;
@@ -267,6 +267,18 @@
 				{/if}
 			</button>
 		{/if}
+	</div>
+
+	<!-- Quick Links to Other Settings Pages -->
+	<div class="mb-6 flex gap-3">
+		<a
+			href="/admin/settings/oidc"
+			class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors"
+			style="background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border-color);"
+		>
+			<KeyRound class="w-4 h-4" />
+			OIDC/SSO Settings
+		</a>
 	</div>
 
 	{#if saveError}
