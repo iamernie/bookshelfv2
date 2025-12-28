@@ -40,6 +40,10 @@ services:
       # Required for SvelteKit in production
       - ORIGIN=${ORIGIN:-http://localhost:3000}
 
+      # Body size limit for uploads (default 512KB is too small for ebooks)
+      # Set to 100MB to allow large ebook uploads
+      - BODY_SIZE_LIMIT=104857600
+
       # User/Group ID for file permissions (match your host user)
       # Run 'id' on your host to find your UID/GID
       - PUID=${PUID:-1000}
