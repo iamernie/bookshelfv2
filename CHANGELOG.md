@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3] - 2025-12-27
+
+### Added
+- OIDC/SSO settings link on admin settings page
+
 ## [0.4.2] - 2025-12-27
 
 ### Fixed
