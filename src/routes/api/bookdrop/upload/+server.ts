@@ -4,6 +4,9 @@ import { addToQueue } from '$lib/server/services/bookdropService';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { randomBytes } from 'crypto';
+import { createLogger } from '$lib/server/services/loggerService';
+
+const log = createLogger('bookdrop-upload');
 
 // POST /api/bookdrop/upload - Upload ebook files to queue
 export const POST: RequestHandler = async ({ request, locals }) => {
@@ -30,6 +33,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const ext = path.extname(file.name).toLowerCase();
 
 		if (!allowedExtensions.includes(ext)) {
+			log.warn(`Rejected file with unsupported type: ${file.name} (${ext})`);
 			results.push({
 				filename: file.name,
 				success: false,
@@ -39,16 +43,21 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		}
 
 		try {
+			log.info(`Processing upload: ${file.name} (${file.size} bytes)`);
+
 			// Save to temp location
 			const buffer = Buffer.from(await file.arrayBuffer());
 			const hash = randomBytes(8).toString('hex');
 			const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
 			const tempPath = path.join(tempDir, `${hash}_${safeName}`);
 
+			log.debug(`Writing to temp path: ${tempPath}`);
 			await writeFile(tempPath, buffer);
+			log.debug(`File written successfully, adding to queue...`);
 
 			// Add to queue
 			const queueItem = await addToQueue(tempPath, file.name, locals.user.id, 'upload');
+			log.info(`File added to queue: ${file.name} (queue id: ${queueItem.id})`);
 
 			results.push({
 				filename: file.name,
@@ -56,10 +65,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				id: queueItem.id
 			});
 		} catch (e) {
+			const errorMsg = e instanceof Error ? e.message : 'Failed to process file';
+			log.error(`Upload failed for ${file.name}: ${errorMsg}`, { error: e });
 			results.push({
 				filename: file.name,
 				success: false,
-				error: e instanceof Error ? e.message : 'Failed to process file'
+				error: errorMsg
 			});
 		}
 	}

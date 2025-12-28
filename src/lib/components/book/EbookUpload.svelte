@@ -110,13 +110,15 @@
 
 			const result = await response.json();
 
-			if (!response.ok || !result.success) {
-				throw new Error(result.message || 'Upload failed');
+			if (!response.ok) {
+				throw new Error(result.message || `Upload failed: ${response.status}`);
 			}
 
 			const uploadedItem = result.results?.[0];
 			if (!uploadedItem?.success || !uploadedItem?.id) {
-				throw new Error(uploadedItem?.error || 'Failed to process file');
+				// Show the specific file error if available
+				const fileError = uploadedItem?.error || result.message || 'Failed to process file';
+				throw new Error(fileError);
 			}
 
 			const itemResponse = await fetch(`/api/bookdrop/${uploadedItem.id}`);
