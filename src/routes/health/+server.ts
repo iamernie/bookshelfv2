@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { sql } from 'drizzle-orm';
+import { APP_CONFIG } from '$lib/config/app';
 
 export const GET: RequestHandler = async () => {
 	try {
@@ -15,7 +16,7 @@ export const GET: RequestHandler = async () => {
 		return json({
 			status: 'ok',
 			timestamp: new Date().toISOString(),
-			version: '2.0.0'
+			version: APP_CONFIG.version
 		});
 	} catch (error) {
 		return json(
