@@ -35,8 +35,7 @@
 		Ticket,
 		Activity,
 		Inbox,
-		LayoutDashboard,
-		Headphones
+		LayoutDashboard
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { APP_CONFIG } from '$lib/config/app';
@@ -131,14 +130,9 @@
 				{/if}
 			</a>
 
-			<a href="/library" class="sidebar-item" class:active={isActive('/library')} class:collapsed title={collapsed ? 'Public Library' : undefined}>
+			<a href="/library" class="sidebar-item" class:active={currentPath === '/library'} class:collapsed title={collapsed ? 'Public Library' : undefined}>
 				<Library class="w-5 h-5 flex-shrink-0" />
 				{#if !collapsed}<span>Public Library</span>{/if}
-			</a>
-
-			<a href="/audiobooks" class="sidebar-item" class:active={isActive('/audiobooks')} class:collapsed title={collapsed ? 'Audiobooks' : undefined}>
-				<Headphones class="w-5 h-5 flex-shrink-0" />
-				{#if !collapsed}<span>Audiobooks</span>{/if}
 			</a>
 		</div>
 

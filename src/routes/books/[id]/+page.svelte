@@ -312,51 +312,51 @@
 
 <div class="min-h-full" style="background-color: var(--bg-primary);" class:pb-40={showPlayer}>
 	<!-- Header -->
-	<div class="sticky top-0 z-10 px-6 py-4" style="background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
-		<div class="max-w-6xl mx-auto flex items-center justify-between">
+	<div class="sticky top-0 z-10 px-3 sm:px-6 py-3 sm:py-4" style="background-color: var(--bg-secondary); border-bottom: 1px solid var(--border-color);">
+		<div class="max-w-6xl mx-auto flex items-center justify-between gap-2">
 			<button
 				type="button"
-				class="flex items-center gap-2 transition-colors"
+				class="flex items-center gap-1 sm:gap-2 transition-colors flex-shrink-0"
 				style="color: var(--text-secondary);"
 				onclick={() => history.back()}
 				onmouseenter={(e) => e.currentTarget.style.color = 'var(--text-primary)'}
 				onmouseleave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
 			>
 				<ArrowLeft class="w-5 h-5" />
-				<span>Back</span>
+				<span class="hidden sm:inline">Back</span>
 			</button>
 
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
 				{#if data.book.ebookPath}
 					<a
 						href="/reader/{data.book.id}"
-						class="btn-accent flex items-center gap-2"
+						class="btn-accent flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm"
 					>
 						<BookOpen class="w-4 h-4" />
-						Read
+						<span class="hidden xs:inline">Read</span>
 					</a>
 				{/if}
 				{#if data.linkedAudiobooks.length > 0}
 					<button
 						type="button"
 						onclick={startListening}
-						class="btn-ghost flex items-center gap-2"
+						class="btn-ghost flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm"
 						style="background: var(--bg-tertiary);"
 					>
 						<Headphones class="w-4 h-4" />
-						Listen
+						<span class="hidden xs:inline">Listen</span>
 					</button>
 				{/if}
 				<a
 					href="/books/{data.book.id}/edit"
-					class="btn-ghost flex items-center gap-2"
+					class="btn-ghost flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm"
 				>
 					<Edit class="w-4 h-4" />
-					Edit
+					<span class="hidden sm:inline">Edit</span>
 				</a>
 				<button
 					type="button"
-					class="btn-ghost flex items-center gap-2"
+					class="btn-ghost flex items-center gap-2 px-2 py-1.5"
 					style="color: var(--text-muted);"
 					onclick={() => showDeleteConfirm = true}
 				>
@@ -920,12 +920,12 @@
 				{:else if activeTab === 'listen'}
 				<!-- Listen Tab - Embedded Audio Player -->
 				{#if selectedAudiobook}
-					<div class="space-y-6">
+					<div class="space-y-4 sm:space-y-6">
 						<!-- Player Info & Controls -->
-						<div class="card p-6">
-							<div class="flex flex-col md:flex-row gap-6">
+						<div class="card p-4 sm:p-6">
+							<div class="flex flex-col sm:flex-row gap-4 sm:gap-6">
 								<!-- Cover -->
-								<div class="w-32 h-32 flex-shrink-0 rounded-xl overflow-hidden shadow-lg mx-auto md:mx-0" style="background: var(--bg-tertiary);">
+								<div class="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 rounded-xl overflow-hidden shadow-lg mx-auto sm:mx-0" style="background: var(--bg-tertiary);">
 									{#if selectedAudiobook.audiobook.coverPath}
 										<img
 											src={selectedAudiobook.audiobook.coverPath}
@@ -940,31 +940,31 @@
 										/>
 									{:else}
 										<div class="w-full h-full flex items-center justify-center">
-											<Headphones class="w-12 h-12" style="color: var(--text-muted);" />
+											<Headphones class="w-10 h-10 sm:w-12 sm:h-12" style="color: var(--text-muted);" />
 										</div>
 									{/if}
 								</div>
 
 								<!-- Info -->
-								<div class="flex-1">
-									<h3 class="text-xl font-bold mb-1" style="color: var(--text-primary);">{selectedAudiobook.audiobook.title}</h3>
+								<div class="flex-1 text-center sm:text-left">
+									<h3 class="text-lg sm:text-xl font-bold mb-1" style="color: var(--text-primary);">{selectedAudiobook.audiobook.title}</h3>
 									{#if selectedAudiobook.audiobook.author}
-										<p class="text-sm mb-2" style="color: var(--text-muted);">by {selectedAudiobook.audiobook.author}</p>
+										<p class="text-sm mb-1 sm:mb-2" style="color: var(--text-muted);">by {selectedAudiobook.audiobook.author}</p>
 									{/if}
 									{#if selectedAudiobook.audiobook.narratorName}
-										<p class="text-sm mb-3" style="color: var(--text-muted);">Narrated by {selectedAudiobook.audiobook.narratorName}</p>
+										<p class="text-sm mb-2 sm:mb-3" style="color: var(--text-muted);">Narrated by {selectedAudiobook.audiobook.narratorName}</p>
 									{/if}
 
 									<!-- Stats -->
-									<div class="flex flex-wrap gap-3 mb-4">
-										<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg" style="background: var(--bg-secondary);">
-											<Clock class="w-4 h-4" style="color: var(--text-muted);" />
-											<span class="text-sm" style="color: var(--text-primary);">{formatDuration(selectedAudiobook.audiobook.duration ?? 0)}</span>
+									<div class="flex flex-wrap gap-2 sm:gap-3 mb-3 sm:mb-4 justify-center sm:justify-start">
+										<div class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg" style="background: var(--bg-secondary);">
+											<Clock class="w-3.5 h-3.5 sm:w-4 sm:h-4" style="color: var(--text-muted);" />
+											<span class="text-xs sm:text-sm" style="color: var(--text-primary);">{formatDuration(selectedAudiobook.audiobook.duration ?? 0)}</span>
 										</div>
 										{#if selectedAudiobook.audiobook.files.length > 1}
-											<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg" style="background: var(--bg-secondary);">
-												<Music class="w-4 h-4" style="color: var(--text-muted);" />
-												<span class="text-sm" style="color: var(--text-primary);">{selectedAudiobook.audiobook.files.length} tracks</span>
+											<div class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg" style="background: var(--bg-secondary);">
+												<Music class="w-3.5 h-3.5 sm:w-4 sm:h-4" style="color: var(--text-muted);" />
+												<span class="text-xs sm:text-sm" style="color: var(--text-primary);">{selectedAudiobook.audiobook.files.length} tracks</span>
 											</div>
 										{/if}
 									</div>
@@ -974,13 +974,13 @@
 										{@const progressPercent = Math.round((selectedAudiobook.progress.progress ?? 0) * 100)}
 										{@const remainingTime = (selectedAudiobook.audiobook.duration ?? 0) - (selectedAudiobook.progress.currentTime ?? 0)}
 										{#if selectedAudiobook.progress.isFinished}
-											<div class="flex items-center gap-2 text-green-500 mb-4">
+											<div class="flex items-center gap-2 text-green-500 mb-3 sm:mb-4 justify-center sm:justify-start">
 												<CheckCircle class="w-5 h-5" />
 												<span class="font-medium">Completed</span>
 											</div>
 										{:else if progressPercent > 0}
-											<div class="mb-4">
-												<div class="flex items-center justify-between text-sm mb-1">
+											<div class="mb-3 sm:mb-4">
+												<div class="flex items-center justify-between text-xs sm:text-sm mb-1">
 													<span style="color: var(--text-muted);">{progressPercent}% complete</span>
 													<span style="color: var(--text-muted);">{formatTimeRemaining(remainingTime)}</span>
 												</div>
@@ -992,28 +992,28 @@
 									{/if}
 
 									<!-- Action buttons -->
-									<div class="flex flex-wrap items-center gap-2">
+									<div class="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
 										{#if selectedAudiobook.progress && !selectedAudiobook.progress.isFinished && (selectedAudiobook.progress.progress ?? 0) > 0}
 											<button
 												type="button"
 												onclick={markAudiobookFinished}
-												class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+												class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm"
 												style="background: var(--bg-secondary); color: var(--text-primary);"
 												title="Mark as finished"
 											>
-												<CheckCircle class="w-4 h-4" />
-												Mark Finished
+												<CheckCircle class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+												<span class="hidden xs:inline">Mark</span> Finished
 											</button>
 										{/if}
 										{#if selectedAudiobook.progress && (selectedAudiobook.progress.progress ?? 0) > 0}
 											<button
 												type="button"
 												onclick={resetAudiobookProgress}
-												class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm"
+												class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm"
 												style="background: var(--bg-secondary); color: var(--text-primary);"
 												title="Reset progress"
 											>
-												<RotateCcw class="w-4 h-4" />
+												<RotateCcw class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
 												Reset
 											</button>
 										{/if}
@@ -1024,26 +1024,28 @@
 
 						<!-- Track List with File Info -->
 						{#if selectedAudiobook.audiobook.files.length > 0}
-							<div class="card p-4">
-								<h4 class="font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+							<div class="card p-3 sm:p-4">
+								<h4 class="font-semibold mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base" style="color: var(--text-primary);">
 									<Music class="w-4 h-4" />
 									Tracks
 								</h4>
-								<div class="space-y-1 max-h-64 overflow-y-auto">
+								<div class="space-y-1 max-h-64 overflow-y-auto -mx-1 px-1">
 									{#each selectedAudiobook.audiobook.files as file, i}
-										<div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors">
-											<div class="flex items-center gap-3 min-w-0">
-												<span class="text-xs font-mono" style="color: var(--text-muted);">{file.trackNumber}</span>
-												<span class="text-sm truncate" style="color: var(--text-primary);">
+										<div class="flex items-center justify-between py-2 px-2 sm:px-3 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors">
+											<div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+												<span class="text-xs font-mono flex-shrink-0 w-4 text-center" style="color: var(--text-muted);">{file.trackNumber}</span>
+												<span class="text-xs sm:text-sm truncate" style="color: var(--text-primary);">
 													{file.title || file.filename}
 												</span>
 											</div>
-											<div class="flex items-center gap-4 flex-shrink-0">
-												<span class="text-xs px-2 py-0.5 rounded" style="background: var(--bg-tertiary); color: var(--text-muted);">
+											<div class="flex items-center gap-2 sm:gap-4 flex-shrink-0 ml-2">
+												<!-- Format badge - hidden on mobile -->
+												<span class="hidden sm:inline text-xs px-2 py-0.5 rounded" style="background: var(--bg-tertiary); color: var(--text-muted);">
 													{getFileFormat(file.filename)}
 												</span>
+												<!-- File size - hidden on mobile -->
 												{#if file.fileSize}
-													<span class="text-xs" style="color: var(--text-muted);">
+													<span class="hidden md:inline text-xs" style="color: var(--text-muted);">
 														{formatFileSize(file.fileSize)}
 													</span>
 												{/if}
@@ -1059,22 +1061,22 @@
 
 						<!-- Bookmarks -->
 						{#if selectedAudiobook.bookmarks.length > 0}
-							<div class="card p-4">
-								<h4 class="font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+							<div class="card p-3 sm:p-4">
+								<h4 class="font-semibold mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base" style="color: var(--text-primary);">
 									Bookmarks
 								</h4>
 								<div class="space-y-2">
 									{#each selectedAudiobook.bookmarks as bookmark}
-										<div class="flex items-center justify-between py-2 px-3 rounded-lg" style="background: var(--bg-secondary);">
-											<div>
-												<span class="text-sm font-medium" style="color: var(--text-primary);">
+										<div class="flex items-center justify-between py-2 px-2 sm:px-3 rounded-lg" style="background: var(--bg-secondary);">
+											<div class="min-w-0 flex-1">
+												<span class="text-xs sm:text-sm font-medium" style="color: var(--text-primary);">
 													{bookmark.title || 'Bookmark'}
 												</span>
 												{#if bookmark.note}
-													<p class="text-xs" style="color: var(--text-muted);">{bookmark.note}</p>
+													<p class="text-xs truncate" style="color: var(--text-muted);">{bookmark.note}</p>
 												{/if}
 											</div>
-											<span class="text-xs font-mono" style="color: var(--text-muted);">
+											<span class="text-xs font-mono flex-shrink-0 ml-2" style="color: var(--text-muted);">
 												{formatDuration(bookmark.time)}
 											</span>
 										</div>
@@ -1084,40 +1086,42 @@
 						{/if}
 					</div>
 				{:else}
-					<div class="card p-8 text-center">
-						<Headphones class="w-12 h-12 mx-auto mb-3" style="color: var(--text-muted);" />
-						<p style="color: var(--text-muted);">No audiobook available</p>
+					<div class="card p-6 sm:p-8 text-center">
+						<Headphones class="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3" style="color: var(--text-muted);" />
+						<p class="text-sm" style="color: var(--text-muted);">No audiobook available</p>
 					</div>
 				{/if}
 				{:else if activeTab === 'media'}
 				<!-- Media Tab - Ebook & Audiobook -->
-				<div class="space-y-6">
+				<div class="space-y-4 sm:space-y-6">
 					<!-- Ebook Section -->
 					<div>
-						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+						<h3 class="text-sm font-semibold mb-2 sm:mb-3 flex items-center gap-2" style="color: var(--text-primary);">
 							<BookOpen class="w-4 h-4" />
 							Ebook
 						</h3>
 						{#if data.book.ebookPath}
-							<div class="card p-4">
-								<div class="flex items-center gap-4">
-									<div class="w-12 h-16 flex-shrink-0 rounded overflow-hidden" style="background: var(--bg-tertiary);">
-										<img
-											src={data.book.coverImageUrl || '/placeholder.png'}
-											alt={data.book.title}
-											class="w-full h-full object-cover"
-										/>
+							<div class="card p-3 sm:p-4">
+								<div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+									<div class="flex items-center gap-3 flex-1 min-w-0">
+										<div class="w-10 h-14 sm:w-12 sm:h-16 flex-shrink-0 rounded overflow-hidden" style="background: var(--bg-tertiary);">
+											<img
+												src={data.book.coverImageUrl || '/placeholder.png'}
+												alt={data.book.title}
+												class="w-full h-full object-cover"
+											/>
+										</div>
+										<div class="min-w-0 flex-1">
+											<p class="font-medium text-sm sm:text-base truncate" style="color: var(--text-primary);">{data.book.title}</p>
+											<p class="text-xs sm:text-sm" style="color: var(--text-muted);">
+												{data.book.format?.name || 'Ebook'} • {data.book.pageCount ? `${data.book.pageCount} pages` : 'Digital format'}
+											</p>
+										</div>
 									</div>
-									<div class="flex-1 min-w-0">
-										<p class="font-medium" style="color: var(--text-primary);">{data.book.title}</p>
-										<p class="text-sm" style="color: var(--text-muted);">
-											{data.book.format?.name || 'Ebook'} • {data.book.pageCount ? `${data.book.pageCount} pages` : 'Digital format'}
-										</p>
-									</div>
-									<div class="flex items-center gap-2">
+									<div class="flex items-center gap-2 w-full sm:w-auto">
 										<a
 											href="/reader/{data.book.id}"
-											class="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium"
+											class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-white font-medium text-sm"
 											style="background: var(--accent);"
 										>
 											<BookOpen class="w-4 h-4" />
@@ -1145,68 +1149,70 @@
 
 					<!-- Audiobook Section -->
 					<div>
-						<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+						<h3 class="text-sm font-semibold mb-2 sm:mb-3 flex items-center gap-2" style="color: var(--text-primary);">
 							<Headphones class="w-4 h-4" />
 							Audiobook
 						</h3>
 						{#if data.linkedAudiobooks.length > 0}
 							{#each data.linkedAudiobooks as audiobook}
-								<div class="card p-4 mb-3">
-									<div class="flex gap-4">
-										<div class="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden" style="background: var(--bg-tertiary);">
-											{#if audiobook.coverPath}
-												<img
-													src={audiobook.coverPath}
-													alt={audiobook.title}
-													class="w-full h-full object-cover"
-												/>
-											{:else}
-												<div class="w-full h-full flex items-center justify-center">
-													<Headphones class="w-6 h-6" style="color: var(--text-muted);" />
-												</div>
-											{/if}
-										</div>
-
-										<div class="flex-1 min-w-0">
-											<p class="font-medium" style="color: var(--text-primary);">{audiobook.title}</p>
-											{#if audiobook.narratorName}
-												<p class="text-sm" style="color: var(--text-muted);">
-													Narrated by {audiobook.narratorName}
-												</p>
-											{/if}
-											<div class="flex flex-wrap items-center gap-3 text-sm mt-1">
-												{#if audiobook.duration}
-													<span class="flex items-center gap-1" style="color: var(--text-muted);">
-														<Clock class="w-3.5 h-3.5" />
-														{formatDuration(audiobook.duration)}
-													</span>
-												{/if}
-												{#if audiobook.userProgress}
-													{@const progress = getProgressPercent(audiobook)}
-													{#if audiobook.userProgress.isFinished}
-														<span class="flex items-center gap-1 text-green-500 text-xs">
-															<Check class="w-3.5 h-3.5" />
-															Completed
-														</span>
-													{:else if progress > 0}
-														<span class="text-xs" style="color: var(--accent);">
-															{progress}% complete
-														</span>
-													{/if}
+								<div class="card p-3 sm:p-4 mb-3">
+									<div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+										<div class="flex items-start gap-3 flex-1 min-w-0">
+											<div class="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 rounded-lg overflow-hidden" style="background: var(--bg-tertiary);">
+												{#if audiobook.coverPath}
+													<img
+														src={audiobook.coverPath}
+														alt={audiobook.title}
+														class="w-full h-full object-cover"
+													/>
+												{:else}
+													<div class="w-full h-full flex items-center justify-center">
+														<Headphones class="w-5 h-5 sm:w-6 sm:h-6" style="color: var(--text-muted);" />
+													</div>
 												{/if}
 											</div>
-											{#if audiobook.userProgress && getProgressPercent(audiobook) > 0 && !audiobook.userProgress.isFinished}
-												<div class="mt-2 h-1 rounded-full overflow-hidden" style="background: var(--bg-tertiary);">
-													<div class="h-full rounded-full" style="width: {getProgressPercent(audiobook)}%; background: var(--accent);"></div>
+
+											<div class="flex-1 min-w-0">
+												<p class="font-medium text-sm sm:text-base" style="color: var(--text-primary);">{audiobook.title}</p>
+												{#if audiobook.narratorName}
+													<p class="text-xs sm:text-sm" style="color: var(--text-muted);">
+														Narrated by {audiobook.narratorName}
+													</p>
+												{/if}
+												<div class="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm mt-1">
+													{#if audiobook.duration}
+														<span class="flex items-center gap-1" style="color: var(--text-muted);">
+															<Clock class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+															{formatDuration(audiobook.duration)}
+														</span>
+													{/if}
+													{#if audiobook.userProgress}
+														{@const progress = getProgressPercent(audiobook)}
+														{#if audiobook.userProgress.isFinished}
+															<span class="flex items-center gap-1 text-green-500 text-xs">
+																<Check class="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+																Completed
+															</span>
+														{:else if progress > 0}
+															<span class="text-xs" style="color: var(--accent);">
+																{progress}% complete
+															</span>
+														{/if}
+													{/if}
 												</div>
-											{/if}
+												{#if audiobook.userProgress && getProgressPercent(audiobook) > 0 && !audiobook.userProgress.isFinished}
+													<div class="mt-2 h-1 rounded-full overflow-hidden" style="background: var(--bg-tertiary);">
+														<div class="h-full rounded-full" style="width: {getProgressPercent(audiobook)}%; background: var(--accent);"></div>
+													</div>
+												{/if}
+											</div>
 										</div>
 
-										<div class="flex items-center gap-2">
+										<div class="flex items-center gap-2 sm:self-center">
 											<button
 												type="button"
 												onclick={startListening}
-												class="flex items-center gap-2 px-4 py-2 rounded-lg text-white font-medium"
+												class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-white font-medium text-sm"
 												style="background: var(--accent);"
 											>
 												<Play class="w-4 h-4" />
@@ -1359,6 +1365,14 @@
 			trackNumber: f.trackNumber,
 			title: f.title
 		}))}
+		chapters={selectedAudiobook.audiobook.chapters?.map(c => ({
+			id: c.id,
+			audiobookId: c.audiobookId,
+			title: c.title,
+			startTime: c.startTime,
+			endTime: c.endTime,
+			chapterNumber: c.chapterNumber
+		})) ?? []}
 		initialTime={selectedAudiobook.progress?.currentTime ?? 0}
 		initialPlaybackRate={selectedAudiobook.progress?.playbackRate ?? 1}
 		onProgressUpdate={handleProgressUpdate}

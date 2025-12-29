@@ -79,10 +79,10 @@
 					<kbd class="hidden md:inline text-xs bg-white px-1.5 py-0.5 rounded border text-gray-400">⌘K</kbd>
 				</button>
 
-				<!-- Add Book -->
-				<a href="/books?add=true" class="btn-primary btn-sm hidden sm:flex">
+				<!-- Add to Library -->
+				<a href="/library/add" class="btn-primary btn-sm hidden sm:flex">
 					<Plus class="w-4 h-4" />
-					Add Book
+					Add
 				</a>
 
 				<!-- User Menu -->
@@ -166,11 +166,11 @@
 					</a>
 				{/each}
 				<a
-					href="/books?add=true"
+					href="/library/add"
 					class="flex items-center gap-3 px-4 py-3 text-primary-600 hover:bg-primary-50 rounded-lg mt-2"
 				>
 					<Plus class="w-5 h-5" />
-					Add Book
+					Add to Library
 				</a>
 			</div>
 		{/if}

@@ -45,6 +45,18 @@
 	let showStatusModal = $state(false);
 	let showDeleteModal = $state(false);
 
+	// Check for special URL params (audiobook-only flow)
+	let audiobookOnly = $derived($page.url.searchParams.get('audiobookOnly') === 'true');
+	let isPublicLibrary = $derived($page.url.searchParams.get('public') === 'true');
+	let addAudio = $derived($page.url.searchParams.get('addAudio') === 'true');
+
+	// Auto-show add modal if audiobookOnly or addAudio param is present
+	$effect(() => {
+		if (audiobookOnly || addAudio) {
+			showAddModal = true;
+		}
+	});
+
 	// Sync searchInput with URL parameter
 	$effect(() => {
 		searchInput = data.search;
@@ -227,15 +239,29 @@
 	}
 
 	async function handleAddBook(bookData: any) {
+		// Include libraryType if creating for public library
+		const dataToSend = {
+			...bookData,
+			...(isPublicLibrary ? { libraryType: 'public' } : {})
+		};
+
 		const res = await fetch('/api/books', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(bookData)
+			body: JSON.stringify(dataToSend)
 		});
 		if (res.ok) {
-			toasts.success('Book created');
+			const newBook = await res.json();
 			showAddModal = false;
-			invalidateAll();
+
+			// If audiobookOnly or addAudio, redirect to edit page Media tab
+			if (audiobookOnly || addAudio) {
+				toasts.success('Book created. Now add audio files.');
+				goto(`/books/${newBook.id}/edit?tab=media`);
+			} else {
+				toasts.success('Book created');
+				invalidateAll();
+			}
 		} else {
 			const err = await res.json();
 			toasts.error(err.message || 'Failed to create book');
@@ -319,14 +345,13 @@
 						<span class="hidden sm:inline">{selectMode ? 'Cancel' : 'Select'}</span>
 					</button>
 
-					<button
-						type="button"
+					<a
+						href="/library/add"
 						class="btn-accent flex items-center gap-2"
-						onclick={() => showAddModal = true}
 					>
 						<Plus class="w-4 h-4" />
 						Add Book
-					</button>
+					</a>
 				</div>
 			</div>
 
@@ -525,14 +550,13 @@
 						{data.search ? 'Try a different search term' : 'Get started by adding your first book'}
 					</p>
 					{#if !data.search}
-						<button
-							type="button"
+						<a
+							href="/library/add"
 							class="btn-accent inline-flex items-center gap-2"
-							onclick={() => showAddModal = true}
 						>
 							<Plus class="w-4 h-4" />
 							Add Book
-						</button>
+						</a>
 					{/if}
 				</div>
 			{/if}

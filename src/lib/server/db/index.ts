@@ -1208,15 +1208,39 @@ function runMigrations() {
 		)
 	`);
 
+	// Add libraryType column to audiobooks (for public library feature)
+	if (tableExists('audiobooks')) {
+		safeAddColumn('audiobooks', 'libraryType', "TEXT DEFAULT 'personal'");
+	}
+
+	// User audiobooks junction table (for "add to library" functionality)
+	safeCreateTable('user_audiobooks', `
+		CREATE TABLE user_audiobooks (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			audiobookId INTEGER NOT NULL REFERENCES audiobooks(id) ON DELETE CASCADE,
+			statusId INTEGER REFERENCES statuses(id),
+			rating REAL,
+			comments TEXT,
+			addedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(userId, audiobookId)
+		)
+	`);
+
 	// Create indexes for audiobook tables
 	try {
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobooks_user ON audiobooks(userId)');
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobooks_book ON audiobooks(bookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobooks_libraryType ON audiobooks(libraryType)');
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_files_audiobook ON audiobook_files(audiobookId)');
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_progress_user ON audiobook_progress(userId)');
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_progress_audiobook ON audiobook_progress(audiobookId)');
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_chapters_audiobook ON audiobook_chapters(audiobookId)');
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_bookmarks_user_audiobook ON audiobook_bookmarks(userId, audiobookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_user_audiobooks_user ON user_audiobooks(userId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_user_audiobooks_audiobook ON user_audiobooks(audiobookId)');
 	} catch {
 		// Indexes may already exist
 	}

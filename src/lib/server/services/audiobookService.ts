@@ -5,6 +5,9 @@ import {
 	audiobookProgress,
 	audiobookChapters,
 	audiobookBookmarks,
+	userAudiobooks,
+	userBooks,
+	statuses,
 	type Audiobook,
 	type NewAudiobook,
 	type AudiobookFile,
@@ -14,9 +17,11 @@ import {
 	type AudiobookChapter,
 	type NewAudiobookChapter,
 	type AudiobookBookmark,
-	type NewAudiobookBookmark
+	type NewAudiobookBookmark,
+	type UserAudiobook,
+	type NewUserAudiobook
 } from '$lib/server/db/schema';
-import { eq, and, desc, asc, sql } from 'drizzle-orm';
+import { eq, and, desc, asc, sql, or } from 'drizzle-orm';
 import { parseFile } from 'music-metadata';
 import { existsSync, mkdirSync, unlinkSync, statSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
@@ -107,47 +112,92 @@ export function isBrowserPlayable(filename: string): boolean {
 // Audio Metadata Extraction
 // ============================================================================
 
+export interface AudioChapter {
+	title: string;
+	startTime: number; // seconds
+	endTime?: number; // seconds
+}
+
 export interface AudioMetadata {
 	duration: number; // seconds
 	title?: string;
 	artist?: string;
 	album?: string;
 	track?: number;
-	chapters?: { title: string; startTime: number; endTime?: number }[];
+	chapters?: AudioChapter[];
 }
 
 export async function extractAudioMetadata(filePath: string): Promise<AudioMetadata> {
 	try {
 		const metadata = await parseFile(filePath);
+		const parsedChapters: AudioChapter[] = [];
+		const duration = metadata.format.duration || 0;
 
-		// Extract chapters if available (common in M4B files)
-		const chapters = metadata.native?.iTunes?.filter(
-			tag => tag.id === 'chpl' || tag.id === '©chp'
-		) || [];
-
-		const parsedChapters: AudioMetadata['chapters'] = [];
-
-		// Try to extract chapter info from the metadata
+		// Try to extract chapters from various formats
 		if (metadata.native) {
-			for (const format of Object.values(metadata.native)) {
-				for (const tag of format) {
-					if (tag.id === 'CHAP' || tag.id === 'chapter') {
-						// ID3v2 chapter format
-						const chapterData = tag.value as { startTime?: number; endTime?: number; tags?: { title?: string } };
-						if (chapterData && typeof chapterData.startTime === 'number') {
-							parsedChapters.push({
-								title: chapterData.tags?.title || `Chapter ${parsedChapters.length + 1}`,
-								startTime: chapterData.startTime / 1000, // Convert to seconds
-								endTime: chapterData.endTime ? chapterData.endTime / 1000 : undefined
-							});
+			// 1. M4B/M4A format - iTunes chapter list (chpl)
+			const iTunesTags = metadata.native['iTunes'];
+			if (iTunesTags) {
+				for (const tag of iTunesTags) {
+					if (tag.id === 'chpl') {
+						// chpl contains an array of chapter entries
+						const chapterList = tag.value as Array<{ title: string; startTimeMs: number }>;
+						if (Array.isArray(chapterList)) {
+							for (let i = 0; i < chapterList.length; i++) {
+								const chapter = chapterList[i];
+								const startTime = chapter.startTimeMs / 1000; // Convert ms to seconds
+								const endTime = i < chapterList.length - 1
+									? chapterList[i + 1].startTimeMs / 1000
+									: duration;
+
+								parsedChapters.push({
+									title: chapter.title || `Chapter ${i + 1}`,
+									startTime,
+									endTime
+								});
+							}
+						}
+					}
+				}
+			}
+
+			// 2. ID3v2 CHAP tag (used in MP3 files)
+			if (parsedChapters.length === 0) {
+				for (const format of Object.values(metadata.native)) {
+					for (const tag of format) {
+						if (tag.id === 'CHAP') {
+							const chapterData = tag.value as {
+								startTime?: number;
+								endTime?: number;
+								tags?: { title?: string }
+							};
+							if (chapterData && typeof chapterData.startTime === 'number') {
+								parsedChapters.push({
+									title: chapterData.tags?.title || `Chapter ${parsedChapters.length + 1}`,
+									startTime: chapterData.startTime / 1000, // Convert ms to seconds
+									endTime: chapterData.endTime ? chapterData.endTime / 1000 : undefined
+								});
+							}
 						}
 					}
 				}
 			}
 		}
 
+		// Sort chapters by start time
+		parsedChapters.sort((a, b) => a.startTime - b.startTime);
+
+		// Fill in missing end times
+		for (let i = 0; i < parsedChapters.length; i++) {
+			if (!parsedChapters[i].endTime) {
+				parsedChapters[i].endTime = i < parsedChapters.length - 1
+					? parsedChapters[i + 1].startTime
+					: duration;
+			}
+		}
+
 		return {
-			duration: metadata.format.duration || 0,
+			duration,
 			title: metadata.common.title,
 			artist: metadata.common.artist || metadata.common.albumartist,
 			album: metadata.common.album,
@@ -324,6 +374,9 @@ export async function getAudiobooksByBookId(bookId: number, userId?: number): Pr
 		with: {
 			files: {
 				orderBy: [asc(audiobookFiles.trackNumber)]
+			},
+			chapters: {
+				orderBy: [asc(audiobookChapters.chapterNumber)]
 			}
 		},
 		orderBy: [desc(audiobooks.createdAt)]
@@ -495,6 +548,60 @@ export async function getOrCreateProgress(audiobookId: number, userId: number): 
 	return newProgress;
 }
 
+/**
+ * Sync audiobook completion to userAudiobooks status and linked book's user_books status
+ * Called when audiobook reaches 95%+ progress or is manually marked as finished
+ */
+async function syncAudiobookCompletionStatus(audiobookId: number, userId: number): Promise<void> {
+	const now = new Date().toISOString();
+
+	// Get the READ status
+	const readStatus = await db.query.statuses.findFirst({
+		where: eq(statuses.key, 'READ')
+	});
+
+	if (!readStatus) return;
+
+	// Update userAudiobooks status if user has this audiobook in their library
+	const userAudiobook = await db.query.userAudiobooks.findFirst({
+		where: and(
+			eq(userAudiobooks.audiobookId, audiobookId),
+			eq(userAudiobooks.userId, userId)
+		)
+	});
+
+	if (userAudiobook && userAudiobook.statusId !== readStatus.id) {
+		await db.update(userAudiobooks)
+			.set({ statusId: readStatus.id, updatedAt: now })
+			.where(eq(userAudiobooks.id, userAudiobook.id));
+	}
+
+	// Get the audiobook to check if it's linked to a book
+	const audiobook = await db.query.audiobooks.findFirst({
+		where: eq(audiobooks.id, audiobookId)
+	});
+
+	if (audiobook?.bookId) {
+		// Update the linked book's status in user_books
+		const userBook = await db.query.userBooks.findFirst({
+			where: and(
+				eq(userBooks.bookId, audiobook.bookId),
+				eq(userBooks.userId, userId)
+			)
+		});
+
+		if (userBook && userBook.statusId !== readStatus.id) {
+			await db.update(userBooks)
+				.set({
+					statusId: readStatus.id,
+					completedDate: now.split('T')[0], // Just the date part
+					updatedAt: now
+				})
+				.where(eq(userBooks.id, userBook.id));
+		}
+	}
+}
+
 export async function updateProgress(
 	audiobookId: number,
 	userId: number,
@@ -535,7 +642,10 @@ export async function updateProgress(
 		updateData.playbackRate = playbackRate;
 	}
 
-	if (isFinished && !progress.isFinished) {
+	// Track if this is a new completion
+	const newlyFinished = isFinished && !progress.isFinished;
+
+	if (newlyFinished) {
 		updateData.isFinished = true;
 		updateData.finishedAt = now;
 	}
@@ -544,6 +654,11 @@ export async function updateProgress(
 		.set(updateData)
 		.where(eq(audiobookProgress.id, progress.id))
 		.returning();
+
+	// Sync read status to userAudiobooks and linked book when newly finished
+	if (newlyFinished) {
+		await syncAudiobookCompletionStatus(audiobookId, userId);
+	}
 
 	return updated;
 }
@@ -561,6 +676,9 @@ export async function markAsFinished(audiobookId: number, userId: number): Promi
 		})
 		.where(eq(audiobookProgress.id, progress.id))
 		.returning();
+
+	// Sync read status to userAudiobooks and linked book
+	await syncAudiobookCompletionStatus(audiobookId, userId);
 
 	return updated;
 }
@@ -599,6 +717,24 @@ export async function addChapter(data: NewAudiobookChapter): Promise<AudiobookCh
 	return chapter;
 }
 
+export async function addChapters(audiobookId: number, chapters: AudioChapter[]): Promise<AudiobookChapter[]> {
+	if (chapters.length === 0) return [];
+
+	const now = new Date().toISOString();
+	const chapterData = chapters.map((ch, index) => ({
+		audiobookId,
+		title: ch.title,
+		startTime: ch.startTime,
+		endTime: ch.endTime || null,
+		chapterNumber: index + 1,
+		createdAt: now,
+		updatedAt: now
+	}));
+
+	const inserted = await db.insert(audiobookChapters).values(chapterData).returning();
+	return inserted;
+}
+
 export async function getChapters(audiobookId: number): Promise<AudiobookChapter[]> {
 	return db.query.audiobookChapters.findMany({
 		where: eq(audiobookChapters.audiobookId, audiobookId),
@@ -608,6 +744,83 @@ export async function getChapters(audiobookId: number): Promise<AudiobookChapter
 
 export async function deleteChapters(audiobookId: number): Promise<void> {
 	await db.delete(audiobookChapters).where(eq(audiobookChapters.audiobookId, audiobookId));
+}
+
+/**
+ * Extract chapters from audio files and save to database.
+ * For M4B files, extracts embedded chapter markers.
+ * For multi-file audiobooks, creates chapters from track titles.
+ */
+export async function extractAndSaveChapters(audiobookId: number): Promise<AudiobookChapter[]> {
+	// First, clear any existing chapters
+	await deleteChapters(audiobookId);
+
+	// Get audiobook with files
+	const audiobook = await getAudiobookById(audiobookId);
+	if (!audiobook || !audiobook.files || audiobook.files.length === 0) {
+		return [];
+	}
+
+	const chapters: AudioChapter[] = [];
+
+	// If single file (likely M4B), try to extract embedded chapters
+	if (audiobook.files.length === 1) {
+		const file = audiobook.files[0];
+		try {
+			const metadata = await extractAudioMetadata(file.filePath);
+			if (metadata.chapters && metadata.chapters.length > 0) {
+				// Found embedded chapters in M4B file
+				return addChapters(audiobookId, metadata.chapters);
+			}
+		} catch (e) {
+			console.error('[audiobookService] Failed to extract chapters from file:', e);
+		}
+	}
+
+	// For multi-file audiobooks or single files without embedded chapters,
+	// create chapters from track titles
+	for (const file of audiobook.files) {
+		const startOffset = file.startOffset ?? 0;
+		chapters.push({
+			title: file.title || `Track ${file.trackNumber}`,
+			startTime: startOffset,
+			endTime: startOffset + file.duration
+		});
+	}
+
+	if (chapters.length > 0) {
+		return addChapters(audiobookId, chapters);
+	}
+
+	return [];
+}
+
+/**
+ * Update a single chapter
+ */
+export async function updateChapter(
+	chapterId: number,
+	data: { title?: string; startTime?: number; endTime?: number }
+): Promise<AudiobookChapter | null> {
+	const now = new Date().toISOString();
+	const [updated] = await db.update(audiobookChapters)
+		.set({ ...data, updatedAt: now })
+		.where(eq(audiobookChapters.id, chapterId))
+		.returning();
+
+	return updated || null;
+}
+
+/**
+ * Get chapter at a specific time position
+ */
+export function getCurrentChapter(chapters: AudiobookChapter[], currentTime: number): AudiobookChapter | null {
+	for (let i = chapters.length - 1; i >= 0; i--) {
+		if (currentTime >= chapters[i].startTime) {
+			return chapters[i];
+		}
+	}
+	return chapters[0] || null;
 }
 
 // ============================================================================
@@ -721,4 +934,284 @@ export function formatDurationLong(seconds: number): string {
 		return `${hours} hr ${minutes} min`;
 	}
 	return `${minutes} min`;
+}
+
+// ============================================================================
+// User Audiobook Library (Public Library Feature)
+// ============================================================================
+
+/**
+ * Add an audiobook to a user's personal library
+ */
+export async function addAudiobookToUserLibrary(
+	userId: number,
+	audiobookId: number,
+	data?: { statusId?: number; rating?: number; comments?: string }
+): Promise<UserAudiobook> {
+	const now = new Date().toISOString();
+
+	// Check if already in library
+	const existing = await db.query.userAudiobooks.findFirst({
+		where: and(
+			eq(userAudiobooks.userId, userId),
+			eq(userAudiobooks.audiobookId, audiobookId)
+		)
+	});
+
+	if (existing) {
+		// Update existing entry
+		const [updated] = await db.update(userAudiobooks)
+			.set({
+				...data,
+				updatedAt: now
+			})
+			.where(eq(userAudiobooks.id, existing.id))
+			.returning();
+		return updated;
+	}
+
+	// Create new entry
+	const [entry] = await db.insert(userAudiobooks).values({
+		userId,
+		audiobookId,
+		statusId: data?.statusId ?? null,
+		rating: data?.rating ?? null,
+		comments: data?.comments ?? null,
+		addedAt: now,
+		createdAt: now,
+		updatedAt: now
+	}).returning();
+
+	return entry;
+}
+
+/**
+ * Remove an audiobook from a user's personal library
+ */
+export async function removeAudiobookFromUserLibrary(userId: number, audiobookId: number): Promise<boolean> {
+	const result = await db.delete(userAudiobooks)
+		.where(and(
+			eq(userAudiobooks.userId, userId),
+			eq(userAudiobooks.audiobookId, audiobookId)
+		));
+
+	return true;
+}
+
+/**
+ * Check if an audiobook is in a user's library
+ */
+export async function isAudiobookInUserLibrary(userId: number, audiobookId: number): Promise<boolean> {
+	const entry = await db.query.userAudiobooks.findFirst({
+		where: and(
+			eq(userAudiobooks.userId, userId),
+			eq(userAudiobooks.audiobookId, audiobookId)
+		)
+	});
+	return !!entry;
+}
+
+/**
+ * Get a user's library entry for an audiobook
+ */
+export async function getUserAudiobookEntry(userId: number, audiobookId: number): Promise<UserAudiobook | null> {
+	const entry = await db.query.userAudiobooks.findFirst({
+		where: and(
+			eq(userAudiobooks.userId, userId),
+			eq(userAudiobooks.audiobookId, audiobookId)
+		)
+	});
+	return entry || null;
+}
+
+/**
+ * Update a user's audiobook library entry
+ */
+export async function updateUserAudiobookEntry(
+	userId: number,
+	audiobookId: number,
+	data: { statusId?: number | null; rating?: number | null; comments?: string | null }
+): Promise<UserAudiobook | null> {
+	const now = new Date().toISOString();
+
+	const [updated] = await db.update(userAudiobooks)
+		.set({
+			...data,
+			updatedAt: now
+		})
+		.where(and(
+			eq(userAudiobooks.userId, userId),
+			eq(userAudiobooks.audiobookId, audiobookId)
+		))
+		.returning();
+
+	return updated || null;
+}
+
+/**
+ * Get audiobooks visible to a user (public or owned by user or in user's library)
+ */
+export async function getAudiobooksForUser(options: AudiobookListOptions & { libraryFilter?: 'all' | 'public' | 'personal' }): Promise<AudiobookListResult> {
+	const {
+		userId,
+		limit = 24,
+		offset = 0,
+		search,
+		sortBy = 'createdAt',
+		sortOrder = 'desc',
+		filter = 'all',
+		libraryFilter = 'all'
+	} = options;
+
+	// Build base conditions based on library filter
+	let whereCondition;
+
+	if (libraryFilter === 'public') {
+		// Only public audiobooks
+		whereCondition = eq(audiobooks.libraryType, 'public');
+	} else if (libraryFilter === 'personal') {
+		// Audiobooks in user's personal library (via user_audiobooks) OR owned by user
+		whereCondition = or(
+			eq(audiobooks.userId, userId),
+			sql`${audiobooks.id} IN (SELECT audiobookId FROM user_audiobooks WHERE userId = ${userId})`
+		);
+	} else {
+		// All audiobooks user can access: public OR owned by user OR in user's library
+		whereCondition = or(
+			eq(audiobooks.libraryType, 'public'),
+			eq(audiobooks.userId, userId),
+			sql`${audiobooks.id} IN (SELECT audiobookId FROM user_audiobooks WHERE userId = ${userId})`
+		);
+	}
+
+	// Get audiobooks
+	const items = await db.query.audiobooks.findMany({
+		where: whereCondition,
+		with: {
+			files: {
+				orderBy: [asc(audiobookFiles.trackNumber)]
+			}
+		},
+		orderBy: sortBy === 'title'
+			? (sortOrder === 'asc' ? [asc(audiobooks.title)] : [desc(audiobooks.title)])
+			: sortBy === 'author'
+			? (sortOrder === 'asc' ? [asc(audiobooks.author)] : [desc(audiobooks.author)])
+			: sortBy === 'duration'
+			? (sortOrder === 'asc' ? [asc(audiobooks.duration)] : [desc(audiobooks.duration)])
+			: (sortOrder === 'asc' ? [asc(audiobooks.createdAt)] : [desc(audiobooks.createdAt)]),
+		limit,
+		offset
+	});
+
+	// Get progress for each audiobook
+	const progressMap = new Map<number, AudiobookProgress>();
+	if (items.length > 0) {
+		const progressRecords = await db.query.audiobookProgress.findMany({
+			where: and(
+				eq(audiobookProgress.userId, userId),
+				sql`${audiobookProgress.audiobookId} IN (${sql.join(items.map(a => sql`${a.id}`), sql`, `)})`
+			)
+		});
+
+		for (const p of progressRecords) {
+			progressMap.set(p.audiobookId, p);
+		}
+	}
+
+	// Get user library entries
+	const libraryMap = new Map<number, UserAudiobook>();
+	if (items.length > 0) {
+		const libraryEntries = await db.query.userAudiobooks.findMany({
+			where: and(
+				eq(userAudiobooks.userId, userId),
+				sql`${userAudiobooks.audiobookId} IN (${sql.join(items.map(a => sql`${a.id}`), sql`, `)})`
+			)
+		});
+
+		for (const entry of libraryEntries) {
+			libraryMap.set(entry.audiobookId, entry);
+		}
+	}
+
+	// Enrich items with progress and library status
+	let enrichedItems: (AudiobookWithFiles & { inUserLibrary: boolean; userLibraryEntry?: UserAudiobook })[] = items.map(item => ({
+		...item,
+		userProgress: progressMap.get(item.id) || null,
+		inUserLibrary: libraryMap.has(item.id) || item.userId === userId,
+		userLibraryEntry: libraryMap.get(item.id)
+	}));
+
+	// Apply filter (in_progress, completed, not_started)
+	if (filter === 'in_progress') {
+		enrichedItems = enrichedItems.filter(item =>
+			item.userProgress &&
+			(item.userProgress.progress ?? 0) > 0 &&
+			!item.userProgress.isFinished
+		);
+	} else if (filter === 'completed') {
+		enrichedItems = enrichedItems.filter(item =>
+			item.userProgress?.isFinished
+		);
+	} else if (filter === 'not_started') {
+		enrichedItems = enrichedItems.filter(item =>
+			!item.userProgress || (item.userProgress.progress ?? 0) === 0
+		);
+	}
+
+	// Apply search filter
+	if (search) {
+		const searchLower = search.toLowerCase();
+		enrichedItems = enrichedItems.filter(item =>
+			item.title.toLowerCase().includes(searchLower) ||
+			item.author?.toLowerCase().includes(searchLower) ||
+			item.narratorName?.toLowerCase().includes(searchLower)
+		);
+	}
+
+	// Get total count based on library filter
+	let countCondition;
+	if (libraryFilter === 'public') {
+		countCondition = eq(audiobooks.libraryType, 'public');
+	} else if (libraryFilter === 'personal') {
+		countCondition = or(
+			eq(audiobooks.userId, userId),
+			sql`${audiobooks.id} IN (SELECT audiobookId FROM user_audiobooks WHERE userId = ${userId})`
+		);
+	} else {
+		countCondition = or(
+			eq(audiobooks.libraryType, 'public'),
+			eq(audiobooks.userId, userId),
+			sql`${audiobooks.id} IN (SELECT audiobookId FROM user_audiobooks WHERE userId = ${userId})`
+		);
+	}
+
+	const totalResult = await db.select({ count: sql<number>`count(*)` })
+		.from(audiobooks)
+		.where(countCondition);
+	const total = totalResult[0]?.count || 0;
+
+	return {
+		items: enrichedItems,
+		total,
+		limit,
+		offset
+	};
+}
+
+/**
+ * Set the library type of an audiobook (admin/librarian only)
+ */
+export async function setAudiobookLibraryType(
+	audiobookId: number,
+	libraryType: 'personal' | 'public'
+): Promise<Audiobook | null> {
+	const [updated] = await db.update(audiobooks)
+		.set({
+			libraryType,
+			updatedAt: new Date().toISOString()
+		})
+		.where(eq(audiobooks.id, audiobookId))
+		.returning();
+
+	return updated || null;
 }

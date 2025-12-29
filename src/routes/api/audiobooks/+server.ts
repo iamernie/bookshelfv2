@@ -37,6 +37,17 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 	try {
 		const body = await request.json();
 
+		// Validate libraryType if provided
+		const libraryType = body.libraryType;
+		if (libraryType && !['personal', 'public'].includes(libraryType)) {
+			throw error(400, 'Invalid library type. Must be "personal" or "public"');
+		}
+
+		// Only admin/librarian can create public audiobooks
+		if (libraryType === 'public' && user.role !== 'admin' && user.role !== 'librarian') {
+			throw error(403, 'Only admins and librarians can add to the public library');
+		}
+
 		const audiobook = await createAudiobook({
 			title: body.title,
 			userId: user.id,
@@ -47,11 +58,13 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 			seriesName: body.seriesName || null,
 			seriesNumber: body.seriesNumber || null,
 			asin: body.asin || null,
-			bookId: body.bookId || null
+			bookId: body.bookId || null,
+			libraryType: libraryType || 'personal'
 		});
 
 		return json(audiobook, { status: 201 });
-	} catch (e) {
+	} catch (e: any) {
+		if (e.status) throw e;
 		console.error('[api/audiobooks] Failed to create audiobook:', e);
 		throw error(500, 'Failed to create audiobook');
 	}

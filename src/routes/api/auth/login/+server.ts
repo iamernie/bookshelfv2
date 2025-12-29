@@ -6,13 +6,31 @@ import { getSetting } from '$lib/server/services/settingsService';
 export const POST: RequestHandler = async ({ request, cookies }) => {
 	const data = await request.json();
 
+	console.log('[LOGIN API] ===========================================');
+	console.log('[LOGIN API] Login attempt received');
+	console.log('[LOGIN API] Email:', data.email);
+	console.log('[LOGIN API] Password provided:', !!data.password);
+	console.log('[LOGIN API] Password length:', data.password?.length || 0);
+
 	if (!data.email?.trim() || !data.password) {
+		console.log('[LOGIN API] ERROR: Missing email or password');
 		throw error(400, { message: 'Email and password are required' });
 	}
 
-	const result = await login(data.email.trim().toLowerCase(), data.password);
+	const normalizedEmail = data.email.trim().toLowerCase();
+	console.log('[LOGIN API] Normalized email:', normalizedEmail);
+
+	const result = await login(normalizedEmail, data.password);
+
+	console.log('[LOGIN API] Login result:', {
+		success: result.success,
+		error: result.error,
+		hasUser: !!result.user,
+		hasSessionId: !!result.sessionId
+	});
 
 	if (!result.success) {
+		console.log('[LOGIN API] ERROR: Login failed -', result.error);
 		throw error(401, { message: result.error || 'Login failed' });
 	}
 

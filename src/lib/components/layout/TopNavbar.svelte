@@ -108,9 +108,9 @@
 
 			{#if addMenuOpen}
 				<div class="dropdown-menu right-0 top-full mt-1 fade-in" onclick={closeMenus}>
-					<a href="/books?add=true" class="dropdown-item">
+					<a href="/library/add" class="dropdown-item">
 						<Plus class="w-4 h-4" />
-						<span>Add Book</span>
+						<span>Add to Library</span>
 					</a>
 					<a href="/authors?add=true" class="dropdown-item">
 						<User class="w-4 h-4" />

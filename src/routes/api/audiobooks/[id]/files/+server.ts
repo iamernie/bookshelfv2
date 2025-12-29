@@ -9,7 +9,8 @@ import {
 	addAudiobookFile,
 	extractAudioMetadata,
 	getMimeType,
-	isSupportedAudioFormat
+	isSupportedAudioFormat,
+	extractAndSaveChapters
 } from '$lib/server/services/audiobookService';
 import { db } from '$lib/server/db';
 import { audiobookFiles } from '$lib/server/db/schema';
@@ -131,10 +132,14 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 			trackNumber++;
 		}
 
+		// After all files are uploaded, extract and save chapters
+		const chapters = await extractAndSaveChapters(audiobookId);
+
 		return json({
 			success: true,
 			files: uploadedFiles,
-			message: `Uploaded ${uploadedFiles.length} file(s)`
+			chapters,
+			message: `Uploaded ${uploadedFiles.length} file(s)` + (chapters.length > 0 ? ` with ${chapters.length} chapter(s)` : '')
 		}, { status: 201 });
 	} catch (e) {
 		console.error('[api/audiobooks/files] Failed to upload files:', e);

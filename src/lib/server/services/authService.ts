@@ -23,7 +23,16 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-	return bcrypt.compare(password, hash);
+	console.log('[AUTH SERVICE] verifyPassword called');
+	console.log('[AUTH SERVICE] Hash to verify against:', hash?.substring(0, 20) + '...');
+	try {
+		const result = await bcrypt.compare(password, hash);
+		console.log('[AUTH SERVICE] bcrypt.compare result:', result);
+		return result;
+	} catch (err) {
+		console.log('[AUTH SERVICE] ERROR in bcrypt.compare:', err);
+		return false;
+	}
 }
 
 export function generateSessionId(): string {
@@ -44,33 +53,55 @@ export async function login(
 	email: string,
 	password: string
 ): Promise<{ success: boolean; user?: AuthUser; sessionId?: string; error?: string }> {
+	console.log('[AUTH SERVICE] ===========================================');
+	console.log('[AUTH SERVICE] login() called');
+	console.log('[AUTH SERVICE] Looking up user by email:', email);
+
 	const user = await getUserByEmail(email);
 
+	console.log('[AUTH SERVICE] User lookup result:', {
+		found: !!user,
+		userId: user?.id,
+		userEmail: user?.email,
+		hasPassword: !!user?.password,
+		passwordHashLength: user?.password?.length,
+		passwordHashPrefix: user?.password?.substring(0, 10)
+	});
+
 	if (!user) {
+		console.log('[AUTH SERVICE] ERROR: User not found');
 		return { success: false, error: 'Invalid email or password' };
 	}
 
 	// Check if locked out
 	if (user.lockoutUntil) {
+		console.log('[AUTH SERVICE] User has lockout set:', user.lockoutUntil);
 		const lockoutTime = new Date(user.lockoutUntil);
 		if (lockoutTime > new Date()) {
 			const minutesLeft = Math.ceil((lockoutTime.getTime() - Date.now()) / 60000);
+			console.log('[AUTH SERVICE] ERROR: Account still locked for', minutesLeft, 'minutes');
 			return {
 				success: false,
 				error: `Account locked. Try again in ${minutesLeft} minute(s)`
 			};
 		}
 		// Lockout expired, reset attempts
+		console.log('[AUTH SERVICE] Lockout expired, resetting attempts');
 		await db
 			.update(users)
 			.set({ failedLoginAttempts: 0, lockoutUntil: null })
 			.where(eq(users.id, user.id));
 	}
 
+	console.log('[AUTH SERVICE] Verifying password...');
+	console.log('[AUTH SERVICE] Input password length:', password.length);
 	const passwordValid = await verifyPassword(password, user.password);
+	console.log('[AUTH SERVICE] Password valid:', passwordValid);
 
 	if (!passwordValid) {
+		console.log('[AUTH SERVICE] ERROR: Password verification failed');
 		const attempts = (user.failedLoginAttempts || 0) + 1;
+		console.log('[AUTH SERVICE] Failed attempts:', attempts);
 
 		if (attempts >= MAX_LOGIN_ATTEMPTS) {
 			const lockoutUntil = new Date(Date.now() + LOCKOUT_MINUTES * 60000).toISOString();
@@ -89,13 +120,16 @@ export async function login(
 	}
 
 	// Reset failed attempts on successful login
+	console.log('[AUTH SERVICE] SUCCESS: Password verified, resetting failed attempts');
 	await db
 		.update(users)
 		.set({ failedLoginAttempts: 0, lockoutUntil: null })
 		.where(eq(users.id, user.id));
 
 	// Create session
+	console.log('[AUTH SERVICE] Creating session...');
 	const sessionId = generateSessionId();
+	console.log('[AUTH SERVICE] Session ID generated (first 10 chars):', sessionId.substring(0, 10));
 	const expires = new Date(Date.now() + SESSION_EXPIRY_DAYS * 24 * 60 * 60 * 1000).toISOString();
 	const sessionData = JSON.stringify({ userId: user.id });
 

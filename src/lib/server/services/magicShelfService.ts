@@ -52,6 +52,7 @@ export const FILTERABLE_FIELDS = [
 	{ field: 'releaseDate', label: 'Release Date', type: 'date' },
 	{ field: 'createdAt', label: 'Date Added', type: 'date' },
 	{ field: 'ebookPath', label: 'Has Ebook', type: 'boolean' },
+	{ field: 'hasAudiobook', label: 'Has Audiobook', type: 'boolean' },
 	{ field: 'coverImageUrl', label: 'Has Cover', type: 'boolean' },
 	{ field: 'isbn13', label: 'ISBN-13', type: 'text' },
 	{ field: 'language', label: 'Language', type: 'text' },
@@ -198,6 +199,18 @@ function buildCondition(rule: FilterRule): SQL<unknown> | null {
 	// Handle junction table fields (author, series, tag)
 	if (field === 'authorId' || field === 'seriesId' || field === 'tagId') {
 		// These need special handling via subqueries
+		return null;
+	}
+
+	// Handle hasAudiobook virtual field - checks if book has linked audiobook
+	if (field === 'hasAudiobook') {
+		if (operator === 'is_not_null') {
+			// Books that HAVE an audiobook
+			return sql`${books.id} IN (SELECT bookId FROM audiobooks WHERE bookId IS NOT NULL)`;
+		} else if (operator === 'is_null') {
+			// Books that DON'T have an audiobook
+			return sql`${books.id} NOT IN (SELECT bookId FROM audiobooks WHERE bookId IS NOT NULL)`;
+		}
 		return null;
 	}
 

@@ -44,6 +44,7 @@
 		{ field: 'releaseDate', label: 'Release Date', type: 'date' },
 		{ field: 'createdAt', label: 'Date Added', type: 'date' },
 		{ field: 'ebookPath', label: 'Has Ebook', type: 'boolean' },
+		{ field: 'hasAudiobook', label: 'Has Audiobook', type: 'boolean' },
 		{ field: 'coverImageUrl', label: 'Has Cover', type: 'boolean' },
 		{ field: 'isbn13', label: 'ISBN-13', type: 'text' },
 		{ field: 'language', label: 'Language', type: 'text' },

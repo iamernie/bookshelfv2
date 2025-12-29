@@ -65,6 +65,15 @@ This document outlines planned features, improvements, and future direction for 
 - [x] Update API routes with userId context and permissions
 - [x] Add permission check to ebook serving route
 - [x] Library sharing API endpoints
+- [x] Unified "Add to Library" page (`/library/add`)
+  - Auto-detects file type (ebook vs audiobook)
+  - Metadata extraction from uploaded files
+  - Metadata search from online databases
+  - Public library requires file attachment
+  - Personal library allows tracking-only entries
+- [x] Public library support for audiobooks
+  - `libraryType` column on audiobooks table
+  - `userAudiobooks` junction table for personal library entries
 - [ ] Library sharing UI in user settings
 - [ ] Permission levels: read, read_write, full
 
@@ -185,27 +194,35 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
 - [x] Support single-file M4B audiobooks
   - Direct play without track management
 
-### Phase 2: Enhanced Player Features
+### Phase 2: Enhanced Player Features ✅ COMPLETE
 **Goal:** Add advanced playback features for a better listening experience.
 
-- [ ] Chapter support
-  - Parse chapter markers from M4B metadata
-  - Manual chapter entry for multi-file audiobooks
-  - Chapter navigation in player UI
-  - Display current chapter name
-- [ ] Sleep timer
+- [x] Sleep timer
   - Set timer (15min, 30min, 45min, 1hr, end of chapter)
   - Gradual volume fade before stop
   - Visual countdown in player
-- [ ] Bookmarks
+- [x] Bookmarks
   - Save position with optional note
   - List and navigate to bookmarks
   - Quick bookmark button in player
-- [ ] Keyboard shortcuts
+- [x] Keyboard shortcuts
   - Space: play/pause
   - Left/Right arrows: skip 10s/30s
   - Up/Down arrows: volume
   - [ / ]: playback speed
+- [x] Audiobook completion tracking
+  - Auto-mark as finished at 95% progress
+  - Syncs status to linked book (marks as READ)
+  - Syncs to userAudiobooks library entry
+- [x] "Has Audiobook" smart collection filter
+  - Filter books by whether they have linked audiobooks
+- [x] Chapter support
+  - Parse chapter markers from M4B metadata
+  - Automatic chapter creation from multi-file audiobooks (track titles)
+  - Chapter navigation in player UI (prev/next buttons, chapter list)
+  - Display current chapter name in player
+  - Keyboard shortcuts: C to toggle chapters, comma/period for prev/next
+  - API endpoint for chapter management
 - [ ] Skip silence (optional)
   - Detect and skip silent portions
   - Configurable threshold

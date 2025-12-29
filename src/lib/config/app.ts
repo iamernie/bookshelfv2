@@ -1,12 +1,13 @@
 // Application configuration
 // Version and copyright info used across the app
 
-// Import version from package.json (resolved at build time via Vite)
-import { version } from '../../../package.json';
+// Version is injected by Vite at build time from package.json
+// See vite.config.ts for the define configuration
+declare const __APP_VERSION__: string;
 
 export const APP_CONFIG = {
 	name: 'BookShelf',
-	version,
+	version: __APP_VERSION__,
 	copyright: {
 		owner: 'Ernie',
 		year: 2026

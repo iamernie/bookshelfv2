@@ -488,8 +488,10 @@ export const audiobooks = sqliteTable('audiobooks', {
 	title: text('title').notNull(),
 	// Optional link to existing book record
 	bookId: integer('bookId').references(() => books.id, { onDelete: 'set null' }),
-	// Owner of the audiobook
+	// Owner/uploader of the audiobook
 	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	// Library type: 'personal' = only visible to owner, 'public' = visible in public library
+	libraryType: text('libraryType').default('personal'),
 	// Metadata
 	author: text('author'),
 	narratorId: integer('narratorId').references(() => narrators.id),
@@ -503,6 +505,23 @@ export const audiobooks = sqliteTable('audiobooks', {
 	seriesNumber: real('seriesNumber'),
 	// External IDs
 	asin: text('asin'),
+	// Timestamps
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+// User's personal library entry for an audiobook (for "add to library" functionality)
+export const userAudiobooks = sqliteTable('user_audiobooks', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	audiobookId: integer('audiobookId').notNull().references(() => audiobooks.id, { onDelete: 'cascade' }),
+	// Listening status (user-specific)
+	statusId: integer('statusId').references(() => statuses.id),
+	rating: real('rating'),
+	// Personal notes
+	comments: text('comments'),
+	// When user added audiobook to their library
+	addedAt: text('addedAt').default('CURRENT_TIMESTAMP'),
 	// Timestamps
 	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
 	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
@@ -692,7 +711,14 @@ export const audiobooksRelations = relations(audiobooks, ({ one, many }) => ({
 	files: many(audiobookFiles),
 	chapters: many(audiobookChapters),
 	progress: many(audiobookProgress),
-	bookmarks: many(audiobookBookmarks)
+	bookmarks: many(audiobookBookmarks),
+	userLibraryEntries: many(userAudiobooks)
+}));
+
+export const userAudiobooksRelations = relations(userAudiobooks, ({ one }) => ({
+	user: one(users, { fields: [userAudiobooks.userId], references: [users.id] }),
+	audiobook: one(audiobooks, { fields: [userAudiobooks.audiobookId], references: [audiobooks.id] }),
+	status: one(statuses, { fields: [userAudiobooks.statusId], references: [statuses.id] })
 }));
 
 export const audiobookFilesRelations = relations(audiobookFiles, ({ one }) => ({
@@ -771,6 +797,8 @@ export type AudiobookChapter = typeof audiobookChapters.$inferSelect;
 export type NewAudiobookChapter = typeof audiobookChapters.$inferInsert;
 export type AudiobookBookmark = typeof audiobookBookmarks.$inferSelect;
 export type NewAudiobookBookmark = typeof audiobookBookmarks.$inferInsert;
+export type UserAudiobook = typeof userAudiobooks.$inferSelect;
+export type NewUserAudiobook = typeof userAudiobooks.$inferInsert;
 
 // Library type values
 export type LibraryType = 'personal' | 'public';
