@@ -382,16 +382,20 @@
 
 					if (audiobookRes.ok) {
 						const audiobook = await audiobookRes.json();
-						formData.append('audioFile', uploadedFile);
+						formData.append('files', uploadedFile);
 						const audioUploadRes = await fetch(`/api/audiobooks/${audiobook.id}/files`, {
 							method: 'POST',
 							body: formData
 						});
 
 						if (!audioUploadRes.ok) {
+							const errData = await audioUploadRes.json().catch(() => ({}));
+							console.error('[library/add] Audio file upload failed:', errData);
 							toasts.warning('Book created but audio file upload failed. You can upload the file later.');
 						}
 					} else {
+						const errData = await audiobookRes.json().catch(() => ({}));
+						console.error('[library/add] Audiobook creation failed:', errData);
 						toasts.warning('Book created but audiobook creation failed.');
 					}
 				}
