@@ -297,6 +297,11 @@
 	}
 
 	async function handleSubmit() {
+		console.log('[library/add] handleSubmit called');
+		console.log('[library/add] title:', title);
+		console.log('[library/add] mediaType:', mediaType);
+		console.log('[library/add] uploadedFile:', uploadedFile?.name);
+
 		if (!title.trim()) {
 			toasts.error('Title is required');
 			return;
@@ -338,18 +343,24 @@
 				libraryType: data.isPublic ? 'public' : 'personal'
 			};
 
+			console.log('[library/add] Creating book with data:', bookData);
+
 			const bookRes = await fetch('/api/books', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(bookData)
 			});
 
+			console.log('[library/add] Book creation response status:', bookRes.status);
+
 			if (!bookRes.ok) {
 				const err = await bookRes.json();
+				console.error('[library/add] Book creation failed:', err);
 				throw new Error(err.message || 'Failed to create book');
 			}
 
 			const newBook = await bookRes.json();
+			console.log('[library/add] Book created:', newBook.id);
 
 			// Upload file if we have one
 			if (uploadedFile) {
@@ -367,31 +378,44 @@
 					}
 				} else if (mediaType === 'audiobook') {
 					// Create audiobook entry linked to book
+					console.log('[library/add] Creating audiobook...');
+					const audiobookPayload = {
+						title: title.trim(),
+						bookId: newBook.id,
+						author: selectedAuthors[0]?.name || null,
+						narratorName: narratorName.trim() || null,
+						narratorId: narratorId ? parseInt(narratorId) : null,
+						libraryType: data.isPublic ? 'public' : 'personal'
+					};
+					console.log('[library/add] Audiobook payload:', audiobookPayload);
+
 					const audiobookRes = await fetch('/api/audiobooks', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							title: title.trim(),
-							bookId: newBook.id,
-							author: selectedAuthors[0]?.name || null,
-							narratorName: narratorName.trim() || null,
-							narratorId: narratorId ? parseInt(narratorId) : null,
-							libraryType: data.isPublic ? 'public' : 'personal'
-						})
+						body: JSON.stringify(audiobookPayload)
 					});
+
+					console.log('[library/add] Audiobook creation response status:', audiobookRes.status);
 
 					if (audiobookRes.ok) {
 						const audiobook = await audiobookRes.json();
+						console.log('[library/add] Audiobook created:', audiobook.id);
+						console.log('[library/add] Uploading audio file:', uploadedFile.name, uploadedFile.size);
+
 						formData.append('files', uploadedFile);
 						const audioUploadRes = await fetch(`/api/audiobooks/${audiobook.id}/files`, {
 							method: 'POST',
 							body: formData
 						});
 
+						console.log('[library/add] Audio file upload response status:', audioUploadRes.status);
+
 						if (!audioUploadRes.ok) {
 							const errData = await audioUploadRes.json().catch(() => ({}));
 							console.error('[library/add] Audio file upload failed:', errData);
 							toasts.warning('Book created but audio file upload failed. You can upload the file later.');
+						} else {
+							console.log('[library/add] Audio file uploaded successfully');
 						}
 					} else {
 						const errData = await audiobookRes.json().catch(() => ({}));
