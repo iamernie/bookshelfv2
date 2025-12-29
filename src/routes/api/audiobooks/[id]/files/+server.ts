@@ -26,10 +26,21 @@ function getAudiobookPath(userId: number, audiobookId: number): string {
 }
 
 async function ensureAudiobookDir(userId: number, audiobookId: number): Promise<string> {
+	const basePath = getAudiobooksBasePath();
 	const dir = getAudiobookPath(userId, audiobookId);
+
+	// Ensure base audiobooks directory exists first
+	if (!existsSync(basePath)) {
+		console.log(`[audiobooks/files] Creating base audiobooks directory: ${basePath}`);
+		await mkdir(basePath, { recursive: true });
+	}
+
+	// Ensure user/audiobook directory exists
 	if (!existsSync(dir)) {
+		console.log(`[audiobooks/files] Creating audiobook directory: ${dir}`);
 		await mkdir(dir, { recursive: true });
 	}
+
 	return dir;
 }
 
@@ -81,8 +92,12 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 	}
 
 	try {
+		console.log(`[audiobooks/files] Starting upload for audiobook ${audiobookId}, user ${user.id}`);
+
 		const formData = await request.formData();
 		const files = formData.getAll('files') as File[];
+
+		console.log(`[audiobooks/files] Received ${files.length} file(s)`);
 
 		if (files.length === 0) {
 			throw error(400, 'No files uploaded');
@@ -97,10 +112,13 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 
 		const uploadedFiles = [];
 		const dir = await ensureAudiobookDir(user.id, audiobookId);
+		console.log(`[audiobooks/files] Using directory: ${dir}`);
 
 		for (const file of files) {
+			console.log(`[audiobooks/files] Processing file: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+
 			if (!isSupportedAudioFormat(file.name)) {
-				console.warn(`[upload] Skipping unsupported file: ${file.name}`);
+				console.warn(`[audiobooks/files] Skipping unsupported file: ${file.name}`);
 				continue;
 			}
 
@@ -110,11 +128,15 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 			const filePath = join(dir, safeFilename);
 
 			// Write file to disk
+			console.log(`[audiobooks/files] Writing file to: ${filePath}`);
 			const arrayBuffer = await file.arrayBuffer();
 			await writeFile(filePath, Buffer.from(arrayBuffer));
+			console.log(`[audiobooks/files] File written successfully`);
 
-			// Extract metadata (duration, etc.)
+			// Extract metadata (duration, etc.) - has timeout protection
+			console.log(`[audiobooks/files] Extracting metadata...`);
 			const metadata = await extractAudioMetadata(filePath);
+			console.log(`[audiobooks/files] Metadata extracted, duration: ${metadata.duration}s`);
 
 			// Add to database
 			const dbFile = await addAudiobookFile({
@@ -130,10 +152,13 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 
 			uploadedFiles.push(dbFile);
 			trackNumber++;
+			console.log(`[audiobooks/files] File ${file.name} uploaded successfully`);
 		}
 
 		// After all files are uploaded, extract and save chapters
+		console.log(`[audiobooks/files] Extracting chapters...`);
 		const chapters = await extractAndSaveChapters(audiobookId);
+		console.log(`[audiobooks/files] Found ${chapters.length} chapters`);
 
 		return json({
 			success: true,
@@ -142,7 +167,7 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 			message: `Uploaded ${uploadedFiles.length} file(s)` + (chapters.length > 0 ? ` with ${chapters.length} chapter(s)` : '')
 		}, { status: 201 });
 	} catch (e) {
-		console.error('[api/audiobooks/files] Failed to upload files:', e);
+		console.error('[audiobooks/files] Failed to upload files:', e);
 		throw error(500, 'Failed to upload files');
 	}
 };

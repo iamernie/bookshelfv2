@@ -127,9 +127,22 @@ export interface AudioMetadata {
 	chapters?: AudioChapter[];
 }
 
+// Timeout for metadata extraction (30 seconds)
+const METADATA_EXTRACTION_TIMEOUT_MS = 30000;
+
 export async function extractAudioMetadata(filePath: string): Promise<AudioMetadata> {
 	try {
-		const metadata = await parseFile(filePath);
+		console.log(`[audiobookService] Extracting metadata from: ${filePath}`);
+
+		// Parse with timeout to prevent hanging on large files
+		const metadata = await Promise.race([
+			parseFile(filePath),
+			new Promise<never>((_, reject) =>
+				setTimeout(() => reject(new Error('Metadata extraction timeout')), METADATA_EXTRACTION_TIMEOUT_MS)
+			)
+		]);
+
+		console.log(`[audiobookService] Metadata extracted, duration: ${metadata.format.duration}s`);
 		const parsedChapters: AudioChapter[] = [];
 		const duration = metadata.format.duration || 0;
 
