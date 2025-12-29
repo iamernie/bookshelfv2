@@ -234,6 +234,11 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
   - Associate audiobook with book record
   - Show audiobook availability on book page
   - Unified reading/listening progress
+- [x] Duplicate detection on upload
+  - Fuzzy title matching when adding new books
+  - Detects when audiobook file matches existing book (e.g., "Edge World: Undying Mercenaries, Book 14" → "Edge World")
+  - Option to link file to existing book instead of creating duplicate
+  - Visual warning with match percentage
 - [ ] Metadata lookup
   - Audible metadata search
   - Audnexus API for chapters

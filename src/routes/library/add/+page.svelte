@@ -4,7 +4,7 @@
 		Upload, FileAudio, FileText, BookOpen, ChevronLeft, X, Loader2,
 		Library, User, Search, Info, AlignLeft, Image, Fingerprint,
 		Headphones, Music, Check, AlertCircle, Star, Tag, Database,
-		Calendar, Globe
+		Calendar, Globe, AlertTriangle, Link
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
 	import MetadataSearchModal from '$lib/components/book/MetadataSearchModal.svelte';
@@ -25,6 +25,7 @@
 	let isExtracting = $state(false);
 	let isDragging = $state(false);
 	let isSubmitting = $state(false);
+	let submitStatus = $state<'idle' | 'creating_book' | 'creating_audiobook' | 'uploading_file' | 'done'>('idle');
 
 	// Metadata search modal
 	let showMetadataModal = $state(false);
@@ -74,6 +75,79 @@
 	let releaseDate = $state('');
 	let startReadingDate = $state('');
 	let completedDate = $state('');
+
+	// Duplicate detection
+	interface DuplicateMatch {
+		id: number;
+		title: string;
+		author: string | null;
+		coverImageUrl: string | null;
+		isbn13: string | null;
+		similarity: number;
+		matchType: 'exact_isbn' | 'exact_title' | 'fuzzy';
+	}
+	let duplicateMatches = $state<DuplicateMatch[]>([]);
+	let isCheckingDuplicates = $state(false);
+	let duplicateCheckTimeout: ReturnType<typeof setTimeout> | null = null;
+	let selectedExistingBook = $state<DuplicateMatch | null>(null);
+	let showDuplicateWarning = $state(false);
+
+	// Debounced duplicate check
+	async function checkForDuplicates() {
+		if (!title.trim() || title.trim().length < 3) {
+			duplicateMatches = [];
+			return;
+		}
+
+		isCheckingDuplicates = true;
+		try {
+			const params = new URLSearchParams({ title: title.trim() });
+			if (selectedAuthors.length > 0) {
+				params.set('author', selectedAuthors[0].name);
+			}
+			if (isbn13.trim()) {
+				params.set('isbn13', isbn13.trim());
+			}
+
+			const res = await fetch(`/api/books/duplicates?${params}`);
+			if (res.ok) {
+				const data = await res.json();
+				duplicateMatches = data.matches || [];
+				// Auto-show warning if high confidence matches found
+				if (duplicateMatches.length > 0 && duplicateMatches[0].similarity >= 80) {
+					showDuplicateWarning = true;
+				}
+			}
+		} catch (err) {
+			console.error('Failed to check duplicates:', err);
+		} finally {
+			isCheckingDuplicates = false;
+		}
+	}
+
+	function debouncedDuplicateCheck() {
+		if (duplicateCheckTimeout) {
+			clearTimeout(duplicateCheckTimeout);
+		}
+		duplicateCheckTimeout = setTimeout(checkForDuplicates, 500);
+	}
+
+	// Watch title changes for duplicate detection
+	$effect(() => {
+		if (title && step === 'form') {
+			debouncedDuplicateCheck();
+		}
+	});
+
+	function selectExistingBook(book: DuplicateMatch) {
+		selectedExistingBook = book;
+		showDuplicateWarning = false;
+	}
+
+	function createNewBookAnyway() {
+		selectedExistingBook = null;
+		showDuplicateWarning = false;
+	}
 
 	// Filtered options
 	let filteredAuthors = $derived(
@@ -301,6 +375,77 @@
 		console.log('[library/add] title:', title);
 		console.log('[library/add] mediaType:', mediaType);
 		console.log('[library/add] uploadedFile:', uploadedFile?.name);
+		console.log('[library/add] selectedExistingBook:', selectedExistingBook?.id);
+
+		// If linking to existing book, we just need the book ID
+		if (selectedExistingBook && uploadedFile) {
+			isSubmitting = true;
+			submitStatus = mediaType === 'audiobook' ? 'creating_audiobook' : 'uploading_file';
+
+			try {
+				const bookId = selectedExistingBook.id;
+
+				if (mediaType === 'ebook') {
+					submitStatus = 'uploading_file';
+					const formData = new FormData();
+					formData.append('ebook', uploadedFile);
+					const uploadRes = await fetch(`/api/ebooks/${bookId}/upload`, {
+						method: 'POST',
+						body: formData
+					});
+
+					if (!uploadRes.ok) {
+						throw new Error('File upload failed');
+					}
+					toasts.success('Ebook added to existing book!');
+				} else if (mediaType === 'audiobook') {
+					// Create audiobook entry linked to existing book
+					submitStatus = 'creating_audiobook';
+					const audiobookPayload = {
+						title: selectedExistingBook.title,
+						bookId,
+						author: selectedExistingBook.author || null,
+						narratorName: narratorName.trim() || null,
+						narratorId: narratorId ? parseInt(narratorId) : null,
+						libraryType: data.isPublic ? 'public' : 'personal'
+					};
+
+					const audiobookRes = await fetch('/api/audiobooks', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(audiobookPayload)
+					});
+
+					if (audiobookRes.ok) {
+						const audiobook = await audiobookRes.json();
+						submitStatus = 'uploading_file';
+						const formData = new FormData();
+						formData.append('files', uploadedFile);
+						const audioUploadRes = await fetch(`/api/audiobooks/${audiobook.id}/files`, {
+							method: 'POST',
+							body: formData
+						});
+
+						if (!audioUploadRes.ok) {
+							toasts.warning('Audiobook created but file upload failed.');
+						} else {
+							toasts.success('Audiobook added to existing book!');
+						}
+					} else {
+						throw new Error('Failed to create audiobook');
+					}
+				}
+
+				goto(`/books/${bookId}`);
+				return;
+			} catch (err: any) {
+				toasts.error(err.message || 'Failed to add file to existing book');
+			} finally {
+				isSubmitting = false;
+				submitStatus = 'idle';
+			}
+			return;
+		}
 
 		if (!title.trim()) {
 			toasts.error('Title is required');
@@ -308,6 +453,7 @@
 		}
 
 		isSubmitting = true;
+		submitStatus = 'creating_book';
 
 		try {
 			// Create the book
@@ -367,6 +513,7 @@
 				const formData = new FormData();
 
 				if (mediaType === 'ebook') {
+					submitStatus = 'uploading_file';
 					formData.append('ebook', uploadedFile);
 					const uploadRes = await fetch(`/api/ebooks/${newBook.id}/upload`, {
 						method: 'POST',
@@ -378,6 +525,7 @@
 					}
 				} else if (mediaType === 'audiobook') {
 					// Create audiobook entry linked to book
+					submitStatus = 'creating_audiobook';
 					console.log('[library/add] Creating audiobook...');
 					const audiobookPayload = {
 						title: title.trim(),
@@ -402,6 +550,7 @@
 						console.log('[library/add] Audiobook created:', audiobook.id);
 						console.log('[library/add] Uploading audio file:', uploadedFile.name, uploadedFile.size);
 
+						submitStatus = 'uploading_file';
 						formData.append('files', uploadedFile);
 						const audioUploadRes = await fetch(`/api/audiobooks/${audiobook.id}/files`, {
 							method: 'POST',
@@ -438,6 +587,7 @@
 				}
 			}
 
+			submitStatus = 'done';
 			toasts.success(data.isPublic ? 'Added to public library!' : 'Book added!');
 			goto(`/books/${newBook.id}`);
 
@@ -445,6 +595,7 @@
 			toasts.error(err.message || 'Failed to add to library');
 		} finally {
 			isSubmitting = false;
+			submitStatus = 'idle';
 		}
 	}
 </script>
@@ -492,51 +643,85 @@
 		<!-- Upload Step -->
 		<div class="space-y-6">
 			<!-- Drop Zone -->
-			<div
-				class="relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer"
-				style="border-color: {isDragging ? 'var(--accent)' : 'var(--border-color)'}; background: {isDragging ? 'rgba(139, 92, 246, 0.05)' : 'var(--bg-secondary)'};"
-				ondragover={(e) => { e.preventDefault(); isDragging = true; }}
-				ondragleave={() => isDragging = false}
-				ondrop={handleFileDrop}
-				onclick={() => document.getElementById('file-input')?.click()}
-				role="button"
-				tabindex="0"
-				onkeydown={(e) => { if (e.key === 'Enter') document.getElementById('file-input')?.click(); }}
-			>
-				<input
-					id="file-input"
-					type="file"
-					class="hidden"
-					accept=".epub,.pdf,.cbz,.mp3,.m4a,.m4b,.aac,.ogg,.opus,.flac,.wav"
-					onchange={handleFileSelect}
-				/>
-
-				<div class="flex justify-center gap-4 mb-4">
-					<div class="w-16 h-16 rounded-xl flex items-center justify-center" style="background: rgba(59, 130, 246, 0.1);">
-						<FileText class="w-8 h-8" style="color: #3b82f6;" />
+			{#if isExtracting && uploadedFile}
+				<!-- File Selected & Processing -->
+				<div
+					class="relative border-2 rounded-xl p-12 text-center"
+					style="border-color: {mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6'}; background: {mediaType === 'ebook' ? 'rgba(59, 130, 246, 0.05)' : 'rgba(139, 92, 246, 0.05)'};"
+				>
+					<div class="flex justify-center mb-4">
+						<div class="w-20 h-20 rounded-xl flex items-center justify-center relative" style="background: {mediaType === 'ebook' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)'};">
+							{#if mediaType === 'ebook'}
+								<FileText class="w-10 h-10" style="color: #3b82f6;" />
+							{:else}
+								<FileAudio class="w-10 h-10" style="color: #8b5cf6;" />
+							{/if}
+							<div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center" style="background: var(--bg-primary);">
+								<Loader2 class="w-4 h-4 animate-spin" style="color: {mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6'};" />
+							</div>
+						</div>
 					</div>
-					<div class="w-16 h-16 rounded-xl flex items-center justify-center" style="background: rgba(139, 92, 246, 0.1);">
-						<FileAudio class="w-8 h-8" style="color: #8b5cf6;" />
+
+					<p class="text-lg font-medium mb-1" style="color: var(--text-primary);">
+						{uploadedFile.name}
+					</p>
+					<p class="text-sm mb-4" style="color: var(--text-muted);">
+						{(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB • {mediaType === 'ebook' ? 'Ebook' : 'Audiobook'}
+					</p>
+
+					<div class="flex items-center justify-center gap-2" style="color: {mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6'};">
+						<Loader2 class="w-5 h-5 animate-spin" />
+						<span class="font-medium">Extracting metadata...</span>
 					</div>
 				</div>
+			{:else}
+				<!-- Normal Drop Zone -->
+				<div
+					class="relative border-2 border-dashed rounded-xl p-12 text-center transition-all cursor-pointer"
+					style="border-color: {isDragging ? 'var(--accent)' : 'var(--border-color)'}; background: {isDragging ? 'rgba(139, 92, 246, 0.05)' : 'var(--bg-secondary)'};"
+					ondragover={(e) => { e.preventDefault(); isDragging = true; }}
+					ondragleave={() => isDragging = false}
+					ondrop={handleFileDrop}
+					onclick={() => document.getElementById('file-input')?.click()}
+					role="button"
+					tabindex="0"
+					onkeydown={(e) => { if (e.key === 'Enter') document.getElementById('file-input')?.click(); }}
+				>
+					<input
+						id="file-input"
+						type="file"
+						class="hidden"
+						accept=".epub,.pdf,.cbz,.mp3,.m4a,.m4b,.aac,.ogg,.opus,.flac,.wav"
+						onchange={handleFileSelect}
+					/>
 
-				<p class="text-lg font-medium mb-2" style="color: var(--text-primary);">
-					Drop your file here or click to browse
-				</p>
-				<p class="text-sm mb-4" style="color: var(--text-muted);">
-					We'll detect the type and extract metadata automatically
-				</p>
+					<div class="flex justify-center gap-4 mb-4">
+						<div class="w-16 h-16 rounded-xl flex items-center justify-center" style="background: rgba(59, 130, 246, 0.1);">
+							<FileText class="w-8 h-8" style="color: #3b82f6;" />
+						</div>
+						<div class="w-16 h-16 rounded-xl flex items-center justify-center" style="background: rgba(139, 92, 246, 0.1);">
+							<FileAudio class="w-8 h-8" style="color: #8b5cf6;" />
+						</div>
+					</div>
 
-				<div class="flex flex-wrap justify-center gap-2 text-xs" style="color: var(--text-muted);">
-					<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">EPUB</span>
-					<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">PDF</span>
-					<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">CBZ</span>
-					<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">MP3</span>
-					<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">M4A</span>
-					<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">M4B</span>
-					<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">FLAC</span>
+					<p class="text-lg font-medium mb-2" style="color: var(--text-primary);">
+						Drop your file here or click to browse
+					</p>
+					<p class="text-sm mb-4" style="color: var(--text-muted);">
+						We'll detect the type and extract metadata automatically
+					</p>
+
+					<div class="flex flex-wrap justify-center gap-2 text-xs" style="color: var(--text-muted);">
+						<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">EPUB</span>
+						<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">PDF</span>
+						<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">CBZ</span>
+						<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">MP3</span>
+						<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">M4A</span>
+						<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">M4B</span>
+						<span class="px-2 py-1 rounded" style="background: var(--bg-tertiary);">FLAC</span>
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			<!-- Alternative options -->
 			<div class="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -654,24 +839,129 @@
 				</div>
 			{/if}
 
-			<!-- Quick metadata search button -->
-			<div class="p-3 rounded-lg flex items-center justify-between" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%); border: 1px solid rgba(139, 92, 246, 0.2);">
-				<div class="flex items-center gap-2">
-					<Database class="w-5 h-5" style="color: var(--accent);" />
-					<span class="text-sm" style="color: var(--text-primary);">Fill from online databases</span>
+			<!-- Selected existing book banner (when user chose to link to existing) -->
+			{#if selectedExistingBook}
+				<div class="p-4 rounded-lg" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3);">
+					<div class="flex items-start gap-4">
+						<div class="flex-shrink-0">
+							{#if selectedExistingBook.coverImageUrl}
+								<img
+									src={selectedExistingBook.coverImageUrl}
+									alt=""
+									class="w-16 h-24 object-cover rounded"
+								/>
+							{:else}
+								<div class="w-16 h-24 rounded flex items-center justify-center" style="background: var(--bg-tertiary);">
+									<BookOpen class="w-6 h-6" style="color: var(--text-muted);" />
+								</div>
+							{/if}
+						</div>
+						<div class="flex-1 min-w-0">
+							<div class="flex items-center gap-2 mb-1">
+								<Link class="w-4 h-4" style="color: #10b981;" />
+								<span class="text-sm font-medium" style="color: #10b981;">Linking to existing book</span>
+							</div>
+							<p class="font-medium truncate" style="color: var(--text-primary);">{selectedExistingBook.title}</p>
+							{#if selectedExistingBook.author}
+								<p class="text-sm" style="color: var(--text-muted);">by {selectedExistingBook.author}</p>
+							{/if}
+							<p class="text-sm mt-2" style="color: var(--text-muted);">
+								Your {mediaType === 'ebook' ? 'ebook' : 'audiobook'} file will be added to this existing book.
+							</p>
+						</div>
+						<button
+							type="button"
+							class="p-2 rounded-lg transition-colors hover:bg-black/10"
+							style="color: var(--text-muted);"
+							onclick={() => { selectedExistingBook = null; showDuplicateWarning = duplicateMatches.length > 0 && duplicateMatches[0].similarity >= 80; }}
+							title="Cancel and create new book"
+						>
+							<X class="w-5 h-5" />
+						</button>
+					</div>
 				</div>
-				<button
-					type="button"
-					class="px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1"
-					style="background: var(--accent); color: white;"
-					onclick={() => showMetadataModal = true}
-				>
-					<Search class="w-4 h-4" />
-					Search
-				</button>
-			</div>
+			{/if}
 
-			<!-- Main form grid -->
+			<!-- Duplicate warning banner -->
+			{#if showDuplicateWarning && duplicateMatches.length > 0 && !selectedExistingBook && uploadedFile}
+				<div class="p-4 rounded-lg" style="background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3);">
+					<div class="flex items-start gap-3 mb-3">
+						<AlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: #ca8a04;" />
+						<div>
+							<p class="font-medium" style="color: #ca8a04;">Potential duplicate detected</p>
+							<p class="text-sm mt-1" style="color: var(--text-muted);">
+								{duplicateMatches.length === 1 ? 'A similar book was found' : `${duplicateMatches.length} similar books were found`} in your library.
+								Would you like to add the file to an existing book instead?
+							</p>
+						</div>
+					</div>
+					<div class="space-y-2 mb-3">
+						{#each duplicateMatches.slice(0, 3) as match}
+							<button
+								type="button"
+								class="w-full p-3 rounded-lg text-left transition-colors flex items-center gap-3"
+								style="background: var(--bg-primary); border: 1px solid var(--border-color);"
+								onclick={() => selectExistingBook(match)}
+							>
+								{#if match.coverImageUrl}
+									<img
+										src={match.coverImageUrl}
+										alt=""
+										class="w-10 h-14 object-cover rounded flex-shrink-0"
+									/>
+								{:else}
+									<div class="w-10 h-14 rounded flex items-center justify-center flex-shrink-0" style="background: var(--bg-tertiary);">
+										<BookOpen class="w-4 h-4" style="color: var(--text-muted);" />
+									</div>
+								{/if}
+								<div class="flex-1 min-w-0">
+									<p class="font-medium truncate" style="color: var(--text-primary);">{match.title}</p>
+									{#if match.author}
+										<p class="text-sm truncate" style="color: var(--text-muted);">by {match.author}</p>
+									{/if}
+								</div>
+								<div class="flex-shrink-0 text-right">
+									<span class="text-xs px-2 py-1 rounded-full" style="background: {match.similarity >= 90 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(234, 179, 8, 0.1)'}; color: {match.similarity >= 90 ? '#ef4444' : '#ca8a04'};">
+										{match.similarity}% match
+									</span>
+								</div>
+							</button>
+						{/each}
+					</div>
+					<div class="flex justify-end gap-2">
+						<button
+							type="button"
+							class="px-4 py-2 rounded-lg text-sm transition-colors"
+							style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+							onclick={createNewBookAnyway}
+						>
+							Create new book anyway
+						</button>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Quick metadata search button (hide when linking to existing) -->
+			{#if !selectedExistingBook}
+				<div class="p-3 rounded-lg flex items-center justify-between" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%); border: 1px solid rgba(139, 92, 246, 0.2);">
+					<div class="flex items-center gap-2">
+						<Database class="w-5 h-5" style="color: var(--accent);" />
+						<span class="text-sm" style="color: var(--text-primary);">Fill from online databases</span>
+					</div>
+					<button
+						type="button"
+						class="px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1"
+						style="background: var(--accent); color: white;"
+						onclick={() => showMetadataModal = true}
+					>
+						<Search class="w-4 h-4" />
+						Search
+					</button>
+				</div>
+			{/if}
+
+			<!-- Main form grid (hide when linking to existing) -->
+			{#if !selectedExistingBook}
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<!-- Left column: Basic info -->
 				<div class="lg:col-span-2 space-y-4">
@@ -992,7 +1282,10 @@
 				</div>
 			</div>
 
-			<!-- Additional Details (collapsible) -->
+			{/if}
+
+			<!-- Additional Details (collapsible) - hide when linking to existing -->
+			{#if !selectedExistingBook}
 			<details class="rounded-lg" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
 				<summary class="px-4 py-3 cursor-pointer font-medium" style="color: var(--text-primary);">
 					Additional Details
@@ -1072,6 +1365,7 @@
 					</div>
 				</div>
 			</details>
+			{/if}
 
 			<!-- Submit buttons -->
 			<div class="flex gap-3 pt-4 sticky bottom-0 py-4" style="background: var(--bg-primary);">
@@ -1080,18 +1374,32 @@
 					class="px-6 py-2.5 rounded-lg transition-colors"
 					style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
 					onclick={goBackToUpload}
+					disabled={isSubmitting}
 				>
 					Back
 				</button>
 				<button
 					type="submit"
-					disabled={isSubmitting || !title.trim() || (data.isPublic && !uploadedFile)}
+					disabled={isSubmitting || (!selectedExistingBook && !title.trim()) || (data.isPublic && !uploadedFile) || (selectedExistingBook && !uploadedFile)}
 					class="flex-1 px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-					style="background: {data.isPublic ? '#10b981' : 'var(--accent)'}; color: white;"
+					style="background: {selectedExistingBook ? '#10b981' : (data.isPublic ? '#10b981' : 'var(--accent)')}; color: white;"
 				>
 					{#if isSubmitting}
 						<Loader2 class="w-5 h-5 animate-spin" />
-						Adding...
+						{#if submitStatus === 'creating_book'}
+							Creating book...
+						{:else if submitStatus === 'creating_audiobook'}
+							Setting up audiobook...
+						{:else if submitStatus === 'uploading_file'}
+							Uploading file...
+						{:else if submitStatus === 'done'}
+							Done!
+						{:else}
+							Adding...
+						{/if}
+					{:else if selectedExistingBook}
+						<Link class="w-5 h-5" />
+						Add {mediaType === 'ebook' ? 'Ebook' : 'Audiobook'} to Existing Book
 					{:else if data.isPublic && !uploadedFile}
 						<AlertCircle class="w-5 h-5" />
 						File Required
