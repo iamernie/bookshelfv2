@@ -74,4 +74,6 @@ export BODY_SIZE_LIMIT
 
 echo "Starting SvelteKit application..."
 echo "Body size limit: $BODY_SIZE_LIMIT"
-exec su-exec "$PUID:$PGID" node build
+
+# Use env to ensure BODY_SIZE_LIMIT is passed to the node process
+exec su-exec "$PUID:$PGID" env BODY_SIZE_LIMIT="$BODY_SIZE_LIMIT" node build
