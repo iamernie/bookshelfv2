@@ -6,6 +6,9 @@ import { checkSetupNeeded } from '$lib/server/services/setupService';
 import { migrationStatus } from '$lib/server/db';
 
 const log = createLogger('hooks');
+
+// Log BODY_SIZE_LIMIT on startup for debugging
+console.log('[hooks] BODY_SIZE_LIMIT env:', process.env.BODY_SIZE_LIMIT || 'NOT SET (default 512kb)');
 const PUBLIC_PATHS = [
 	'/login',
 	'/reset-password',
