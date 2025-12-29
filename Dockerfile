@@ -16,6 +16,9 @@ RUN npm ci
 # Copy application source
 COPY . .
 
+# Set body size limit for large file uploads (500MB for audiobooks)
+ENV BODY_SIZE_LIMIT=500M
+
 # Build the SvelteKit application
 RUN npm run build
 
