@@ -17,7 +17,7 @@ build/
 *.sqlite-shm
 data/
 
-# User content - covers and ebooks
+# User content - covers, ebooks, and audiobooks
 static/covers/
 !static/covers/.gitkeep
 !static/covers/placeholder.png
@@ -25,6 +25,14 @@ static/ebooks/
 !static/ebooks/.gitkeep
 static/uploads/temp/
 !static/uploads/temp/.gitkeep
+
+# Data directory content (audiobooks, backups, etc)
+data/audiobooks/
+data/backups/
+data/temp/
+
+# Root-level backups
+backups/
 
 # Testing databases
 testing/databases/*.sqlite
