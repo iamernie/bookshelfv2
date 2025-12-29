@@ -7,7 +7,7 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { parseAudibleHtml, calculateStartDate, isDateInPast, type AudibleBook } from '$lib/server/services/audibleImportService';
 import { db } from '$lib/server/db';
-import { books, authors, series, narrators, formats, statuses, genres, bookAuthors, bookSeries } from '$lib/server/db/schema';
+import { books, authors, series, narrators, formats, statuses, genres, bookAuthors, bookSeries, userBooks } from '$lib/server/db/schema';
 import { eq, and, or, like, sql } from 'drizzle-orm';
 import { fuzzyMatch } from '$lib/server/services/importService';
 
@@ -142,7 +142,11 @@ export const POST: RequestHandler = async ({ request }) => {
 /**
  * PUT - Execute import with selected books
  */
-export const PUT: RequestHandler = async ({ request }) => {
+export const PUT: RequestHandler = async ({ request, locals }) => {
+	if (!locals.user) {
+		throw error(401, 'Unauthorized');
+	}
+
 	const body = await request.json();
 	const { sessionId, selectedRows, booksData, downloadCovers = true } = body;
 
@@ -255,6 +259,8 @@ export const PUT: RequestHandler = async ({ request }) => {
 				coverImageUrl = null; // Will use originalCoverUrl as fallback
 			}
 
+			const now = new Date().toISOString();
+
 			// Create the book
 			const newBook = await db.insert(books).values({
 				title: bookData.title,
@@ -266,13 +272,27 @@ export const PUT: RequestHandler = async ({ request }) => {
 				completedDate,
 				coverImageUrl,
 				originalCoverUrl,
-				asin: bookData.asin || null
+				asin: bookData.asin || null,
+				ownerId: locals.user.id,
+				createdAt: now,
+				updatedAt: now
 			}).returning();
 
 			const bookId = newBook[0].id;
 
+			// Add book to user's personal library (user_books table)
+			await db.insert(userBooks).values({
+				userId: locals.user.id,
+				bookId,
+				statusId: bookData.statusId || null,
+				startReadingDate,
+				completedDate,
+				addedAt: now,
+				createdAt: now,
+				updatedAt: now
+			});
+
 			// Add author to junction table
-			const now = new Date().toISOString();
 			if (authorId) {
 				await db.insert(bookAuthors).values({
 					bookId,

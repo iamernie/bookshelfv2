@@ -44,6 +44,7 @@
     "epubjs": "^0.3.93",
     "jszip": "^3.10.1",
     "lucide-svelte": "^0.468.0",
+    "music-metadata": "^11.10.3",
     "nodemailer": "^7.0.12",
     "openid-client": "^6.8.1",
     "pdfjs-dist": "^5.4.449",

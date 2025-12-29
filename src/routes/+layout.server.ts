@@ -1,29 +1,16 @@
 import type { LayoutServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { genres, statuses, books, magicShelves } from '$lib/server/db/schema';
+import { genres, statuses, books, magicShelves, userBooks } from '$lib/server/db/schema';
 import { sql, eq, count, asc, or, and, ne, inArray } from 'drizzle-orm';
 import { getAllShelves, getShelfBookCounts } from '$lib/server/services/magicShelfService';
-import { getAccessibleBookOwners } from '$lib/server/services/libraryShareService';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	const userId = locals.user?.id;
 
-	// Get accessible book owner IDs (user's own books + shared libraries)
-	let userLibraryCondition;
-	if (userId) {
-		const accessibleOwnerIds = await getAccessibleBookOwners(userId);
-		if (accessibleOwnerIds.length === 1) {
-			userLibraryCondition = eq(books.ownerId, accessibleOwnerIds[0]);
-		} else if (accessibleOwnerIds.length > 1) {
-			userLibraryCondition = inArray(books.ownerId, accessibleOwnerIds);
-		} else {
-			// Fallback - only own books
-			userLibraryCondition = eq(books.ownerId, userId);
-		}
-	} else {
-		// No user - show nothing
-		userLibraryCondition = sql`1=0`;
-	}
+	// User library condition: books in user's personal library (user_books table)
+	const userLibraryCondition = userId
+		? sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
+		: sql`1=0`;
 
 	// Get genres with book counts (user's library)
 	const genresWithCounts = await db

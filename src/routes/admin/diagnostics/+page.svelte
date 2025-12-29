@@ -12,7 +12,12 @@
 		RefreshCw,
 		Loader2,
 		Trash2,
-		XCircle
+		XCircle,
+		Library,
+		Globe,
+		FileText,
+		BookOpen,
+		User
 	} from 'lucide-svelte';
 
 	let { data } = $props();
@@ -243,7 +248,7 @@
 
 	<!-- Data Counts -->
 	<div class="card p-4 mb-6">
-		<h3 class="font-semibold mb-4" style="color: var(--text-primary);">Data Summary</h3>
+		<h3 class="font-semibold mb-4" style="color: var(--text-primary);">Database Tables</h3>
 		<div class="grid grid-cols-2 md:grid-cols-6 gap-4">
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.books}</div>
@@ -251,11 +256,11 @@
 			</div>
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.authors}</div>
-				<div class="text-sm" style="color: var(--text-muted);">Authors</div>
+				<div class="text-sm" style="color: var(--text-muted);">Authors (all)</div>
 			</div>
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.series}</div>
-				<div class="text-sm" style="color: var(--text-muted);">Series</div>
+				<div class="text-sm" style="color: var(--text-muted);">Series (all)</div>
 			</div>
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.genres}</div>
@@ -269,6 +274,137 @@
 				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.sessions}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Sessions</div>
 			</div>
+		</div>
+	</div>
+
+	<!-- Library Statistics -->
+	<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+		<!-- Total Library -->
+		<div class="card p-4">
+			<div class="flex items-center gap-3 mb-4">
+				<div class="w-10 h-10 rounded-lg flex items-center justify-center bg-blue-500">
+					<Library class="w-5 h-5 text-white" />
+				</div>
+				<div>
+					<h3 class="font-semibold" style="color: var(--text-primary);">Total Library</h3>
+					<p class="text-sm" style="color: var(--text-secondary);">All books in the system</p>
+				</div>
+			</div>
+			<div class="grid grid-cols-2 gap-4">
+				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+					<div class="flex items-center gap-2 mb-1">
+						<Book class="w-4 h-4" style="color: var(--text-muted);" />
+						<span class="text-sm" style="color: var(--text-muted);">Books</span>
+					</div>
+					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.total.totalBooks}</div>
+				</div>
+				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+					<div class="flex items-center gap-2 mb-1">
+						<FileText class="w-4 h-4" style="color: var(--text-muted);" />
+						<span class="text-sm" style="color: var(--text-muted);">With Ebooks</span>
+					</div>
+					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.total.booksWithEbooks}</div>
+				</div>
+				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+					<div class="flex items-center gap-2 mb-1">
+						<User class="w-4 h-4" style="color: var(--text-muted);" />
+						<span class="text-sm" style="color: var(--text-muted);">Authors (linked)</span>
+					</div>
+					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.total.totalAuthors}</div>
+				</div>
+				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+					<div class="flex items-center gap-2 mb-1">
+						<BookOpen class="w-4 h-4" style="color: var(--text-muted);" />
+						<span class="text-sm" style="color: var(--text-muted);">Series (linked)</span>
+					</div>
+					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.total.totalSeries}</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Public Library -->
+		<div class="card p-4">
+			<div class="flex items-center gap-3 mb-4">
+				<div class="w-10 h-10 rounded-lg flex items-center justify-center bg-green-500">
+					<Globe class="w-5 h-5 text-white" />
+				</div>
+				<div>
+					<h3 class="font-semibold" style="color: var(--text-primary);">Public Library</h3>
+					<p class="text-sm" style="color: var(--text-secondary);">Shared books available to all users</p>
+				</div>
+			</div>
+			<div class="grid grid-cols-2 gap-4">
+				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+					<div class="flex items-center gap-2 mb-1">
+						<Book class="w-4 h-4" style="color: var(--text-muted);" />
+						<span class="text-sm" style="color: var(--text-muted);">Books</span>
+					</div>
+					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.publicLibrary.totalBooks}</div>
+				</div>
+				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+					<div class="flex items-center gap-2 mb-1">
+						<FileText class="w-4 h-4" style="color: var(--text-muted);" />
+						<span class="text-sm" style="color: var(--text-muted);">With Ebooks</span>
+					</div>
+					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.publicLibrary.booksWithEbooks}</div>
+				</div>
+				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+					<div class="flex items-center gap-2 mb-1">
+						<User class="w-4 h-4" style="color: var(--text-muted);" />
+						<span class="text-sm" style="color: var(--text-muted);">Authors (linked)</span>
+					</div>
+					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.publicLibrary.totalAuthors}</div>
+				</div>
+				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
+					<div class="flex items-center gap-2 mb-1">
+						<BookOpen class="w-4 h-4" style="color: var(--text-muted);" />
+						<span class="text-sm" style="color: var(--text-muted);">Series (linked)</span>
+					</div>
+					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.publicLibrary.totalSeries}</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- User Libraries -->
+	<div class="card p-4 mb-6">
+		<div class="flex items-center gap-3 mb-4">
+			<div class="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-500">
+				<Users class="w-5 h-5 text-white" />
+			</div>
+			<div>
+				<h3 class="font-semibold" style="color: var(--text-primary);">User Libraries</h3>
+				<p class="text-sm" style="color: var(--text-secondary);">Books in each user's personal library</p>
+			</div>
+		</div>
+		<div class="overflow-x-auto">
+			<table class="w-full">
+				<thead>
+					<tr style="border-bottom: 1px solid var(--border-color);">
+						<th class="text-left py-2 px-3 text-sm font-medium" style="color: var(--text-muted);">User</th>
+						<th class="text-left py-2 px-3 text-sm font-medium" style="color: var(--text-muted);">Email</th>
+						<th class="text-right py-2 px-3 text-sm font-medium" style="color: var(--text-muted);">Books</th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each health.libraryStats.userLibraries as user}
+						<tr style="border-bottom: 1px solid var(--border-color);">
+							<td class="py-2 px-3" style="color: var(--text-primary);">
+								<div class="flex items-center gap-2">
+									<User class="w-4 h-4" style="color: var(--text-muted);" />
+									{user.username}
+								</div>
+							</td>
+							<td class="py-2 px-3" style="color: var(--text-secondary);">{user.email}</td>
+							<td class="py-2 px-3 text-right">
+								<span class="px-2 py-1 rounded-full text-sm font-medium" style="background-color: var(--accent-color); color: white;">
+									{user.bookCount}
+								</span>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</div>
 	</div>
 

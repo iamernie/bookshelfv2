@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db, books, bookAuthors, bookSeries, bookTags } from '$lib/server/db';
+import { db, books, bookAuthors, bookSeries, bookTags, userBooks, userBookTags, metadataSuggestions, readingSessions, bookdropQueue } from '$lib/server/db';
 import { eq, inArray } from 'drizzle-orm';
 import { unlink } from 'fs/promises';
 import { existsSync } from 'fs';
@@ -58,10 +58,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		}
 	}
 
-	// Delete junction table entries (should cascade, but being explicit)
+	// Delete related records (should cascade, but being explicit)
 	await db.delete(bookAuthors).where(inArray(bookAuthors.bookId, bookIds));
 	await db.delete(bookSeries).where(inArray(bookSeries.bookId, bookIds));
 	await db.delete(bookTags).where(inArray(bookTags.bookId, bookIds));
+	await db.delete(userBooks).where(inArray(userBooks.bookId, bookIds));
+	await db.delete(userBookTags).where(inArray(userBookTags.bookId, bookIds));
+	await db.delete(metadataSuggestions).where(inArray(metadataSuggestions.bookId, bookIds));
+	await db.delete(readingSessions).where(inArray(readingSessions.bookId, bookIds));
+	await db.delete(bookdropQueue).where(inArray(bookdropQueue.bookId, bookIds));
 
 	// Delete books
 	const result = await db.delete(books).where(inArray(books.id, bookIds));

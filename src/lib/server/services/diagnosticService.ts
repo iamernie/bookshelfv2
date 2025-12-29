@@ -17,11 +17,26 @@ import {
 	bookSeries,
 	tags,
 	bookTags,
-	settings
+	settings,
+	userBooks
 } from '$lib/server/db/schema';
-import { count, eq, isNull, sql, notInArray, inArray } from 'drizzle-orm';
+import { count, eq, isNull, sql, notInArray, inArray, ne, and } from 'drizzle-orm';
 import * as fs from 'fs';
 import * as path from 'path';
+
+export interface LibraryStats {
+	totalBooks: number;
+	totalAuthors: number;
+	totalSeries: number;
+	booksWithEbooks: number;
+}
+
+export interface UserLibraryStats {
+	userId: number;
+	username: string;
+	email: string;
+	bookCount: number;
+}
 
 export interface SystemHealth {
 	status: 'healthy' | 'warning' | 'error';
@@ -45,6 +60,12 @@ export interface SystemHealth {
 		genres: number;
 		users: number;
 		sessions: number;
+	};
+	// New library statistics
+	libraryStats: {
+		total: LibraryStats;
+		publicLibrary: LibraryStats;
+		userLibraries: UserLibraryStats[];
 	};
 	issues: DiagnosticIssue[];
 }
@@ -324,6 +345,65 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 		});
 	}
 
+	// ========== Library Statistics ==========
+
+	// Total books with ebooks attached
+	const [totalBooksWithEbooks] = await db
+		.select({ count: count() })
+		.from(books)
+		.where(sql`${books.ebookPath} IS NOT NULL AND ${books.ebookPath} != ''`);
+
+	// Total unique authors (linked to books)
+	const [totalLinkedAuthors] = await db
+		.select({ count: sql<number>`COUNT(DISTINCT ${bookAuthors.authorId})` })
+		.from(bookAuthors);
+
+	// Total unique series (linked to books)
+	const [totalLinkedSeries] = await db
+		.select({ count: sql<number>`COUNT(DISTINCT ${bookSeries.seriesId})` })
+		.from(bookSeries);
+
+	// Public library stats
+	const [publicBookCount] = await db
+		.select({ count: count() })
+		.from(books)
+		.where(eq(books.libraryType, 'public'));
+
+	const [publicBooksWithEbooks] = await db
+		.select({ count: count() })
+		.from(books)
+		.where(and(
+			eq(books.libraryType, 'public'),
+			sql`${books.ebookPath} IS NOT NULL AND ${books.ebookPath} != ''`
+		));
+
+	// Public library authors (authors linked to public books)
+	const [publicAuthors] = await db
+		.select({ count: sql<number>`COUNT(DISTINCT ${bookAuthors.authorId})` })
+		.from(bookAuthors)
+		.innerJoin(books, eq(bookAuthors.bookId, books.id))
+		.where(eq(books.libraryType, 'public'));
+
+	// Public library series (series linked to public books)
+	const [publicSeries] = await db
+		.select({ count: sql<number>`COUNT(DISTINCT ${bookSeries.seriesId})` })
+		.from(bookSeries)
+		.innerJoin(books, eq(bookSeries.bookId, books.id))
+		.where(eq(books.libraryType, 'public'));
+
+	// Per-user library stats
+	const userLibraryStats = await db
+		.select({
+			userId: users.id,
+			username: users.username,
+			email: users.email,
+			bookCount: count(userBooks.id)
+		})
+		.from(users)
+		.leftJoin(userBooks, eq(users.id, userBooks.userId))
+		.groupBy(users.id)
+		.orderBy(sql`count(${userBooks.id}) DESC`);
+
 	return {
 		status: overallStatus,
 		database: {
@@ -346,6 +426,26 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 			genres: genreCount.count,
 			users: userCount.count,
 			sessions: sessionCount.count
+		},
+		libraryStats: {
+			total: {
+				totalBooks: bookCount.count,
+				totalAuthors: totalLinkedAuthors.count || 0,
+				totalSeries: totalLinkedSeries.count || 0,
+				booksWithEbooks: totalBooksWithEbooks.count
+			},
+			publicLibrary: {
+				totalBooks: publicBookCount.count,
+				totalAuthors: publicAuthors.count || 0,
+				totalSeries: publicSeries.count || 0,
+				booksWithEbooks: publicBooksWithEbooks.count
+			},
+			userLibraries: userLibraryStats.map(u => ({
+				userId: u.userId,
+				username: u.username || 'Unknown',
+				email: u.email,
+				bookCount: u.bookCount
+			}))
 		},
 		issues
 	};

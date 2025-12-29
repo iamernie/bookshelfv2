@@ -72,18 +72,16 @@ export const OPERATORS_BY_TYPE = {
 // ============================================
 
 export async function getAllShelves(userId?: number): Promise<MagicShelf[]> {
-	const allShelves = await db
-		.select()
-		.from(magicShelves)
-		.orderBy(asc(magicShelves.displayOrder), asc(magicShelves.name));
-
-	// Filter to user's shelves and public ones
-	if (userId) {
-		return allShelves.filter(s => s.userId === userId || s.isPublic);
+	// Only return shelves owned by the user (no public sharing of shelves between users)
+	if (!userId) {
+		return [];
 	}
 
-	// Return only public shelves for anonymous
-	return allShelves.filter(s => s.isPublic);
+	return db
+		.select()
+		.from(magicShelves)
+		.where(eq(magicShelves.userId, userId))
+		.orderBy(asc(magicShelves.displayOrder), asc(magicShelves.name));
 }
 
 export async function getShelfById(id: number): Promise<MagicShelf | null> {
@@ -414,17 +412,14 @@ export async function getShelfBooks(
 	// Build final conditions
 	const conditions: ReturnType<typeof eq>[] = [];
 
-	// Only include books in user's library: personal books OR books user added from public library
+	// Only include books in user's personal library (user_books table)
 	if (userId) {
 		conditions.push(
-			or(
-				sql`${books.libraryType} = 'personal'`,
-				sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
-			)!
+			sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
 		);
 	} else {
-		// Fallback: exclude public library books
-		conditions.push(sql`${books.libraryType} != 'public'`);
+		// No user - return nothing
+		return { books: [], total: 0, page, limit, totalPages: 0 };
 	}
 
 	if (whereClause) conditions.push(whereClause);
@@ -518,17 +513,14 @@ export async function previewFilter(
 
 	const conditions: ReturnType<typeof eq>[] = [];
 
-	// Only include books in user's library: personal books OR books user added from public library
+	// Only include books in user's personal library (user_books table)
 	if (userId) {
 		conditions.push(
-			or(
-				sql`${books.libraryType} = 'personal'`,
-				sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
-			)!
+			sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
 		);
 	} else {
-		// Fallback: exclude public library books
-		conditions.push(sql`${books.libraryType} != 'public'`);
+		// No user - return nothing
+		return { books: [], total: 0, page, limit, totalPages: 0 };
 	}
 
 	if (whereClause) conditions.push(whereClause);

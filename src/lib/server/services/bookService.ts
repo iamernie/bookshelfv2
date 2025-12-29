@@ -1,7 +1,6 @@
-import { db, books, bookAuthors, bookSeries, bookTags, authors, series, statuses, genres, formats, narrators, tags, userBooks, userBookTags, metadataSuggestions, readingSessions, bookdropQueue, libraryShares } from '$lib/server/db';
+import { db, books, bookAuthors, bookSeries, bookTags, authors, series, statuses, genres, formats, narrators, tags, userBooks, userBookTags, metadataSuggestions, readingSessions, bookdropQueue } from '$lib/server/db';
 import { eq, like, sql, desc, asc, and, or, inArray } from 'drizzle-orm';
 import type { Book, NewBook } from '$lib/server/db/schema';
-import { getAccessibleBookOwners } from './libraryShareService';
 
 export interface BookWithRelations extends Book {
 	authors: { id: number; name: string; role: string | null; isPrimary: boolean | null }[];
@@ -28,7 +27,6 @@ export interface GetBooksOptions {
 	libraryType?: 'personal' | 'public' | 'all';
 	userId?: number; // Required for per-user library filtering - shows books owned by user and shared with user
 	filterMode?: 'and' | 'or'; // How to combine filter conditions (default: 'and')
-	includeShared?: boolean; // Whether to include books from shared libraries (default: true)
 }
 
 export async function getBooks(options: GetBooksOptions = {}): Promise<{
@@ -37,7 +35,7 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 	page: number;
 	limit: number;
 }> {
-	const { page = 1, limit = 24, search, statusId, genreId, formatId, tagId, authorId, seriesId, sort = 'createdAt', order = 'desc', libraryType = 'personal', userId, filterMode = 'and', includeShared = true } = options;
+	const { page = 1, limit = 24, search, statusId, genreId, formatId, tagId, authorId, seriesId, sort = 'createdAt', order = 'desc', libraryType = 'personal', userId, filterMode = 'and' } = options;
 	const offset = (page - 1) * limit;
 
 	// Build where conditions
@@ -46,23 +44,21 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 	// Filter conditions can use AND or OR based on filterMode
 	const filterConditions = [];
 
-	// Per-user library filtering: only show books owned by user or shared with user
+	// Per-user library filtering
 	if (userId) {
-		// Get all owner IDs whose books this user can access
-		const accessibleOwnerIds = includeShared
-			? await getAccessibleBookOwners(userId)
-			: [userId];
-
-		if (accessibleOwnerIds.length === 1) {
-			baseConditions.push(eq(books.ownerId, accessibleOwnerIds[0]));
-		} else if (accessibleOwnerIds.length > 1) {
-			baseConditions.push(inArray(books.ownerId, accessibleOwnerIds));
+		if (libraryType === 'personal') {
+			// Show books the user has added to their personal library (user_books table)
+			baseConditions.push(
+				sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
+			);
+		} else if (libraryType === 'public') {
+			// Show books in the public library
+			baseConditions.push(eq(books.libraryType, 'public'));
 		}
-	}
-
-	// Filter by library type (personal vs public within accessible books)
-	if (libraryType !== 'all') {
-		baseConditions.push(eq(books.libraryType, libraryType));
+		// 'all' shows everything (no libraryType filter)
+	} else {
+		// No user - only show public books
+		baseConditions.push(eq(books.libraryType, 'public'));
 	}
 
 	// Search always uses AND with other filters
@@ -353,6 +349,20 @@ export async function createBook(data: CreateBookData): Promise<Book> {
 			}))
 		);
 	}
+
+	// Add book to owner's personal library (user_books table)
+	await db.insert(userBooks).values({
+		userId: bookData.ownerId,
+		bookId: newBook.id,
+		statusId: bookData.statusId || null,
+		rating: bookData.rating || null,
+		startReadingDate: bookData.startReadingDate || null,
+		completedDate: bookData.completedDate || null,
+		comments: bookData.comments || null,
+		addedAt: now,
+		createdAt: now,
+		updatedAt: now
+	});
 
 	return newBook;
 }

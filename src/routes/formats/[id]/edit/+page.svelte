@@ -7,11 +7,15 @@
 		Loader2,
 		Layers,
 		BookOpen,
-		Palette
+		Palette,
+		Trash2,
+		AlertCircle,
+		ArrowRight
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import IconPicker from '$lib/components/ui/IconPicker.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 
 	let { data } = $props();
 	const format = data.format;
@@ -20,6 +24,9 @@
 	let returnTo = $derived($page.url.searchParams.get('returnTo') || `/formats`);
 
 	let saving = $state(false);
+	let deleting = $state(false);
+	let showDeleteModal = $state(false);
+	let reassignToId = $state<string>('null');
 
 	// Form fields
 	let name = $state(format.name || '');
@@ -28,6 +35,13 @@
 
 	// Icon picker state
 	let showIconPicker = $state(false);
+
+	// Get the target format name for display
+	const reassignTargetName = $derived(
+		reassignToId === 'null'
+			? 'No format'
+			: data.allFormats.find((f: { id: number; name: string }) => f.id.toString() === reassignToId)?.name || 'Unknown'
+	);
 
 	// Predefined colors
 	const colorOptions = [
@@ -74,6 +88,48 @@
 		icon = selectedIcon;
 		showIconPicker = false;
 	}
+
+	function initiateDelete() {
+		if (format.bookCount > 0) {
+			// Show reassignment dialog
+			showDeleteModal = true;
+		} else {
+			// No books, confirm and delete directly
+			if (confirm('Are you sure you want to delete this format?')) {
+				performDelete(null);
+			}
+		}
+	}
+
+	async function performDelete(reassignTo: number | null) {
+		deleting = true;
+		try {
+			const res = await fetch(`/api/formats/${format.id}`, {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ reassignTo })
+			});
+
+			if (!res.ok) {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to delete format');
+				return;
+			}
+
+			toasts.success('Format deleted');
+			showDeleteModal = false;
+			goto('/formats');
+		} catch {
+			toasts.error('Failed to delete format');
+		} finally {
+			deleting = false;
+		}
+	}
+
+	function confirmDelete() {
+		const targetId = reassignToId === 'null' ? null : parseInt(reassignToId);
+		performDelete(targetId);
+	}
 </script>
 
 <svelte:head>
@@ -103,6 +159,16 @@
 				</h1>
 
 				<div class="flex items-center gap-2">
+					<button
+						type="button"
+						class="px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5"
+						style="color: #ef4444;"
+						onclick={initiateDelete}
+						disabled={deleting}
+					>
+						<Trash2 class="w-4 h-4" />
+						<span class="hidden sm:inline">Delete</span>
+					</button>
 					<button
 						type="button"
 						class="px-3 py-1.5 text-sm rounded-lg transition-colors"
@@ -309,6 +375,70 @@
 		onSelect={selectIcon}
 		onClose={() => showIconPicker = false}
 	/>
+{/if}
+
+<!-- Delete Confirmation Modal -->
+{#if showDeleteModal}
+	<Modal open={true} onClose={() => showDeleteModal = false} title="Delete Format" size="sm">
+		<div class="p-6 space-y-4">
+			<div class="flex items-center gap-3 p-4 rounded-lg" style="background-color: #fef3c7; border: 1px solid #fcd34d;">
+				<AlertCircle class="w-5 h-5 flex-shrink-0" style="color: #d97706;" />
+				<div>
+					<p class="font-medium" style="color: #92400e;">This format has {format.bookCount} book{format.bookCount === 1 ? '' : 's'}</p>
+					<p class="text-sm mt-1" style="color: #a16207;">Choose what to do with the books before deleting.</p>
+				</div>
+			</div>
+
+			<div>
+				<label for="reassignTo" class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">
+					Reassign books to:
+				</label>
+				<select
+					id="reassignTo"
+					bind:value={reassignToId}
+					class="w-full px-3 py-2 rounded-lg focus:ring-2 focus:ring-offset-0"
+					style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); --tw-ring-color: var(--accent);"
+				>
+					<option value="null">No format (remove format from books)</option>
+					{#each data.allFormats as fmt}
+						<option value={fmt.id.toString()}>{fmt.name}</option>
+					{/each}
+				</select>
+			</div>
+
+			<div class="flex items-center gap-2 text-sm" style="color: var(--text-secondary);">
+				<span class="font-medium">{format.name}</span>
+				<ArrowRight class="w-4 h-4" />
+				<span class="font-medium">{reassignTargetName}</span>
+			</div>
+
+			<div class="flex justify-end gap-3 pt-4" style="border-top: 1px solid var(--border-color);">
+				<button
+					type="button"
+					class="px-4 py-2 rounded-lg transition-colors"
+					style="color: var(--text-secondary);"
+					onclick={() => showDeleteModal = false}
+					disabled={deleting}
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					class="px-4 py-2 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
+					style="background-color: #ef4444; color: white;"
+					onclick={confirmDelete}
+					disabled={deleting}
+				>
+					{#if deleting}
+						<Loader2 class="w-4 h-4 animate-spin" />
+					{:else}
+						<Trash2 class="w-4 h-4" />
+					{/if}
+					Delete Format
+				</button>
+			</div>
+		</div>
+	</Modal>
 {/if}
 
 <style>

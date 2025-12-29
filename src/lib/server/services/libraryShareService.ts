@@ -1,4 +1,4 @@
-import { db, libraryShares, users, books } from '$lib/server/db';
+import { db, libraryShares, users, books, userBooks } from '$lib/server/db';
 import { eq, and, or, inArray } from 'drizzle-orm';
 import type { LibrarySharePermission } from '$lib/server/db/schema';
 
@@ -168,8 +168,21 @@ export async function getBookPermission(
 
 /**
  * Check if a user can access a specific book
+ * User can access if: book is in their user_books, they own it, or it was shared with them
  */
 export async function canAccessBook(userId: number, bookId: number): Promise<boolean> {
+	// First check if book is in user's personal library (user_books)
+	const userBook = await db
+		.select({ id: userBooks.id })
+		.from(userBooks)
+		.where(and(eq(userBooks.userId, userId), eq(userBooks.bookId, bookId)))
+		.get();
+
+	if (userBook) {
+		return true;
+	}
+
+	// Fall back to ownership/sharing check
 	const permission = await getBookPermission(userId, bookId);
 	return permission !== null;
 }

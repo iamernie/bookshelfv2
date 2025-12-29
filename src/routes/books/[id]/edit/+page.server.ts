@@ -1,8 +1,9 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
 import { getBookById, getStatuses, getGenres, getFormats, getNarrators, getTags, getAllAuthors, getAllSeries } from '$lib/server/services/bookService';
+import { getAudiobooksByBookId } from '$lib/server/services/audiobookService';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const id = parseInt(params.id);
 	if (isNaN(id)) {
 		throw error(404, 'Book not found');
@@ -13,18 +14,20 @@ export const load: PageServerLoad = async ({ params }) => {
 		throw error(404, 'Book not found');
 	}
 
-	const [statuses, genres, formats, narrators, tags, authors, series] = await Promise.all([
+	const [statuses, genres, formats, narrators, tags, authors, series, linkedAudiobooks] = await Promise.all([
 		getStatuses(),
 		getGenres(),
 		getFormats(),
 		getNarrators(),
 		getTags(),
 		getAllAuthors(),
-		getAllSeries()
+		getAllSeries(),
+		locals.user ? getAudiobooksByBookId(id, locals.user.id) : Promise.resolve([])
 	]);
 
 	return {
 		book,
+		linkedAudiobooks,
 		options: {
 			statuses,
 			genres,

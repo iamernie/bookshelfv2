@@ -480,6 +480,102 @@ export const userOidcLinks = sqliteTable('user_oidc_links', {
 });
 
 // ============================================
+// Audiobook Tables
+// ============================================
+
+export const audiobooks = sqliteTable('audiobooks', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	title: text('title').notNull(),
+	// Optional link to existing book record
+	bookId: integer('bookId').references(() => books.id, { onDelete: 'set null' }),
+	// Owner of the audiobook
+	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	// Metadata
+	author: text('author'),
+	narratorId: integer('narratorId').references(() => narrators.id),
+	narratorName: text('narratorName'), // Fallback if not linked to narrator
+	description: text('description'),
+	coverPath: text('coverPath'),
+	// Duration in seconds (calculated from all files)
+	duration: real('duration').default(0),
+	// Series info (if not linked to book)
+	seriesName: text('seriesName'),
+	seriesNumber: real('seriesNumber'),
+	// External IDs
+	asin: text('asin'),
+	// Timestamps
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+export const audiobookFiles = sqliteTable('audiobook_files', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	audiobookId: integer('audiobookId').notNull().references(() => audiobooks.id, { onDelete: 'cascade' }),
+	// File info
+	filename: text('filename').notNull(),
+	filePath: text('filePath').notNull(),
+	fileSize: integer('fileSize'), // bytes
+	mimeType: text('mimeType').default('audio/mpeg'),
+	// Track info
+	trackNumber: integer('trackNumber').notNull().default(1),
+	title: text('title'), // Chapter/track name
+	duration: real('duration').notNull().default(0), // seconds
+	// Cumulative offset for seeking (sum of previous tracks' durations)
+	startOffset: real('startOffset').default(0),
+	// Timestamps
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+export const audiobookProgress = sqliteTable('audiobook_progress', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	audiobookId: integer('audiobookId').notNull().references(() => audiobooks.id, { onDelete: 'cascade' }),
+	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	// Current position
+	currentTime: real('currentTime').default(0), // seconds from start of audiobook
+	currentFileId: integer('currentFileId').references(() => audiobookFiles.id),
+	// Progress tracking
+	duration: real('duration').default(0), // total duration
+	progress: real('progress').default(0), // 0-1
+	// Playback settings (persisted per user per audiobook)
+	playbackRate: real('playbackRate').default(1),
+	// Completion status
+	isFinished: integer('isFinished', { mode: 'boolean' }).default(false),
+	finishedAt: text('finishedAt'),
+	// Activity tracking
+	lastPlayedAt: text('lastPlayedAt'),
+	// Timestamps
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+export const audiobookChapters = sqliteTable('audiobook_chapters', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	audiobookId: integer('audiobookId').notNull().references(() => audiobooks.id, { onDelete: 'cascade' }),
+	// Chapter info
+	title: text('title').notNull(),
+	startTime: real('startTime').notNull().default(0), // seconds from start
+	endTime: real('endTime'), // seconds, null = until next chapter or end
+	chapterNumber: integer('chapterNumber').notNull().default(1),
+	// Timestamps
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+export const audiobookBookmarks = sqliteTable('audiobook_bookmarks', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	audiobookId: integer('audiobookId').notNull().references(() => audiobooks.id, { onDelete: 'cascade' }),
+	userId: integer('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
+	// Bookmark position
+	time: real('time').notNull(), // seconds from start
+	// Optional note
+	title: text('title'),
+	note: text('note'),
+	// Timestamps
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP')
+});
+
+// ============================================
 // Relations
 // ============================================
 
@@ -588,6 +684,36 @@ export const userOidcLinksRelations = relations(userOidcLinks, ({ one }) => ({
 	provider: one(oidcProviders, { fields: [userOidcLinks.providerId], references: [oidcProviders.id] })
 }));
 
+// Audiobook relations
+export const audiobooksRelations = relations(audiobooks, ({ one, many }) => ({
+	book: one(books, { fields: [audiobooks.bookId], references: [books.id] }),
+	user: one(users, { fields: [audiobooks.userId], references: [users.id] }),
+	narrator: one(narrators, { fields: [audiobooks.narratorId], references: [narrators.id] }),
+	files: many(audiobookFiles),
+	chapters: many(audiobookChapters),
+	progress: many(audiobookProgress),
+	bookmarks: many(audiobookBookmarks)
+}));
+
+export const audiobookFilesRelations = relations(audiobookFiles, ({ one }) => ({
+	audiobook: one(audiobooks, { fields: [audiobookFiles.audiobookId], references: [audiobooks.id] })
+}));
+
+export const audiobookProgressRelations = relations(audiobookProgress, ({ one }) => ({
+	audiobook: one(audiobooks, { fields: [audiobookProgress.audiobookId], references: [audiobooks.id] }),
+	user: one(users, { fields: [audiobookProgress.userId], references: [users.id] }),
+	currentFile: one(audiobookFiles, { fields: [audiobookProgress.currentFileId], references: [audiobookFiles.id] })
+}));
+
+export const audiobookChaptersRelations = relations(audiobookChapters, ({ one }) => ({
+	audiobook: one(audiobooks, { fields: [audiobookChapters.audiobookId], references: [audiobooks.id] })
+}));
+
+export const audiobookBookmarksRelations = relations(audiobookBookmarks, ({ one }) => ({
+	audiobook: one(audiobooks, { fields: [audiobookBookmarks.audiobookId], references: [audiobooks.id] }),
+	user: one(users, { fields: [audiobookBookmarks.userId], references: [users.id] })
+}));
+
 // ============================================
 // Type exports
 // ============================================
@@ -633,6 +759,18 @@ export type UserOidcLink = typeof userOidcLinks.$inferSelect;
 export type NewUserOidcLink = typeof userOidcLinks.$inferInsert;
 export type LibraryShare = typeof libraryShares.$inferSelect;
 export type NewLibraryShare = typeof libraryShares.$inferInsert;
+
+// Audiobook types
+export type Audiobook = typeof audiobooks.$inferSelect;
+export type NewAudiobook = typeof audiobooks.$inferInsert;
+export type AudiobookFile = typeof audiobookFiles.$inferSelect;
+export type NewAudiobookFile = typeof audiobookFiles.$inferInsert;
+export type AudiobookProgress = typeof audiobookProgress.$inferSelect;
+export type NewAudiobookProgress = typeof audiobookProgress.$inferInsert;
+export type AudiobookChapter = typeof audiobookChapters.$inferSelect;
+export type NewAudiobookChapter = typeof audiobookChapters.$inferInsert;
+export type AudiobookBookmark = typeof audiobookBookmarks.$inferSelect;
+export type NewAudiobookBookmark = typeof audiobookBookmarks.$inferInsert;
 
 // Library type values
 export type LibraryType = 'personal' | 'public';

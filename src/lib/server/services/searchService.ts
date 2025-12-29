@@ -1,6 +1,5 @@
-import { db, books, authors, series, narrators, bookAuthors, bookSeries, statuses, genres, formats, tags, bookTags } from '$lib/server/db';
+import { db, books, authors, series, narrators, bookAuthors, bookSeries, statuses, genres, formats, tags, bookTags, userBooks } from '$lib/server/db';
 import { like, eq, sql, asc, desc, and, or, gte, lte, ne, isNull, isNotNull, inArray } from 'drizzle-orm';
-import { getAccessibleBookOwners } from './libraryShareService';
 
 export interface AutocompleteResult {
 	books: {
@@ -39,26 +38,21 @@ export async function autocomplete(query: string, userId?: number): Promise<Auto
 
 	const searchTerm = `%${query}%`;
 
-	// Get accessible owner IDs for per-user library filtering
-	const accessibleOwnerIds = userId ? await getAccessibleBookOwners(userId) : null;
-
-	// Build book ownership filter
-	const ownershipFilter = accessibleOwnerIds
-		? accessibleOwnerIds.length === 1
-			? eq(books.ownerId, accessibleOwnerIds[0])
-			: inArray(books.ownerId, accessibleOwnerIds)
+	// Build user library filter - filter by user_books table
+	const userLibraryFilter = userId
+		? sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
 		: undefined;
 
 	// Run all searches in parallel
 	const [booksResult, authorsResult, seriesResult, narratorsResult] = await Promise.all([
-		// Search books by title (filtered by ownership)
+		// Search books by title (filtered by user's library)
 		db.select({
 			id: books.id,
 			title: books.title,
 			coverImageUrl: books.coverImageUrl
 		})
 			.from(books)
-			.where(ownershipFilter ? and(like(books.title, searchTerm), ownershipFilter) : like(books.title, searchTerm))
+			.where(userLibraryFilter ? and(like(books.title, searchTerm), userLibraryFilter) : like(books.title, searchTerm))
 			.orderBy(asc(books.title))
 			.limit(5),
 
@@ -218,14 +212,11 @@ export async function advancedSearch(filters: AdvancedSearchFilters): Promise<Ad
 	// Build where conditions
 	const conditions: ReturnType<typeof eq>[] = [];
 
-	// Per-user library filtering - only show books the user has access to
+	// Per-user library filtering - only show books in user's personal library (user_books table)
 	if (userId) {
-		const accessibleOwnerIds = await getAccessibleBookOwners(userId);
-		if (accessibleOwnerIds.length === 1) {
-			conditions.push(eq(books.ownerId, accessibleOwnerIds[0]));
-		} else if (accessibleOwnerIds.length > 1) {
-			conditions.push(inArray(books.ownerId, accessibleOwnerIds));
-		}
+		conditions.push(
+			sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
+		);
 	}
 
 	// Title search

@@ -60,13 +60,10 @@ export async function getDashboardStats(userId?: number): Promise<DashboardStats
 	const readStatusId = readStatus[0]?.id;
 	const dnfStatusId = dnfStatus[0]?.id;
 
-	// User library condition: personal books OR books user has added from public library
+	// User library condition: books in user's personal library (user_books table)
 	const userLibraryCondition = userId
-		? or(
-				eq(books.libraryType, 'personal'),
-				sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
-		  )
-		: eq(books.libraryType, 'personal');
+		? sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
+		: sql`1=0`;
 
 	// Parallel queries for counts (filtered by user's library)
 	const [
@@ -357,13 +354,10 @@ export async function getReadingTimeline(year?: number, userId?: number): Promis
 	const readStatus = await db.select().from(statuses).where(eq(statuses.key, STATUS_KEYS.READ)).limit(1);
 	const readStatusId = readStatus[0]?.id;
 
-	// User library condition
+	// User library condition: books in user's personal library (user_books table)
 	const userLibraryCondition = userId
-		? or(
-				eq(books.libraryType, 'personal'),
-				sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
-		  )
-		: eq(books.libraryType, 'personal');
+		? sql`${books.id} IN (SELECT bookId FROM user_books WHERE userId = ${userId})`
+		: sql`1=0`;
 
 	if (!readStatusId) {
 		return {

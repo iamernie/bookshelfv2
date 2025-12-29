@@ -278,6 +278,7 @@ function runMigrations() {
 		'Creating V2 tables',
 		'Creating indexes',
 		'Setting up per-user libraries',
+		'Creating audiobook tables',
 		'Finalizing'
 	];
 
@@ -1116,6 +1117,167 @@ function runMigrations() {
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_library_shares_shared_with ON library_shares(sharedWithId)');
 	} catch {
 		// Indexes may already exist
+	}
+
+	// ========== Audiobook Tables ==========
+	updateStatus('Creating audiobook tables...');
+
+	// Audiobooks main table
+	safeCreateTable('audiobooks', `
+		CREATE TABLE audiobooks (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT NOT NULL,
+			bookId INTEGER REFERENCES books(id) ON DELETE SET NULL,
+			userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			author TEXT,
+			narratorId INTEGER REFERENCES narrators(id),
+			narratorName TEXT,
+			description TEXT,
+			coverPath TEXT,
+			duration REAL DEFAULT 0,
+			seriesName TEXT,
+			seriesNumber REAL,
+			asin TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Audiobook files table (supports multi-file audiobooks)
+	safeCreateTable('audiobook_files', `
+		CREATE TABLE audiobook_files (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			audiobookId INTEGER NOT NULL REFERENCES audiobooks(id) ON DELETE CASCADE,
+			filename TEXT NOT NULL,
+			filePath TEXT NOT NULL,
+			fileSize INTEGER,
+			mimeType TEXT DEFAULT 'audio/mpeg',
+			trackNumber INTEGER NOT NULL DEFAULT 1,
+			title TEXT,
+			duration REAL NOT NULL DEFAULT 0,
+			startOffset REAL DEFAULT 0,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Audiobook progress table (per-user listening progress)
+	safeCreateTable('audiobook_progress', `
+		CREATE TABLE audiobook_progress (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			audiobookId INTEGER NOT NULL REFERENCES audiobooks(id) ON DELETE CASCADE,
+			userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			currentTime REAL DEFAULT 0,
+			currentFileId INTEGER REFERENCES audiobook_files(id),
+			duration REAL DEFAULT 0,
+			progress REAL DEFAULT 0,
+			playbackRate REAL DEFAULT 1,
+			isFinished INTEGER DEFAULT 0,
+			finishedAt TEXT,
+			lastPlayedAt TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(audiobookId, userId)
+		)
+	`);
+
+	// Audiobook chapters table
+	safeCreateTable('audiobook_chapters', `
+		CREATE TABLE audiobook_chapters (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			audiobookId INTEGER NOT NULL REFERENCES audiobooks(id) ON DELETE CASCADE,
+			title TEXT NOT NULL,
+			startTime REAL NOT NULL DEFAULT 0,
+			endTime REAL,
+			chapterNumber INTEGER NOT NULL DEFAULT 1,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Audiobook bookmarks table
+	safeCreateTable('audiobook_bookmarks', `
+		CREATE TABLE audiobook_bookmarks (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			audiobookId INTEGER NOT NULL REFERENCES audiobooks(id) ON DELETE CASCADE,
+			userId INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			time REAL NOT NULL,
+			title TEXT,
+			note TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Create indexes for audiobook tables
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobooks_user ON audiobooks(userId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobooks_book ON audiobooks(bookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_files_audiobook ON audiobook_files(audiobookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_progress_user ON audiobook_progress(userId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_progress_audiobook ON audiobook_progress(audiobookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_chapters_audiobook ON audiobook_chapters(audiobookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_audiobook_bookmarks_user_audiobook ON audiobook_bookmarks(userId, audiobookId)');
+	} catch {
+		// Indexes may already exist
+	}
+	completeStep('Creating audiobook tables');
+
+	// ========== Migrate owned books to user_books table ==========
+	// For users who own books (via ownerId), ensure those books appear in their personal library (user_books)
+	if (tableExists('user_books') && tableExists('books') && columnExists('books', 'ownerId')) {
+		try {
+			// Count books that have owners but aren't in user_books
+			const missingEntries = sqlite.prepare(`
+				SELECT COUNT(*) as count
+				FROM books b
+				WHERE b.ownerId IS NOT NULL
+				  AND NOT EXISTS (
+				    SELECT 1 FROM user_books ub
+				    WHERE ub.userId = b.ownerId AND ub.bookId = b.id
+				  )
+			`).get() as { count: number };
+
+			if (missingEntries.count > 0) {
+				ensureBackup();
+				console.log(`[db] Migrating ${missingEntries.count} owned books to user_books table...`);
+
+				// Insert into user_books for all owned books that aren't already there
+				const result = sqlite.prepare(`
+					INSERT INTO user_books (userId, bookId, statusId, rating, startReadingDate, completedDate, comments, readingProgress, readingPosition, lastReadAt, dnfPage, dnfPercent, dnfReason, dnfDate, addedAt, createdAt, updatedAt)
+					SELECT
+						b.ownerId,
+						b.id,
+						b.statusId,
+						b.rating,
+						b.startReadingDate,
+						b.completedDate,
+						b.comments,
+						b.readingProgress,
+						b.readingPosition,
+						b.lastReadAt,
+						b.dnfPage,
+						b.dnfPercent,
+						b.dnfReason,
+						b.dnfDate,
+						COALESCE(b.createdAt, CURRENT_TIMESTAMP),
+						COALESCE(b.createdAt, CURRENT_TIMESTAMP),
+						COALESCE(b.updatedAt, CURRENT_TIMESTAMP)
+					FROM books b
+					WHERE b.ownerId IS NOT NULL
+					  AND NOT EXISTS (
+					    SELECT 1 FROM user_books ub
+					    WHERE ub.userId = b.ownerId AND ub.bookId = b.id
+					  )
+				`).run();
+
+				if (result.changes > 0) {
+					console.log(`[db] Added ${result.changes} books to user_books for their owners`);
+					migrationsMade = true;
+				}
+			}
+		} catch (e) {
+			console.error('[db] Failed to migrate owned books to user_books:', e);
+		}
 	}
 
 	completeStep('Setting up per-user libraries');

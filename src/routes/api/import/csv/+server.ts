@@ -234,7 +234,11 @@ export const POST: RequestHandler = async ({ request }) => {
 /**
  * PUT - Execute import
  */
-export const PUT: RequestHandler = async ({ request }) => {
+export const PUT: RequestHandler = async ({ request, locals }) => {
+	if (!locals.user) {
+		throw error(401, 'Unauthorized');
+	}
+
 	const { sessionId, selectedRows, createMissing = true } = await request.json();
 
 	if (!sessionId) {
@@ -368,7 +372,8 @@ export const PUT: RequestHandler = async ({ request }) => {
 				comments: book.comments || null,
 				bookNum: book.bookNum,
 				authors: authorId ? [{ id: authorId }] : [],
-				series: seriesId ? [{ id: seriesId, bookNum: book.bookNum || undefined }] : []
+				series: seriesId ? [{ id: seriesId, bookNum: book.bookNum || undefined }] : [],
+				ownerId: locals.user.id
 			});
 
 			results.imported++;
