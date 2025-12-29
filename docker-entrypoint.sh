@@ -67,5 +67,11 @@ chown -R "$PUID:$PGID" /data /logs /app/static/covers /app/static/ebooks /app/st
 chown "$PUID:$PGID" /app 2>/dev/null || true
 
 # Run the SvelteKit application as the target user
+# BODY_SIZE_LIMIT must be set at runtime for SvelteKit adapter-node
+# Default to 500MB for large audiobook uploads
+BODY_SIZE_LIMIT=${BODY_SIZE_LIMIT:-500M}
+export BODY_SIZE_LIMIT
+
 echo "Starting SvelteKit application..."
+echo "Body size limit: $BODY_SIZE_LIMIT"
 exec su-exec "$PUID:$PGID" node build
