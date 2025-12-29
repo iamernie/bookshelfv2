@@ -27,6 +27,11 @@
 	let isSubmitting = $state(false);
 	let submitStatus = $state<'idle' | 'creating_book' | 'creating_audiobook' | 'uploading_file' | 'done'>('idle');
 
+	// Upload progress tracking
+	let isUploading = $state(false);
+	let uploadProgress = $state(0);
+	let uploadPhase = $state<'idle' | 'uploading' | 'extracting' | 'done'>('idle');
+
 	// Metadata search modal
 	let showMetadataModal = $state(false);
 
@@ -208,25 +213,62 @@
 		uploadedFile = file;
 		mediaType = type;
 
-		// Try to extract metadata
-		isExtracting = true;
+		// Reset and start upload progress tracking
+		isUploading = true;
+		uploadProgress = 0;
+		uploadPhase = 'uploading';
+
 		try {
+			// Use XHR for upload progress tracking
 			const formData = new FormData();
 			formData.append('file', file);
 
-			const res = await fetch('/api/metadata/extract', {
-				method: 'POST',
-				body: formData
+			const metadata = await new Promise<any>((resolve, reject) => {
+				const xhr = new XMLHttpRequest();
+
+				xhr.upload.addEventListener('progress', (e) => {
+					if (e.lengthComputable) {
+						uploadProgress = Math.round((e.loaded / e.total) * 100);
+					}
+				});
+
+				xhr.upload.addEventListener('load', () => {
+					// Upload complete, now extracting
+					uploadProgress = 100;
+					uploadPhase = 'extracting';
+					isExtracting = true;
+				});
+
+				xhr.addEventListener('load', () => {
+					isExtracting = false;
+					if (xhr.status >= 200 && xhr.status < 300) {
+						try {
+							resolve(JSON.parse(xhr.responseText));
+						} catch {
+							resolve({});
+						}
+					} else {
+						resolve({});
+					}
+				});
+
+				xhr.addEventListener('error', () => {
+					isExtracting = false;
+					reject(new Error('Upload failed'));
+				});
+
+				xhr.open('POST', '/api/metadata/extract');
+				xhr.send(formData);
 			});
 
-			if (res.ok) {
-				const metadata = await res.json();
-				extractedMetadata = metadata;
-				applyExtractedMetadata(metadata);
-			}
+			extractedMetadata = metadata;
+			applyExtractedMetadata(metadata);
+			uploadPhase = 'done';
+
 		} catch (err) {
 			console.error('Failed to extract metadata:', err);
 		} finally {
+			isUploading = false;
 			isExtracting = false;
 		}
 
@@ -643,22 +685,19 @@
 		<!-- Upload Step -->
 		<div class="space-y-6">
 			<!-- Drop Zone -->
-			{#if isExtracting && uploadedFile}
-				<!-- File Selected & Processing -->
+			{#if (isUploading || isExtracting) && uploadedFile}
+				<!-- File Selected & Processing with Progress -->
 				<div
-					class="relative border-2 rounded-xl p-12 text-center"
+					class="relative border-2 rounded-xl p-8 text-center"
 					style="border-color: {mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6'}; background: {mediaType === 'ebook' ? 'rgba(59, 130, 246, 0.05)' : 'rgba(139, 92, 246, 0.05)'};"
 				>
 					<div class="flex justify-center mb-4">
-						<div class="w-20 h-20 rounded-xl flex items-center justify-center relative" style="background: {mediaType === 'ebook' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)'};">
+						<div class="w-16 h-16 rounded-xl flex items-center justify-center relative" style="background: {mediaType === 'ebook' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)'};">
 							{#if mediaType === 'ebook'}
-								<FileText class="w-10 h-10" style="color: #3b82f6;" />
+								<FileText class="w-8 h-8" style="color: #3b82f6;" />
 							{:else}
-								<FileAudio class="w-10 h-10" style="color: #8b5cf6;" />
+								<FileAudio class="w-8 h-8" style="color: #8b5cf6;" />
 							{/if}
-							<div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center" style="background: var(--bg-primary);">
-								<Loader2 class="w-4 h-4 animate-spin" style="color: {mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6'};" />
-							</div>
 						</div>
 					</div>
 
@@ -669,9 +708,74 @@
 						{(uploadedFile.size / (1024 * 1024)).toFixed(1)} MB • {mediaType === 'ebook' ? 'Ebook' : 'Audiobook'}
 					</p>
 
+					<!-- Progress Steps -->
+					<div class="max-w-md mx-auto mb-4">
+						<div class="flex items-center justify-between mb-2">
+							<!-- Step 1: Upload -->
+							<div class="flex items-center gap-2">
+								<div
+									class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-colors"
+									style="background: {uploadPhase === 'uploading' ? (mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6') : uploadProgress >= 100 ? '#10b981' : 'var(--bg-tertiary)'}; color: {uploadPhase === 'uploading' || uploadProgress >= 100 ? 'white' : 'var(--text-muted)'};"
+								>
+									{#if uploadProgress >= 100}
+										<Check class="w-3.5 h-3.5" />
+									{:else}
+										1
+									{/if}
+								</div>
+								<span class="text-sm" style="color: {uploadPhase === 'uploading' ? 'var(--text-primary)' : 'var(--text-muted)'};">Upload</span>
+							</div>
+
+							<!-- Connector -->
+							<div class="flex-1 h-0.5 mx-2" style="background: {uploadProgress >= 100 ? '#10b981' : 'var(--border-color)'};"></div>
+
+							<!-- Step 2: Extract -->
+							<div class="flex items-center gap-2">
+								<div
+									class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-colors"
+									style="background: {uploadPhase === 'extracting' ? (mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6') : uploadPhase === 'done' ? '#10b981' : 'var(--bg-tertiary)'}; color: {uploadPhase === 'extracting' || uploadPhase === 'done' ? 'white' : 'var(--text-muted)'};"
+								>
+									{#if uploadPhase === 'done'}
+										<Check class="w-3.5 h-3.5" />
+									{:else}
+										2
+									{/if}
+								</div>
+								<span class="text-sm" style="color: {uploadPhase === 'extracting' ? 'var(--text-primary)' : 'var(--text-muted)'};">Extract</span>
+							</div>
+						</div>
+
+						<!-- Progress Bar -->
+						<div class="h-2 rounded-full overflow-hidden" style="background: var(--bg-tertiary);">
+							{#if uploadPhase === 'uploading'}
+								<div
+									class="h-full rounded-full transition-all duration-300"
+									style="width: {uploadProgress}%; background: {mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6'};"
+								></div>
+							{:else if uploadPhase === 'extracting'}
+								<!-- Indeterminate progress for extraction -->
+								<div
+									class="h-full rounded-full animate-pulse"
+									style="width: 100%; background: {mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6'};"
+								></div>
+							{:else}
+								<div class="h-full rounded-full" style="width: 100%; background: #10b981;"></div>
+							{/if}
+						</div>
+					</div>
+
+					<!-- Status Text -->
 					<div class="flex items-center justify-center gap-2" style="color: {mediaType === 'ebook' ? '#3b82f6' : '#8b5cf6'};">
-						<Loader2 class="w-5 h-5 animate-spin" />
-						<span class="font-medium">Extracting metadata...</span>
+						{#if uploadPhase === 'uploading'}
+							<Loader2 class="w-4 h-4 animate-spin" />
+							<span class="font-medium">Uploading... {uploadProgress}%</span>
+						{:else if uploadPhase === 'extracting'}
+							<Loader2 class="w-4 h-4 animate-spin" />
+							<span class="font-medium">Extracting metadata...</span>
+						{:else}
+							<Check class="w-4 h-4" style="color: #10b981;" />
+							<span class="font-medium" style="color: #10b981;">Complete!</span>
+						{/if}
 					</div>
 				</div>
 			{:else}
