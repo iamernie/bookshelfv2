@@ -56,6 +56,15 @@ async function handleOPDSAuth(event: Parameters<Handle>[0]['event']): Promise<bo
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Debug logging for upload requests
+	if (event.url.pathname.includes('/api/metadata/extract') || event.url.pathname.includes('/api/audiobooks')) {
+		console.log('[hooks] === INCOMING REQUEST ===');
+		console.log('[hooks] Method:', event.request.method);
+		console.log('[hooks] URL:', event.url.pathname);
+		console.log('[hooks] Content-Type:', event.request.headers.get('content-type'));
+		console.log('[hooks] Content-Length:', event.request.headers.get('content-length'));
+	}
+
 	// Check if database migration is in progress
 	const isUpgradePath = event.url.pathname.startsWith('/upgrade') ||
 		event.url.pathname.startsWith('/api/system/migration-status');

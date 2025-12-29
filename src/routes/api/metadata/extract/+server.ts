@@ -70,22 +70,46 @@ function extractTitleFromFilename(filename: string): string {
 }
 
 export const POST: RequestHandler = async ({ request, locals }) => {
+	console.log('[metadata/extract] === REQUEST RECEIVED ===');
+	console.log('[metadata/extract] Content-Type:', request.headers.get('content-type'));
+	console.log('[metadata/extract] Content-Length:', request.headers.get('content-length'));
+
 	if (!locals.user) {
+		console.log('[metadata/extract] ERROR: Unauthorized - no user in locals');
 		throw error(401, 'Unauthorized');
 	}
+	console.log('[metadata/extract] User authenticated:', locals.user.id);
 
-	const formData = await request.formData();
+	console.log('[metadata/extract] Parsing formData...');
+	let formData;
+	try {
+		formData = await request.formData();
+		console.log('[metadata/extract] FormData parsed successfully');
+	} catch (formError) {
+		console.error('[metadata/extract] ERROR parsing formData:', formError);
+		throw error(400, `Failed to parse form data: ${formError}`);
+	}
+
 	const file = formData.get('file') as File | null;
 
 	if (!file) {
+		console.log('[metadata/extract] ERROR: No file in formData');
+		console.log('[metadata/extract] FormData keys:', [...formData.keys()]);
 		throw error(400, 'No file provided');
 	}
+
+	console.log('[metadata/extract] File received:');
+	console.log('[metadata/extract]   - Name:', file.name);
+	console.log('[metadata/extract]   - Size:', file.size, 'bytes', `(${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+	console.log('[metadata/extract]   - Type:', file.type);
 
 	const ext = getFileExtension(file.name);
 	const isEbook = EBOOK_EXTENSIONS.includes(ext);
 	const isAudio = AUDIO_EXTENSIONS.includes(ext);
+	console.log('[metadata/extract] Extension:', ext, '| isEbook:', isEbook, '| isAudio:', isAudio);
 
 	if (!isEbook && !isAudio) {
+		console.log('[metadata/extract] ERROR: Unsupported file type');
 		throw error(400, 'Unsupported file type');
 	}
 
@@ -98,29 +122,42 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			// For large audio files, skip full extraction to avoid timeouts
 			// Just parse title from filename
 			if (file.size > MAX_FULL_EXTRACTION_SIZE) {
-				console.log(`[metadata/extract] Large file (${(file.size / 1024 / 1024).toFixed(1)}MB), using filename-based extraction`);
+				console.log(`[metadata/extract] Large file (${(file.size / 1024 / 1024).toFixed(1)}MB) > ${MAX_FULL_EXTRACTION_SIZE / 1024 / 1024}MB limit`);
+				console.log('[metadata/extract] Using filename-based extraction (skipping audio parsing)');
 				metadata.title = extractTitleFromFilename(file.name);
+				console.log('[metadata/extract] Extracted title:', metadata.title);
+				console.log('[metadata/extract] === RETURNING EARLY (large file) ===');
 				return json(metadata);
 			}
 
 			// Extract metadata from audio file with timeout
+			console.log('[metadata/extract] File is under size limit, will parse audio metadata');
 			const tempDir = getTempDir();
+			console.log('[metadata/extract] Temp directory:', tempDir);
 			const tempPath = join(tempDir, `extract_${Date.now()}_${file.name}`);
+			console.log('[metadata/extract] Temp file path:', tempPath);
 
 			try {
 				// Write file to temp location
+				console.log('[metadata/extract] Reading file arrayBuffer...');
 				const buffer = Buffer.from(await file.arrayBuffer());
+				console.log('[metadata/extract] Buffer size:', buffer.length, 'bytes');
+				console.log('[metadata/extract] Writing to temp file...');
 				writeFileSync(tempPath, buffer);
+				console.log('[metadata/extract] Temp file written successfully');
 
 				// Parse audio metadata with timeout
+				console.log('[metadata/extract] Starting audio metadata parse (timeout:', EXTRACTION_TIMEOUT_MS, 'ms)...');
 				const audioMeta = await Promise.race([
 					parseFile(tempPath),
 					new Promise<never>((_, reject) =>
 						setTimeout(() => reject(new Error('Metadata extraction timeout')), EXTRACTION_TIMEOUT_MS)
 					)
 				]);
+				console.log('[metadata/extract] Audio metadata parsed successfully');
 
 				if (audioMeta.common) {
+					console.log('[metadata/extract] Common metadata found');
 					metadata.title = audioMeta.common.title || audioMeta.common.album;
 					metadata.author = audioMeta.common.artist || audioMeta.common.albumartist;
 
@@ -146,18 +183,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 						const narratorValue = Array.isArray(composer) ? composer[0] : composer;
 						metadata.narrator = metadata.narrator || narratorValue;
 					}
+				} else {
+					console.log('[metadata/extract] No common metadata found in audio file');
 				}
 
 				if (audioMeta.format) {
 					metadata.duration = audioMeta.format.duration;
+					console.log('[metadata/extract] Duration:', metadata.duration, 'seconds');
 				}
 
 			} finally {
 				// Clean up temp file
+				console.log('[metadata/extract] Cleaning up temp file...');
 				try {
 					unlinkSync(tempPath);
-				} catch {
-					// Ignore cleanup errors
+					console.log('[metadata/extract] Temp file deleted');
+				} catch (cleanupErr) {
+					console.log('[metadata/extract] Temp file cleanup failed (may not exist):', cleanupErr);
 				}
 			}
 		} else if (ext === '.epub') {
@@ -184,11 +226,16 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			// For now, basic filename parsing is a reasonable fallback
 		}
 
+		console.log('[metadata/extract] === EXTRACTION COMPLETE ===');
+		console.log('[metadata/extract] Final metadata:', JSON.stringify(metadata, null, 2));
 		return json(metadata);
 
 	} catch (err) {
-		console.error('[metadata/extract] Error extracting metadata:', err);
+		console.error('[metadata/extract] === EXTRACTION ERROR ===');
+		console.error('[metadata/extract] Error:', err);
+		console.error('[metadata/extract] Stack:', err instanceof Error ? err.stack : 'no stack');
 		// Return empty metadata rather than failing - user can fill in manually
+		console.log('[metadata/extract] Returning partial metadata due to error');
 		return json(metadata);
 	}
 };
