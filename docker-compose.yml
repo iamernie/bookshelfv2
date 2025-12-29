@@ -40,9 +40,9 @@ services:
       # Required for SvelteKit in production
       - ORIGIN=${ORIGIN:-http://localhost:3000}
 
-      # Body size limit for uploads (default 512KB is too small for ebooks)
-      # Set to 100MB to allow large ebook uploads
-      - BODY_SIZE_LIMIT=100M
+      # Body size limit for uploads (default 512KB is too small for ebooks/audiobooks)
+      # Set to 500MB to allow large audiobook uploads
+      - BODY_SIZE_LIMIT=500M
 
       # User/Group ID for file permissions (match your host user)
       # Run 'id' on your host to find your UID/GID
@@ -67,6 +67,9 @@ services:
       # Ebooks - uploaded ebook files
       - bookshelf_ebooks:/app/static/ebooks
 
+      # Audiobooks - uploaded audiobook files
+      - bookshelf_audiobooks:/data/audiobooks
+
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
@@ -83,4 +86,6 @@ volumes:
   bookshelf_covers:
     driver: local
   bookshelf_ebooks:
+    driver: local
+  bookshelf_audiobooks:
     driver: local
