@@ -10,6 +10,13 @@ import { writeFileSync, unlinkSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import { env } from '$env/dynamic/private';
 
+// Timeout for metadata extraction (30 seconds)
+const EXTRACTION_TIMEOUT_MS = 30000;
+
+// Max file size for full metadata extraction (50MB)
+// Larger files will get basic filename-based metadata
+const MAX_FULL_EXTRACTION_SIZE = 50 * 1024 * 1024;
+
 // Temp directory for processing
 function getTempDir(): string {
 	const dataPath = env.DATA_PATH || './data';
@@ -42,6 +49,26 @@ function getFileExtension(filename: string): string {
 	return filename.slice(filename.lastIndexOf('.')).toLowerCase();
 }
 
+/**
+ * Extract a reasonable title from a filename
+ * Handles patterns like:
+ * - "Edge World Undying Mercenaries, Book 14.mp3"
+ * - "Author - Title.mp3"
+ * - "Title (Series #1).mp3"
+ */
+function extractTitleFromFilename(filename: string): string {
+	// Remove extension
+	let title = filename.replace(/\.[^.]+$/, '');
+
+	// Remove common audiobook suffixes
+	title = title.replace(/[-_]\s*(audiobook|unabridged|abridged)$/i, '');
+
+	// Clean up underscores and multiple spaces
+	title = title.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+
+	return title;
+}
+
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
@@ -68,7 +95,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	try {
 		if (isAudio) {
-			// Extract metadata from audio file
+			// For large audio files, skip full extraction to avoid timeouts
+			// Just parse title from filename
+			if (file.size > MAX_FULL_EXTRACTION_SIZE) {
+				console.log(`[metadata/extract] Large file (${(file.size / 1024 / 1024).toFixed(1)}MB), using filename-based extraction`);
+				metadata.title = extractTitleFromFilename(file.name);
+				return json(metadata);
+			}
+
+			// Extract metadata from audio file with timeout
 			const tempDir = getTempDir();
 			const tempPath = join(tempDir, `extract_${Date.now()}_${file.name}`);
 
@@ -77,8 +112,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				const buffer = Buffer.from(await file.arrayBuffer());
 				writeFileSync(tempPath, buffer);
 
-				// Parse audio metadata
-				const audioMeta = await parseFile(tempPath);
+				// Parse audio metadata with timeout
+				const audioMeta = await Promise.race([
+					parseFile(tempPath),
+					new Promise<never>((_, reject) =>
+						setTimeout(() => reject(new Error('Metadata extraction timeout')), EXTRACTION_TIMEOUT_MS)
+					)
+				]);
 
 				if (audioMeta.common) {
 					metadata.title = audioMeta.common.title || audioMeta.common.album;
