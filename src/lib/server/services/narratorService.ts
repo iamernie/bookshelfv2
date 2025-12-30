@@ -1,4 +1,4 @@
-import { db, narrators, books, narratorTags, tags, audiobooks, audiobookNarrators } from '$lib/server/db';
+import { db, narrators, books, narratorTags, tags, audiobooks } from '$lib/server/db';
 import { eq, like, asc, desc, sql, and, or, inArray } from 'drizzle-orm';
 
 // Infer Narrator type from schema
@@ -95,13 +95,13 @@ export async function getNarrators(options: GetNarratorsOptions = {}): Promise<{
 				.from(books)
 				.where(and(eq(books.narratorId, narrator.id), userLibraryCondition));
 
-			// Audiobook stats (via audiobookNarrators junction table)
+			// Audiobook stats (direct narratorId on audiobooks table)
 			const audiobookStatsResult = await db
 				.select({
-					count: sql<number>`count(DISTINCT ${audiobookNarrators.audiobookId})`
+					count: sql<number>`count(*)`
 				})
-				.from(audiobookNarrators)
-				.where(eq(audiobookNarrators.narratorId, narrator.id));
+				.from(audiobooks)
+				.where(eq(audiobooks.narratorId, narrator.id));
 
 			return {
 				...narrator,
@@ -220,10 +220,10 @@ export async function getNarratorById(id: number, userId?: number): Promise<Narr
 	// Audiobook stats
 	const audiobookStatsResult = await db
 		.select({
-			count: sql<number>`count(DISTINCT ${audiobookNarrators.audiobookId})`
+			count: sql<number>`count(*)`
 		})
-		.from(audiobookNarrators)
-		.where(eq(audiobookNarrators.narratorId, id));
+		.from(audiobooks)
+		.where(eq(audiobooks.narratorId, id));
 
 	// Get tags
 	const narratorTagsData = await db
@@ -326,8 +326,8 @@ export async function deleteNarrator(id: number): Promise<boolean> {
 	// Check if any audiobooks are using this narrator
 	const audiobookCount = await db
 		.select({ count: sql<number>`count(*)` })
-		.from(audiobookNarrators)
-		.where(eq(audiobookNarrators.narratorId, id));
+		.from(audiobooks)
+		.where(eq(audiobooks.narratorId, id));
 
 	const totalUsage = (bookCount[0]?.count ?? 0) + (audiobookCount[0]?.count ?? 0);
 	if (totalUsage > 0) {
@@ -377,9 +377,8 @@ export async function getAudiobooksByNarrator(narratorId: number): Promise<{
 			coverPath: audiobooks.coverPath,
 			bookId: audiobooks.bookId
 		})
-		.from(audiobookNarrators)
-		.innerJoin(audiobooks, eq(audiobookNarrators.audiobookId, audiobooks.id))
-		.where(eq(audiobookNarrators.narratorId, narratorId))
+		.from(audiobooks)
+		.where(eq(audiobooks.narratorId, narratorId))
 		.orderBy(asc(audiobooks.title));
 }
 
