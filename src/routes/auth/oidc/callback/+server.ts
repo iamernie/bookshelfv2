@@ -66,7 +66,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 
 	try {
 		// Exchange code for tokens and get user claims
-		const tokenResult = await handleCallback(provider, callbackUrl, redirectUri, stateData.nonce);
+		const tokenResult = await handleCallback(provider, callbackUrl, redirectUri, stateData.nonce, stateData.state);
 		const { claims } = tokenResult;
 
 		// Check if this OIDC identity is already linked to a user

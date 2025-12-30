@@ -212,15 +212,17 @@ export async function handleCallback(
 	provider: OidcProvider,
 	callbackUrl: URL,
 	redirectUri: string,
-	expectedNonce: string
+	expectedNonce: string,
+	expectedState: string
 ): Promise<OidcTokenResult> {
 	const config = await getOidcConfig(provider);
 
 	// Exchange code for tokens
 	// openid-client v6 expects the full callback URL with query params (code, state)
-	// and the original redirect_uri for validation
+	// and validates against expectedState and expectedNonce
 	const tokens = await client.authorizationCodeGrant(config, callbackUrl, {
 		expectedNonce,
+		expectedState,
 		idTokenExpected: true
 	});
 
