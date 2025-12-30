@@ -5,6 +5,7 @@ import { canManagePublicLibrary } from '$lib/server/services/permissionService';
 import { getSimilarBooks } from '$lib/server/services/recommendationService';
 import { getAudiobooksByBookId, getOrCreateProgress, getBookmarks } from '$lib/server/services/audiobookService';
 import { getAllTags } from '$lib/server/services/tagService';
+import { getAllStatuses } from '$lib/server/services/statusService';
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const id = parseInt(params.id);
@@ -18,9 +19,10 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	}
 
 	// Get similar books for the Similar Books tab
-	const [similarBooks, allTags] = await Promise.all([
+	const [similarBooks, allTags, allStatuses] = await Promise.all([
 		getSimilarBooks(id, 8),
-		getAllTags()
+		getAllTags(),
+		getAllStatuses()
 	]);
 
 	// Get linked audiobooks with full file info
@@ -53,6 +55,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		audiobookData,
 		autoPlayAudiobook,
 		canManagePublicLibrary: canManagePublicLibrary(locals.user),
-		allTags
+		allTags,
+		allStatuses
 	};
 };

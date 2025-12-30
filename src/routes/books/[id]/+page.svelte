@@ -169,6 +169,59 @@
 	let showDeleteConfirm = $state(false);
 	let permanentDelete = $state(false);
 
+	// Inline rating/status state
+	let currentRating = $state(data.book.rating ?? 0);
+	let currentStatusId = $state(data.book.statusId);
+	let savingRating = $state(false);
+	let savingStatus = $state(false);
+	let hoverRating = $state(0);
+
+	// Update rating function
+	async function updateRating(newRating: number) {
+		// Allow clicking same star to remove rating
+		const ratingToSave = newRating === currentRating ? null : newRating;
+		savingRating = true;
+		try {
+			const res = await fetch(`/api/books/${data.book.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ rating: ratingToSave })
+			});
+			if (res.ok) {
+				currentRating = ratingToSave ?? 0;
+				toasts.success(ratingToSave ? `Rated ${ratingToSave} star${ratingToSave > 1 ? 's' : ''}` : 'Rating cleared');
+				invalidateAll();
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to update rating');
+			}
+		} finally {
+			savingRating = false;
+		}
+	}
+
+	// Update status function
+	async function updateStatus(newStatusId: number | null) {
+		savingStatus = true;
+		try {
+			const res = await fetch(`/api/books/${data.book.id}`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ statusId: newStatusId })
+			});
+			if (res.ok) {
+				currentStatusId = newStatusId;
+				toasts.success('Status updated');
+				invalidateAll();
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to update status');
+			}
+		} finally {
+			savingStatus = false;
+		}
+	}
+
 	// Derived: is this a public library book?
 	const isPublicLibraryBook = $derived(data.book.libraryType === 'public');
 
@@ -388,28 +441,54 @@
 							{formatSeriesNumber(data.book.series[0])}
 						</div>
 					{/if}
-
-					<!-- Rating Badge -->
-					{#if data.book.rating}
-						<div class="absolute top-2 right-2 bg-black/70 text-white px-2 py-0.5 rounded flex items-center gap-1 text-xs">
-							<Star class="w-3 h-3 fill-yellow-400 text-yellow-400" />
-							{data.book.rating.toFixed(1)}
-						</div>
-					{/if}
 				</div>
 
-				<!-- Status Badge -->
-				{#if data.book.status}
+				<!-- Inline Rating -->
+				<div class="mb-3">
 					<div
-						class="w-full py-1.5 px-3 rounded-lg text-center text-white font-medium mb-3 flex items-center justify-center gap-1.5 text-sm"
-						style="background-color: {data.book.status.color || '#6c757d'}"
+						class="flex items-center justify-center gap-0.5 py-1.5"
+						role="group"
+						aria-label="Rate this book"
 					>
-						{#if data.book.status.icon}
-							<DynamicIcon icon={data.book.status.icon} size={14} />
+						{#each [1, 2, 3, 4, 5] as star}
+							<button
+								type="button"
+								class="rating-star p-0.5 transition-transform hover:scale-110 disabled:opacity-50"
+								onclick={() => updateRating(star)}
+								onmouseenter={() => hoverRating = star}
+								onmouseleave={() => hoverRating = 0}
+								disabled={savingRating}
+								title={star === currentRating ? 'Click to remove rating' : `Rate ${star} star${star > 1 ? 's' : ''}`}
+							>
+								<Star
+									class="w-6 h-6 transition-colors {(hoverRating >= star || (!hoverRating && currentRating >= star)) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 dark:text-gray-600'}"
+								/>
+							</button>
+						{/each}
+						{#if currentRating > 0}
+							<span class="ml-2 text-sm font-medium" style="color: var(--text-secondary);">{currentRating.toFixed(1)}</span>
 						{/if}
-						{data.book.status.name}
 					</div>
-				{/if}
+				</div>
+
+				<!-- Inline Status Selector -->
+				<div class="mb-3">
+					<select
+						class="status-select w-full py-2 px-3 rounded-lg text-sm font-medium text-center cursor-pointer transition-all"
+						style="background-color: {data.allStatuses.find(s => s.id === currentStatusId)?.color || 'var(--bg-tertiary)'}; color: {currentStatusId ? 'white' : 'var(--text-secondary)'}; border: 1px solid {currentStatusId ? 'transparent' : 'var(--border-color)'};"
+						value={currentStatusId ?? ''}
+						onchange={(e) => {
+							const val = e.currentTarget.value;
+							updateStatus(val ? parseInt(val) : null);
+						}}
+						disabled={savingStatus}
+					>
+						<option value="">No Status</option>
+						{#each data.allStatuses as status}
+							<option value={status.id}>{status.name}</option>
+						{/each}
+					</select>
+				</div>
 
 				<!-- Format & Genre Pills -->
 				<div class="flex flex-wrap gap-1.5 mb-3">
@@ -1527,5 +1606,48 @@
 	.tab-btn.active {
 		color: var(--accent);
 		border-bottom-color: var(--accent);
+	}
+
+	/* Inline Rating Stars */
+	.rating-star {
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		line-height: 1;
+	}
+
+	.rating-star:focus {
+		outline: none;
+	}
+
+	.rating-star:focus-visible {
+		outline: 2px solid var(--accent);
+		outline-offset: 2px;
+		border-radius: 4px;
+	}
+
+	/* Status Select */
+	.status-select {
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+		background-position: right 0.5rem center;
+		background-repeat: no-repeat;
+		background-size: 1.5em 1.5em;
+		padding-right: 2.5rem;
+	}
+
+	.status-select:focus {
+		outline: none;
+		box-shadow: 0 0 0 2px var(--accent);
+	}
+
+	.status-select:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	.status-select option {
+		background-color: var(--bg-primary);
+		color: var(--text-primary);
 	}
 </style>
