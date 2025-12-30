@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.7] - 2025-12-30
+
+### Added
+- **Photo Upload for Authors & Narrators** - Add photos via file upload or URL download
+  - Upload photos directly from your device on author/narrator edit pages
+  - Download photos from any URL (including Wikipedia)
+  - Photos served via `/photos/` route for runtime-uploaded content
+  - Supports JPG, PNG, GIF, WebP, and AVIF formats
+
 ## [2.2.6] - 2025-12-30
 
 ### Added

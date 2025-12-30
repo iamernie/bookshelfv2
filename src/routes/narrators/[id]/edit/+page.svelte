@@ -13,7 +13,10 @@
 		Search,
 		Download,
 		X,
-		Tag
+		Tag,
+		Upload,
+		Link,
+		Trash2
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { toasts } from '$lib/stores/toast';
@@ -67,6 +70,83 @@
 	// Tag state
 	let narratorTags = $state(data.narratorTags);
 	let togglingTag = $state<number | null>(null);
+
+	// Photo upload state
+	let photoInputRef = $state<HTMLInputElement | null>(null);
+	let uploadingPhoto = $state(false);
+	let downloadingPhoto = $state(false);
+	let photoUrlInput = $state(''); // Separate from photoUrl for the download URL input
+
+	async function downloadPhotoFromUrl() {
+		if (!photoUrlInput.trim()) {
+			toasts.error('Please enter a URL');
+			return;
+		}
+		downloadingPhoto = true;
+		try {
+			const res = await fetch('/api/photos/download', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					url: photoUrlInput.trim(),
+					type: 'narrator',
+					id: narrator.id
+				})
+			});
+			if (res.ok) {
+				const result = await res.json();
+				photoUrl = result.photoPath;
+				photoUrlInput = '';
+				toasts.success('Photo downloaded successfully');
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to download photo');
+			}
+		} catch {
+			toasts.error('Failed to download photo');
+		} finally {
+			downloadingPhoto = false;
+		}
+	}
+
+	async function handlePhotoUpload(e: Event) {
+		const input = e.target as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file) return;
+
+		uploadingPhoto = true;
+		try {
+			const formData = new FormData();
+			formData.append('photo', file);
+			formData.append('type', 'narrator');
+			formData.append('id', narrator.id.toString());
+
+			const res = await fetch('/api/photos/upload', {
+				method: 'POST',
+				body: formData
+			});
+
+			if (res.ok) {
+				const result = await res.json();
+				photoUrl = result.photoPath;
+				toasts.success('Photo uploaded successfully');
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to upload photo');
+			}
+		} catch {
+			toasts.error('Failed to upload photo');
+		} finally {
+			uploadingPhoto = false;
+			// Reset input
+			if (input) input.value = '';
+		}
+	}
+
+	function removePhoto() {
+		photoUrl = '';
+		toasts.success('Photo removed');
+	}
 
 	async function toggleTag(tagId: number) {
 		togglingTag = tagId;
@@ -632,22 +712,108 @@
 							</div>
 						</div>
 
-						<!-- Photo URL -->
+						<!-- Photo -->
 						<div
 							class="rounded-lg p-4"
 							style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);"
 						>
-							<label for="photoUrl" class="block text-xs font-medium mb-1.5" style="color: var(--text-muted);">
-								Photo URL
-							</label>
-							<input
-								id="photoUrl"
-								type="url"
-								bind:value={photoUrl}
-								class="w-full px-3 py-2 rounded-md text-sm"
-								style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary);"
-								placeholder="https://..."
-							/>
+							<h3 class="text-xs font-medium mb-3 flex items-center gap-2" style="color: var(--text-muted);">
+								<Upload class="w-3.5 h-3.5" />
+								Photo
+							</h3>
+
+							{#if photoUrl}
+								<!-- Current Photo -->
+								<div class="flex items-start gap-4 mb-4">
+									<img
+										src={photoUrl}
+										alt={name}
+										class="w-20 h-20 object-cover rounded-lg"
+										onerror={(e) => {
+											const img = e.currentTarget as HTMLImageElement;
+											img.onerror = null;
+											img.src = '/placeholder.png';
+										}}
+									/>
+									<div class="flex-1">
+										<p class="text-xs mb-2" style="color: var(--text-muted);">Current photo</p>
+										<p class="text-xs break-all mb-2" style="color: var(--text-primary);">{photoUrl}</p>
+										<button
+											type="button"
+											class="btn-ghost text-xs px-2 py-1 flex items-center gap-1"
+											style="color: #ef4444;"
+											onclick={removePhoto}
+										>
+											<Trash2 class="w-3 h-3" />
+											Remove
+										</button>
+									</div>
+								</div>
+							{/if}
+
+							<!-- Upload or Download Options -->
+							<div class="space-y-3">
+								<!-- Upload File -->
+								<div>
+									<input
+										type="file"
+										accept="image/*"
+										class="hidden"
+										bind:this={photoInputRef}
+										onchange={handlePhotoUpload}
+									/>
+									<button
+										type="button"
+										class="w-full border-2 border-dashed rounded-lg p-4 text-center transition-all"
+										style="border-color: var(--border-color); background-color: var(--bg-tertiary);"
+										onclick={() => photoInputRef?.click()}
+										disabled={uploadingPhoto}
+									>
+										{#if uploadingPhoto}
+											<Loader2 class="w-6 h-6 mx-auto mb-1 animate-spin" style="color: var(--accent);" />
+											<p class="text-xs" style="color: var(--accent);">Uploading...</p>
+										{:else}
+											<Upload class="w-6 h-6 mx-auto mb-1" style="color: var(--text-muted);" />
+											<p class="text-xs" style="color: var(--text-primary);">Click to upload photo</p>
+											<p class="text-xs mt-1" style="color: var(--text-muted);">JPG, PNG, GIF, WebP (max 10MB)</p>
+										{/if}
+									</button>
+								</div>
+
+								<!-- Or divider -->
+								<div class="flex items-center gap-3">
+									<div class="flex-1 border-t" style="border-color: var(--border-color);"></div>
+									<span class="text-xs" style="color: var(--text-muted);">or</span>
+									<div class="flex-1 border-t" style="border-color: var(--border-color);"></div>
+								</div>
+
+								<!-- Download from URL -->
+								<div class="flex gap-2">
+									<div class="relative flex-1">
+										<Link class="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4" style="color: var(--text-muted);" />
+										<input
+											type="url"
+											bind:value={photoUrlInput}
+											class="w-full pl-8 pr-3 py-2 rounded-md text-sm"
+											style="background-color: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary);"
+											placeholder="Paste image URL..."
+										/>
+									</div>
+									<button
+										type="button"
+										class="btn-secondary px-3 py-2 flex items-center gap-1.5"
+										onclick={downloadPhotoFromUrl}
+										disabled={downloadingPhoto || !photoUrlInput.trim()}
+									>
+										{#if downloadingPhoto}
+											<Loader2 class="w-4 h-4 animate-spin" />
+										{:else}
+											<Download class="w-4 h-4" />
+										{/if}
+										<span class="text-sm">Download</span>
+									</button>
+								</div>
+							</div>
 						</div>
 
 						<!-- Notes -->
