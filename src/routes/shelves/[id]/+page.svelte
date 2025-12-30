@@ -3,6 +3,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import BookCard from '$lib/components/book/BookCard.svelte';
+	import BookGrid from '$lib/components/book/BookGrid.svelte';
 	import ShelfModal from '$lib/components/shelves/ShelfModal.svelte';
 	import type { BookCardData } from '$lib/types';
 	import type { FilterConfig } from '$lib/server/services/magicShelfService';
@@ -106,14 +107,14 @@
 			</p>
 		</div>
 	{:else}
-		<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+		<BookGrid gap="md">
 			{#each books as book (book.id)}
 				<BookCard
 					{book}
 					onClick={handleBookClick}
 				/>
 			{/each}
-		</div>
+		</BookGrid>
 
 		<!-- Pagination -->
 		{#if data.pagination.totalPages > 1}

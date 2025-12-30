@@ -15,6 +15,7 @@
 		List
 	} from 'lucide-svelte';
 	import BookCard from '$lib/components/book/BookCard.svelte';
+	import BookGrid from '$lib/components/book/BookGrid.svelte';
 
 	let { data } = $props();
 
@@ -485,7 +486,7 @@
 
 			<!-- Grid View -->
 			{#if viewMode === 'grid'}
-				<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+				<BookGrid gap="md">
 					{#each data.results.items as book (book.id)}
 						<a href="/books?id={book.id}" class="block">
 							<BookCard
@@ -503,7 +504,7 @@
 							/>
 						</a>
 					{/each}
-				</div>
+				</BookGrid>
 			{:else}
 				<!-- List View -->
 				<div class="card divide-y" style="--tw-divide-opacity: 1; border-color: var(--border-color);">

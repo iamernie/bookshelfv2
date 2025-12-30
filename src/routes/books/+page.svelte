@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { BookOpen, Plus, Grid, List, Search, ChevronLeft, ChevronRight, SlidersHorizontal, SquareCheck, Library } from 'lucide-svelte';
 	import BookCard from '$lib/components/book/BookCard.svelte';
+	import BookGrid from '$lib/components/book/BookGrid.svelte';
 	import BookRow from '$lib/components/book/BookRow.svelte';
 	import BookListHeader from '$lib/components/book/BookListHeader.svelte';
 	import BookModal from '$lib/components/book/BookModal.svelte';
@@ -442,7 +443,7 @@
 			<!-- Books Grid/List/Series -->
 			{#if data.items.length > 0}
 				{#if viewMode === 'grid'}
-					<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
+					<BookGrid gap="md">
 						{#each data.items as book (book.id)}
 							<BookCard
 								book={toBookCardData(book)}
@@ -455,7 +456,7 @@
 								onQuickEdit={handleQuickEdit}
 							/>
 						{/each}
-					</div>
+					</BookGrid>
 				{:else if viewMode === 'series'}
 					<!-- Series View -->
 					<div class="space-y-8">
@@ -481,7 +482,7 @@
 									</span>
 								</div>
 								<!-- Series Books Grid -->
-								<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
+								<BookGrid gap="md">
 									{#each group.books as book (book.id)}
 										<BookCard
 											book={toBookCardData(book)}
@@ -494,7 +495,7 @@
 											onQuickEdit={handleQuickEdit}
 										/>
 									{/each}
-								</div>
+								</BookGrid>
 							</div>
 						{/each}
 					</div>

@@ -201,7 +201,7 @@
 <svelte:window onclick={handleClickOutside} />
 
 <div
-	class="card group cursor-pointer hover:shadow-lg transition-all duration-200"
+	class="card group cursor-pointer hover:shadow-lg transition-all duration-200 max-w-[180px]"
 	style="{selected ? 'ring: 2px solid var(--accent);' : ''}"
 	onclick={handleClick}
 	onkeydown={handleKeydown}

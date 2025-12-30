@@ -2,6 +2,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import BookCard from '$lib/components/book/BookCard.svelte';
+	import BookGrid from '$lib/components/book/BookGrid.svelte';
 	import BookRow from '$lib/components/book/BookRow.svelte';
 	import BookListHeader from '$lib/components/book/BookListHeader.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -367,7 +368,7 @@
 				{/if}
 			</div>
 		{:else if viewMode === 'grid'}
-			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3">
+			<BookGrid gap="md">
 				{#each data.books as book}
 					<div class="relative group">
 						<BookCard
@@ -409,7 +410,7 @@
 						{/if}
 					</div>
 				{/each}
-			</div>
+			</BookGrid>
 		{:else}
 			<!-- List View -->
 			<div class="card overflow-hidden">
