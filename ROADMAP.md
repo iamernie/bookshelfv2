@@ -104,7 +104,7 @@ This document outlines planned features, improvements, and future direction for 
 - [ ] Custom fields for books
 
 ### Long Term
-- [ ] Mobile app (PWA or native)
+- [x] Progressive Web App (PWA) - Installable, offline support, app-like experience
 - [ ] Social features (follow users, public profiles)
 - [ ] Plugin/extension system
 
@@ -274,9 +274,11 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
   - Remote control from browser
 - [ ] CarPlay/Android Auto metadata
   - Proper metadata for car displays
-- [ ] Offline PWA support
-  - Download audiobooks for offline
-  - Background sync of progress
+- [x] Offline PWA support
+  - Service worker caching for static assets
+  - Installable as home screen app
+  - [ ] Download audiobooks for offline (future)
+  - [ ] Background sync of progress (future)
 - [ ] Podcast support
   - RSS feed subscription
   - Auto-download new episodes

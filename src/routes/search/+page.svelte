@@ -147,48 +147,48 @@
 <div class="container mx-auto px-4 py-8">
 	<!-- Header -->
 	<div class="mb-6">
-		<h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+		<h1 class="text-2xl font-bold flex items-center gap-2" style="color: var(--text-primary);">
 			<Search class="w-7 h-7" />
 			Advanced Search
 		</h1>
-		<p class="text-gray-500 mt-1">Find books using multiple criteria</p>
+		<p class="mt-1" style="color: var(--text-muted);">Find books using multiple criteria</p>
 	</div>
 
 	<!-- Search Form -->
-	<form onsubmit={(e) => { e.preventDefault(); handleSearch(); }} class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+	<form onsubmit={(e) => { e.preventDefault(); handleSearch(); }} class="card mb-6">
 		<!-- Basic Search -->
 		<div class="p-4 space-y-4">
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 				<!-- Title -->
 				<div>
-					<label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+					<label for="title" class="label">Title</label>
 					<input
 						id="title"
 						type="text"
 						placeholder="Search by title..."
-						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+						class="input"
 						bind:value={title}
 					/>
 				</div>
 
 				<!-- Author -->
 				<div>
-					<label for="author" class="block text-sm font-medium text-gray-700 mb-1">Author</label>
+					<label for="author" class="label">Author</label>
 					<input
 						id="author"
 						type="text"
 						placeholder="Search by author..."
-						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+						class="input"
 						bind:value={authorName}
 					/>
 				</div>
 
 				<!-- Status -->
 				<div>
-					<label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+					<label for="status" class="label">Status</label>
 					<select
 						id="status"
-						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+						class="select"
 						bind:value={statusId}
 					>
 						<option value="">Any status</option>
@@ -200,10 +200,10 @@
 
 				<!-- Genre -->
 				<div>
-					<label for="genre" class="block text-sm font-medium text-gray-700 mb-1">Genre</label>
+					<label for="genre" class="label">Genre</label>
 					<select
 						id="genre"
-						class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+						class="select"
 						bind:value={genreId}
 					>
 						<option value="">Any genre</option>
@@ -216,13 +216,13 @@
 
 			<!-- Search Buttons -->
 			<div class="flex items-center gap-3">
-				<button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+				<button type="submit" class="btn-accent">
 					<Search class="w-4 h-4" />
 					Search
 				</button>
 
 				{#if activeFilterCount() > 0}
-					<button type="button" class="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2" onclick={clearFilters}>
+					<button type="button" class="btn-ghost" onclick={clearFilters}>
 						<X class="w-4 h-4" />
 						Clear ({activeFilterCount()})
 					</button>
@@ -230,7 +230,7 @@
 
 				<button
 					type="button"
-					class="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2 ml-auto"
+					class="btn-ghost ml-auto"
 					onclick={() => showAdvanced = !showAdvanced}
 				>
 					<Filter class="w-4 h-4" />
@@ -246,27 +246,27 @@
 
 		<!-- Advanced Filters -->
 		{#if showAdvanced}
-			<div class="border-t border-gray-200 p-4 space-y-6 bg-gray-50">
+			<div class="border-t p-4 space-y-6" style="border-color: var(--border-color); background-color: var(--bg-tertiary);">
 				<!-- Text Filters -->
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<label for="seriesTitle" class="block text-sm font-medium text-gray-700 mb-1">Series Title</label>
+						<label for="seriesTitle" class="label">Series Title</label>
 						<input
 							id="seriesTitle"
 							type="text"
 							placeholder="Search by series name..."
-							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+							class="input"
 							bind:value={seriesTitle}
 						/>
 					</div>
 
 					<div>
-						<label for="summary" class="block text-sm font-medium text-gray-700 mb-1">Summary / Comments</label>
+						<label for="summary" class="label">Summary / Comments</label>
 						<input
 							id="summary"
 							type="text"
 							placeholder="Search in summary or comments..."
-							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+							class="input"
 							bind:value={summaryComments}
 						/>
 					</div>
@@ -275,10 +275,10 @@
 				<!-- Dropdown Filters -->
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<div>
-						<label for="format" class="block text-sm font-medium text-gray-700 mb-1">Format</label>
+						<label for="format" class="label">Format</label>
 						<select
 							id="format"
-							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+							class="select"
 							bind:value={formatId}
 						>
 							<option value="">Any format</option>
@@ -289,10 +289,10 @@
 					</div>
 
 					<div>
-						<label for="series" class="block text-sm font-medium text-gray-700 mb-1">Series</label>
+						<label for="series" class="label">Series</label>
 						<select
 							id="series"
-							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+							class="select"
 							bind:value={seriesId}
 						>
 							<option value="">Any series</option>
@@ -303,10 +303,10 @@
 					</div>
 
 					<div>
-						<label for="sortBy" class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+						<label for="sortBy" class="label">Sort By</label>
 						<select
 							id="sortBy"
-							class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+							class="select"
 							bind:value={sortBy}
 						>
 							<option value="title">Title (A-Z)</option>
@@ -324,7 +324,7 @@
 				<!-- Range Filters -->
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Rating Range</label>
+						<label class="label">Rating Range</label>
 						<div class="flex items-center gap-2">
 							<input
 								type="number"
@@ -332,72 +332,72 @@
 								min="0"
 								max="5"
 								step="0.1"
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								class="input"
 								bind:value={ratingMin}
 							/>
-							<span class="text-gray-400">-</span>
+							<span style="color: var(--text-muted);">-</span>
 							<input
 								type="number"
 								placeholder="Max"
 								min="0"
 								max="5"
 								step="0.1"
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								class="input"
 								bind:value={ratingMax}
 							/>
 						</div>
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Page Count</label>
+						<label class="label">Page Count</label>
 						<div class="flex items-center gap-2">
 							<input
 								type="number"
 								placeholder="Min"
 								min="0"
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								class="input"
 								bind:value={pagesMin}
 							/>
-							<span class="text-gray-400">-</span>
+							<span style="color: var(--text-muted);">-</span>
 							<input
 								type="number"
 								placeholder="Max"
 								min="0"
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								class="input"
 								bind:value={pagesMax}
 							/>
 						</div>
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Completed Date</label>
+						<label class="label">Completed Date</label>
 						<div class="flex items-center gap-2">
 							<input
 								type="date"
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								class="input"
 								bind:value={completedFrom}
 							/>
-							<span class="text-gray-400">-</span>
+							<span style="color: var(--text-muted);">-</span>
 							<input
 								type="date"
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								class="input"
 								bind:value={completedTo}
 							/>
 						</div>
 					</div>
 
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-1">Release Date</label>
+						<label class="label">Release Date</label>
 						<div class="flex items-center gap-2">
 							<input
 								type="date"
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								class="input"
 								bind:value={releaseFrom}
 							/>
-							<span class="text-gray-400">-</span>
+							<span style="color: var(--text-muted);">-</span>
 							<input
 								type="date"
-								class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+								class="input"
 								bind:value={releaseTo}
 							/>
 						</div>
@@ -407,12 +407,12 @@
 				<!-- Tags -->
 				{#if data.options.tags.length > 0}
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+						<label class="label">Tags</label>
 						<div class="flex flex-wrap gap-2">
 							{#each data.options.tags as tag}
 								<button
 									type="button"
-									class="px-3 py-1 rounded-full text-sm font-medium transition-colors border-2 {selectedTagIds.includes(tag.id) ? 'border-blue-500' : 'border-transparent'}"
+									class="px-3 py-1 rounded-full text-sm font-medium transition-colors border-2 {selectedTagIds.includes(tag.id) ? 'border-[var(--accent)]' : 'border-transparent'}"
 									style="background-color: {tag.color || '#6c757d'}20; color: {tag.color || '#6c757d'}"
 									onclick={() => toggleTag(tag.id)}
 								>
@@ -425,27 +425,27 @@
 
 				<!-- Boolean Filters -->
 				<div>
-					<label class="block text-sm font-medium text-gray-700 mb-2">Special Filters</label>
+					<label class="label">Special Filters</label>
 					<div class="flex flex-wrap gap-4">
 						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" bind:checked={hasNarrator} />
-							<span class="text-sm text-gray-700">Has Narrator</span>
+							<input type="checkbox" class="w-4 h-4 rounded" style="accent-color: var(--accent);" bind:checked={hasNarrator} />
+							<span class="text-sm" style="color: var(--text-secondary);">Has Narrator</span>
 						</label>
 						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" bind:checked={hasRating} />
-							<span class="text-sm text-gray-700">Has Rating</span>
+							<input type="checkbox" class="w-4 h-4 rounded" style="accent-color: var(--accent);" bind:checked={hasRating} />
+							<span class="text-sm" style="color: var(--text-secondary);">Has Rating</span>
 						</label>
 						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" bind:checked={noRating} />
-							<span class="text-sm text-gray-700">No Rating</span>
+							<input type="checkbox" class="w-4 h-4 rounded" style="accent-color: var(--accent);" bind:checked={noRating} />
+							<span class="text-sm" style="color: var(--text-secondary);">No Rating</span>
 						</label>
 						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" bind:checked={hasCover} />
-							<span class="text-sm text-gray-700">Has Cover</span>
+							<input type="checkbox" class="w-4 h-4 rounded" style="accent-color: var(--accent);" bind:checked={hasCover} />
+							<span class="text-sm" style="color: var(--text-secondary);">Has Cover</span>
 						</label>
 						<label class="flex items-center gap-2 cursor-pointer">
-							<input type="checkbox" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" bind:checked={noCover} />
-							<span class="text-sm text-gray-700">No Cover</span>
+							<input type="checkbox" class="w-4 h-4 rounded" style="accent-color: var(--accent);" bind:checked={noCover} />
+							<span class="text-sm" style="color: var(--text-secondary);">No Cover</span>
 						</label>
 					</div>
 				</div>
@@ -458,22 +458,24 @@
 		{#if data.results && data.results.items.length > 0}
 			<!-- Results Header -->
 			<div class="flex items-center justify-between mb-4">
-				<p class="text-sm text-gray-600">
+				<p class="text-sm" style="color: var(--text-secondary);">
 					{data.results.total} {data.results.total === 1 ? 'book' : 'books'} found
 				</p>
 
 				<!-- View Toggle -->
-				<div class="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+				<div class="flex items-center gap-1 rounded-lg p-1" style="background-color: var(--bg-tertiary);">
 					<button
 						type="button"
-						class="p-2 rounded {viewMode === 'grid' ? 'bg-white shadow-sm' : 'text-gray-500'}"
+						class="p-2 rounded transition-colors"
+						style={viewMode === 'grid' ? 'background-color: var(--bg-secondary); color: var(--text-primary);' : 'color: var(--text-muted);'}
 						onclick={() => viewMode = 'grid'}
 					>
 						<Grid class="w-4 h-4" />
 					</button>
 					<button
 						type="button"
-						class="p-2 rounded {viewMode === 'list' ? 'bg-white shadow-sm' : 'text-gray-500'}"
+						class="p-2 rounded transition-colors"
+						style={viewMode === 'list' ? 'background-color: var(--bg-secondary); color: var(--text-primary);' : 'color: var(--text-muted);'}
 						onclick={() => viewMode = 'list'}
 					>
 						<List class="w-4 h-4" />
@@ -504,14 +506,17 @@
 				</div>
 			{:else}
 				<!-- List View -->
-				<div class="bg-white rounded-lg shadow-sm border border-gray-200 divide-y divide-gray-200">
+				<div class="card divide-y" style="--tw-divide-opacity: 1; border-color: var(--border-color);">
 					{#each data.results.items as book (book.id)}
 						<a
 							href="/books?id={book.id}"
-							class="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors"
+							class="flex items-center gap-4 p-4 transition-colors"
+							style="border-color: var(--border-color);"
+							onmouseenter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
+							onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
 						>
 							<!-- Cover -->
-							<div class="w-12 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+							<div class="w-12 h-16 rounded overflow-hidden flex-shrink-0" style="background-color: var(--bg-tertiary);">
 								<img
 									src={book.coverImageUrl || '/placeholder.png'}
 									alt={book.title}
@@ -522,13 +527,13 @@
 
 							<!-- Info -->
 							<div class="flex-1 min-w-0">
-								<h3 class="font-medium text-gray-900 truncate">{book.title}</h3>
-								<p class="text-sm text-gray-500 truncate">
+								<h3 class="font-medium truncate" style="color: var(--text-primary);">{book.title}</h3>
+								<p class="text-sm truncate" style="color: var(--text-muted);">
 									{#if book.authors.length > 0}
 										{book.authors.map(a => a.name).join(', ')}
 									{/if}
 									{#if book.series.length > 0}
-										<span class="text-gray-400">
+										<span style="color: var(--text-muted);">
 											• {book.series[0].title}
 											{#if book.series[0].bookNum}#{book.series[0].bookNum}{/if}
 										</span>
@@ -548,7 +553,7 @@
 
 							<!-- Rating -->
 							{#if book.rating}
-								<div class="flex items-center gap-1 text-sm text-gray-600 flex-shrink-0">
+								<div class="flex items-center gap-1 text-sm flex-shrink-0" style="color: var(--text-secondary);">
 									<Star class="w-4 h-4 fill-yellow-400 text-yellow-400" />
 									{book.rating.toFixed(1)}
 								</div>
@@ -563,22 +568,28 @@
 				<div class="flex items-center justify-center gap-2 mt-8">
 					<button
 						type="button"
-						class="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+						class="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						style="color: var(--text-secondary);"
 						disabled={data.results.page <= 1}
 						onclick={() => goToPage(data.results!.page - 1)}
+						onmouseenter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')}
+						onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
 					>
 						<ChevronLeft class="w-5 h-5" />
 					</button>
 
-					<span class="px-4 py-2 text-sm text-gray-600">
+					<span class="px-4 py-2 text-sm" style="color: var(--text-secondary);">
 						Page {data.results.page} of {data.results.totalPages}
 					</span>
 
 					<button
 						type="button"
-						class="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+						class="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+						style="color: var(--text-secondary);"
 						disabled={data.results.page >= data.results.totalPages}
 						onclick={() => goToPage(data.results!.page + 1)}
+						onmouseenter={(e) => !e.currentTarget.disabled && (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')}
+						onmouseleave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
 					>
 						<ChevronRight class="w-5 h-5" />
 					</button>
@@ -587,12 +598,13 @@
 		{:else}
 			<!-- No Results -->
 			<div class="text-center py-12">
-				<Search class="w-16 h-16 text-gray-300 mx-auto mb-4" />
-				<h3 class="text-lg font-medium text-gray-900 mb-2">No books found</h3>
-				<p class="text-gray-500 mb-4">Try adjusting your search criteria</p>
+				<Search class="w-16 h-16 mx-auto mb-4" style="color: var(--text-muted);" />
+				<h3 class="text-lg font-medium mb-2" style="color: var(--text-primary);">No books found</h3>
+				<p class="mb-4" style="color: var(--text-muted);">Try adjusting your search criteria</p>
 				<button
 					type="button"
-					class="px-4 py-2 text-blue-600 hover:text-blue-800"
+					class="px-4 py-2"
+					style="color: var(--accent);"
 					onclick={clearFilters}
 				>
 					Clear all filters
@@ -602,9 +614,9 @@
 	{:else}
 		<!-- No Search Yet -->
 		<div class="text-center py-12">
-			<Search class="w-16 h-16 text-gray-300 mx-auto mb-4" />
-			<h3 class="text-lg font-medium text-gray-900 mb-2">Start your search</h3>
-			<p class="text-gray-500">Use the filters above to find books in your library</p>
+			<Search class="w-16 h-16 mx-auto mb-4" style="color: var(--text-muted);" />
+			<h3 class="text-lg font-medium mb-2" style="color: var(--text-primary);">Start your search</h3>
+			<p style="color: var(--text-muted);">Use the filters above to find books in your library</p>
 		</div>
 	{/if}
 </div>

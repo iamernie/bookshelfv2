@@ -1012,7 +1012,7 @@
 
 	.progress-fill {
 		height: 100%;
-		background: var(--accent-color, #3b82f6);
+		background: var(--accent, #3b82f6);
 		border-radius: 4px;
 		transition: width 0.1s ease;
 	}
@@ -1061,13 +1061,13 @@
 	.play-btn {
 		width: 48px;
 		height: 48px;
-		background: var(--accent-color, #3b82f6);
+		background: var(--accent, #3b82f6);
 		color: white;
 	}
 
 	.play-btn:hover,
 	.play-btn:active {
-		background: var(--accent-color-hover, #2563eb);
+		background: var(--accent-hover, #2563eb);
 	}
 
 	.control-btn-sm {
@@ -1134,7 +1134,7 @@
 		-webkit-appearance: none;
 		width: 14px;
 		height: 14px;
-		background: var(--accent-color, #3b82f6);
+		background: var(--accent, #3b82f6);
 		border-radius: 50%;
 		cursor: pointer;
 	}
@@ -1166,7 +1166,7 @@
 		top: 0;
 		left: 0;
 		height: 3px;
-		background: var(--accent-color, #3b82f6);
+		background: var(--accent, #3b82f6);
 	}
 
 	.mini-info {
@@ -1210,7 +1210,7 @@
 		position: absolute;
 		top: -4px;
 		right: -4px;
-		background: var(--accent-color, #3b82f6);
+		background: var(--accent, #3b82f6);
 		color: white;
 		font-size: 0.625rem;
 		min-width: 14px;
@@ -1224,7 +1224,7 @@
 
 	.control-btn-sm.active {
 		background: var(--bg-secondary, #252542);
-		color: var(--accent-color, #3b82f6);
+		color: var(--accent, #3b82f6);
 	}
 
 	.bookmarks-panel {
@@ -1307,7 +1307,7 @@
 	.bookmark-time {
 		font-family: monospace;
 		font-size: 0.75rem;
-		color: var(--accent-color, #3b82f6);
+		color: var(--accent, #3b82f6);
 		min-width: 60px;
 	}
 
@@ -1344,7 +1344,7 @@
 		align-items: center;
 		gap: 0.375rem;
 		padding: 0.25rem 0.5rem;
-		background: var(--accent-color, #3b82f6);
+		background: var(--accent, #3b82f6);
 		border: none;
 		border-radius: 9999px;
 		cursor: pointer;
@@ -1354,7 +1354,7 @@
 	}
 
 	.sleep-timer-active:hover {
-		background: var(--accent-color-hover, #2563eb);
+		background: var(--accent-hover, #2563eb);
 	}
 
 	.timer-remaining {
@@ -1409,8 +1409,8 @@
 	}
 
 	.sleep-timer-option:hover {
-		background: var(--accent-color, #3b82f6);
-		border-color: var(--accent-color, #3b82f6);
+		background: var(--accent, #3b82f6);
+		border-color: var(--accent, #3b82f6);
 	}
 
 	.sleep-timer-hint {
@@ -1443,7 +1443,7 @@
 
 	.player-chapter {
 		font-size: 0.75rem;
-		color: var(--accent-color, #3b82f6);
+		color: var(--accent, #3b82f6);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
@@ -1509,7 +1509,7 @@
 
 	.chapter-item.active {
 		background: var(--bg-secondary, #252542);
-		border-left: 3px solid var(--accent-color, #3b82f6);
+		border-left: 3px solid var(--accent, #3b82f6);
 	}
 
 	.chapter-number {

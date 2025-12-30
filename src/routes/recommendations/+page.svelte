@@ -244,7 +244,7 @@
 				{@const Icon = typeIcons[section.type] || BookOpen}
 				<div class="card p-6">
 					<div class="flex items-center gap-3 mb-4">
-						<Icon class="w-5 h-5" style="color: var(--accent-color);" />
+						<Icon class="w-5 h-5" style="color: var(--accent);" />
 						<div>
 							<h3 class="font-semibold" style="color: var(--text-primary);">{section.title}</h3>
 							{#if section.subtitle}

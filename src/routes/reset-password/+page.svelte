@@ -98,7 +98,7 @@
 		<div class="card p-8 shadow-xl">
 			{#if validating}
 				<div class="text-center py-8">
-					<Loader2 class="w-8 h-8 animate-spin mx-auto mb-4" style="color: var(--accent-color);" />
+					<Loader2 class="w-8 h-8 animate-spin mx-auto mb-4" style="color: var(--accent);" />
 					<p style="color: var(--text-secondary);">Validating reset link...</p>
 				</div>
 			{:else if success}
@@ -114,7 +114,7 @@
 					<p class="text-sm mb-4" style="color: var(--text-muted);">
 						Your password has been updated. Redirecting to login...
 					</p>
-					<a href="/login" class="text-sm hover:underline" style="color: var(--accent-color);">
+					<a href="/login" class="text-sm hover:underline" style="color: var(--accent);">
 						Click here if not redirected
 					</a>
 				</div>
@@ -220,7 +220,7 @@
 					<a
 						href="/login"
 						class="block w-full text-center text-sm hover:underline"
-						style="color: var(--accent-color);"
+						style="color: var(--accent);"
 					>
 						Back to sign in
 					</a>

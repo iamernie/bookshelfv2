@@ -156,7 +156,7 @@
 					<div class="absolute bottom-0 left-0 right-0 h-2" style="background: rgba(0,0,0,0.5);">
 						<div
 							class="h-full"
-							style="width: {getProgressPercent()}%; background: var(--accent-color);"
+							style="width: {getProgressPercent()}%; background: var(--accent);"
 						></div>
 					</div>
 				{/if}
@@ -166,7 +166,7 @@
 			<button
 				onclick={() => showPlayer = true}
 				class="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-xl text-white font-semibold text-lg transition-colors mb-4"
-				style="background: var(--accent-color);"
+				style="background: var(--accent);"
 			>
 				<Play class="w-6 h-6" />
 				{#if getProgressPercent() > 0 && !data.progress?.isFinished}

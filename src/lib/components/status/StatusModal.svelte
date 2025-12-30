@@ -50,39 +50,39 @@
 
 				<div class="flex-1">
 					<div class="flex items-center gap-2">
-						<h2 class="text-xl font-semibold text-gray-900">{status.name}</h2>
+						<h2 class="text-xl font-semibold" style="color: var(--text-primary);">{status.name}</h2>
 						{#if status.isSystem}
-							<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+							<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background-color: var(--bg-tertiary); color: var(--text-muted);">
 								<Lock class="w-3 h-3" />
 								System
 							</span>
 						{/if}
 					</div>
-					<div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
+					<div class="flex items-center gap-3 mt-1 text-sm" style="color: var(--text-muted);">
 						<span class="flex items-center gap-1">
 							<BookOpen class="w-4 h-4" />
 							{status.bookCount ?? books.length} {(status.bookCount ?? books.length) === 1 ? 'book' : 'books'}
 						</span>
 						{#if status.key}
-							<span class="text-gray-400">Key: {status.key}</span>
+							<span style="color: var(--text-muted);">Key: {status.key}</span>
 						{/if}
 					</div>
 				</div>
 
 				<div
-					class="w-8 h-8 rounded-full border-4 border-white shadow"
-					style="background-color: {status.color || '#6c757d'}"
+					class="w-8 h-8 rounded-full shadow"
+					style="background-color: {status.color || '#6c757d'}; border: 4px solid var(--bg-secondary);"
 				></div>
 			</div>
 
-			<div class="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+			<div class="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
 				<AlertTriangle class="w-4 h-4 flex-shrink-0" />
 				<span>Statuses are system-defined. Only the display name can be changed for localization purposes.</span>
 			</div>
 
 			{#if books.length > 0}
 				<div>
-					<h3 class="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+					<h3 class="text-sm font-medium mb-3 flex items-center gap-2" style="color: var(--text-secondary);">
 						<BookOpen class="w-4 h-4" />
 						Books with this status
 					</h3>
@@ -99,16 +99,16 @@
 						{/each}
 					</div>
 					{#if books.length > 12}
-						<p class="text-sm text-gray-500 mt-2">and {books.length - 12} more...</p>
+						<p class="text-sm mt-2" style="color: var(--text-muted);">and {books.length - 12} more...</p>
 					{/if}
 				</div>
 			{/if}
 
 			<!-- Action buttons -->
-			<div class="flex justify-end pt-4 border-t">
+			<div class="flex justify-end pt-4" style="border-top: 1px solid var(--border-color);">
 				<button
 					type="button"
-					class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+					class="btn-accent flex items-center gap-2"
 					onclick={() => currentMode = 'edit'}
 				>
 					<Edit2 class="w-4 h-4" />
@@ -119,30 +119,30 @@
 	{:else if status}
 		<!-- Edit Mode -->
 		<form onsubmit={(e) => { e.preventDefault(); handleSave(); }} class="p-6 space-y-4">
-			<div class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+			<div class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400">
 				<Lock class="w-4 h-4 flex-shrink-0" />
 				<span>You can only change the display name for localization. The status key and behavior cannot be modified.</span>
 			</div>
 
 			<div>
-				<label for="name" class="block text-sm font-medium text-gray-700 mb-1">Display Name <span class="text-red-500">*</span></label>
+				<label for="name" class="label">Display Name <span class="text-red-500">*</span></label>
 				<input
 					id="name"
 					type="text"
 					bind:value={name}
 					required
-					class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+					class="input"
 				/>
 				{#if status.key}
-					<p class="text-xs text-gray-500 mt-1">System key: {status.key}</p>
+					<p class="text-xs mt-1" style="color: var(--text-muted);">System key: {status.key}</p>
 				{/if}
 			</div>
 
 			<!-- Form buttons -->
-			<div class="flex justify-end gap-3 pt-4 border-t">
+			<div class="flex justify-end gap-3 pt-4" style="border-top: 1px solid var(--border-color);">
 				<button
 					type="button"
-					class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+					class="btn-secondary"
 					onclick={() => currentMode = 'view'}
 				>
 					Cancel
@@ -150,7 +150,7 @@
 				<button
 					type="submit"
 					disabled={saving || !name.trim()}
-					class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+					class="btn-accent"
 				>
 					{saving ? 'Saving...' : 'Save'}
 				</button>

@@ -58,7 +58,7 @@
 	<!-- Header -->
 	<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
 		<div class="flex items-center gap-3">
-			<Headphones class="w-8 h-8" style="color: var(--accent-color);" />
+			<Headphones class="w-8 h-8" style="color: var(--accent);" />
 			<h1 class="text-2xl font-bold" style="color: var(--text-primary);">Audiobooks</h1>
 		</div>
 
@@ -99,7 +99,7 @@
 			<a
 				href="/audiobooks/upload"
 				class="flex items-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-medium transition-colors"
-				style="background: var(--accent-color);"
+				style="background: var(--accent);"
 			>
 				<Plus class="w-4 h-4" />
 				<span class="hidden sm:inline">Add</span>
@@ -111,7 +111,7 @@
 	{#if data.continueListening.length > 0}
 		<section class="mb-8">
 			<h2 class="text-lg font-semibold mb-4 flex items-center gap-2" style="color: var(--text-primary);">
-				<Play class="w-5 h-5" style="color: var(--accent-color);" />
+				<Play class="w-5 h-5" style="color: var(--accent);" />
 				Continue Listening
 			</h2>
 
@@ -139,7 +139,7 @@
 							<div class="absolute bottom-0 left-0 right-0 h-1" style="background: var(--bg-secondary);">
 								<div
 									class="h-full transition-all"
-									style="width: {getProgressPercent(audiobook)}%; background: var(--accent-color);"
+									style="width: {getProgressPercent(audiobook)}%; background: var(--accent);"
 								></div>
 							</div>
 
@@ -170,7 +170,7 @@
 				onclick={() => setFilter(filterOption.key)}
 				class="px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors"
 				style={data.filter === filterOption.key
-					? 'background: var(--accent-color); color: white;'
+					? 'background: var(--accent); color: white;'
 					: 'background: var(--bg-secondary); color: var(--text-muted);'
 				}
 			>
@@ -203,7 +203,7 @@
 				<a
 					href="/audiobooks/upload"
 					class="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium"
-					style="background: var(--accent-color);"
+					style="background: var(--accent);"
 				>
 					<Plus class="w-5 h-5" />
 					Add Audiobook
@@ -241,7 +241,7 @@
 							<div class="absolute bottom-0 left-0 right-0 h-1" style="background: rgba(0,0,0,0.5);">
 								<div
 									class="h-full"
-									style="width: {getProgressPercent(audiobook)}%; background: var(--accent-color);"
+									style="width: {getProgressPercent(audiobook)}%; background: var(--accent);"
 								></div>
 							</div>
 						{/if}
@@ -290,7 +290,7 @@
 								{formatDuration(audiobook.duration ?? 0)}
 							</span>
 							{#if audiobook.userProgress && (audiobook.userProgress.progress ?? 0) > 0}
-								<span class="text-xs" style="color: var(--accent-color);">
+								<span class="text-xs" style="color: var(--accent);">
 									{getProgressPercent(audiobook)}% complete
 								</span>
 							{/if}

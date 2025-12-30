@@ -98,16 +98,16 @@
 	<!-- Header -->
 	<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
 		<div>
-			<h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+			<h1 class="text-2xl font-bold flex items-center gap-2" style="color: var(--text-primary);">
 				<Tag class="w-7 h-7" />
 				Tags
 			</h1>
-			<p class="text-gray-500 mt-1">{total} tags</p>
+			<p class="mt-1" style="color: var(--text-muted);">{total} tags</p>
 		</div>
 
 		<button
 			type="button"
-			class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+			class="btn-accent flex items-center gap-2"
 			onclick={openAddModal}
 		>
 			<Plus class="w-5 h-5" />
@@ -119,17 +119,17 @@
 	<div class="mb-6">
 		<form onsubmit={(e) => { e.preventDefault(); handleSearch(); }} class="flex gap-2">
 			<div class="relative flex-1 max-w-md">
-				<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+				<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style="color: var(--text-muted);" />
 				<input
 					type="text"
 					bind:value={search}
 					placeholder="Search tags..."
-					class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+					class="input w-full pl-10"
 				/>
 			</div>
 			<button
 				type="submit"
-				class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+				class="btn-secondary"
 			>
 				Search
 			</button>
@@ -143,15 +143,15 @@
 		</div>
 	{:else if tags.length === 0}
 		<div class="text-center py-12">
-			<Tag class="w-12 h-12 text-gray-300 mx-auto mb-4" />
-			<h3 class="text-lg font-medium text-gray-900 mb-2">No tags found</h3>
-			<p class="text-gray-500 mb-4">
+			<Tag class="w-12 h-12 mx-auto mb-4" style="color: var(--text-muted);" />
+			<h3 class="text-lg font-medium mb-2" style="color: var(--text-primary);">No tags found</h3>
+			<p class="mb-4" style="color: var(--text-muted);">
 				{search ? 'Try a different search term' : 'Get started by creating your first tag'}
 			</p>
 			{#if !search}
 				<button
 					type="button"
-					class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-2"
+					class="btn-accent inline-flex items-center gap-2"
 					onclick={openAddModal}
 				>
 					<Plus class="w-5 h-5" />

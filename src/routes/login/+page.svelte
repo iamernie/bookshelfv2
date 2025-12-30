@@ -177,7 +177,7 @@
 						<button
 							type="button"
 							class="text-sm hover:underline"
-							style="color: var(--accent-color);"
+							style="color: var(--accent);"
 							onclick={toggleForgotPassword}
 						>
 							Forgot password?
@@ -231,7 +231,7 @@
 						<div class="text-center">
 							<p class="text-sm" style="color: var(--text-muted);">
 								Don't have an account?
-								<a href="/signup" class="hover:underline" style="color: var(--accent-color);">
+								<a href="/signup" class="hover:underline" style="color: var(--accent);">
 									Sign up
 								</a>
 							</p>
@@ -300,7 +300,7 @@
 					<button
 						type="button"
 						class="w-full text-center text-sm hover:underline"
-						style="color: var(--accent-color);"
+						style="color: var(--accent);"
 						onclick={toggleForgotPassword}
 					>
 						Back to sign in

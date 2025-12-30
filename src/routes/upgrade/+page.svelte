@@ -72,7 +72,7 @@
 	<div class="w-full max-w-lg">
 		<!-- Logo/Header -->
 		<div class="text-center mb-8">
-			<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style="background-color: var(--accent-color);">
+			<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style="background-color: var(--accent);">
 				<Database class="w-8 h-8 text-white" />
 			</div>
 			<h1 class="text-2xl font-bold mb-2" style="color: var(--text-primary);">
@@ -134,7 +134,7 @@
 				<!-- In Progress State -->
 				<div class="mb-6">
 					<div class="flex items-center gap-3 mb-4">
-						<Loader2 class="w-5 h-5 animate-spin" style="color: var(--accent-color);" />
+						<Loader2 class="w-5 h-5 animate-spin" style="color: var(--accent);" />
 						<span class="font-medium" style="color: var(--text-primary);">
 							{status.currentStep || 'Initializing...'}
 						</span>
@@ -155,7 +155,7 @@
 							{#if stepStatus === 'completed'}
 								<CheckCircle class="w-5 h-5 text-green-500 flex-shrink-0" />
 							{:else if stepStatus === 'current'}
-								<Loader2 class="w-5 h-5 animate-spin flex-shrink-0" style="color: var(--accent-color);" />
+								<Loader2 class="w-5 h-5 animate-spin flex-shrink-0" style="color: var(--accent);" />
 							{:else}
 								<Circle class="w-5 h-5 flex-shrink-0" style="color: var(--text-muted);" />
 							{/if}

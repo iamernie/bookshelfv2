@@ -216,7 +216,7 @@
 		<!-- Database -->
 		<div class="card p-4">
 			<div class="flex items-center gap-3 mb-3">
-				<div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: var(--accent-color);">
+				<div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: var(--accent);">
 					<Database class="w-5 h-5 text-white" />
 				</div>
 				<div>
@@ -251,27 +251,27 @@
 		<h3 class="font-semibold mb-4" style="color: var(--text-primary);">Database Tables</h3>
 		<div class="grid grid-cols-2 md:grid-cols-6 gap-4">
 			<div class="text-center">
-				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.books}</div>
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.books}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Books</div>
 			</div>
 			<div class="text-center">
-				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.authors}</div>
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.authors}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Authors (all)</div>
 			</div>
 			<div class="text-center">
-				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.series}</div>
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.series}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Series (all)</div>
 			</div>
 			<div class="text-center">
-				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.genres}</div>
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.genres}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Genres</div>
 			</div>
 			<div class="text-center">
-				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.users}</div>
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.users}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Users</div>
 			</div>
 			<div class="text-center">
-				<div class="text-2xl font-bold" style="color: var(--accent-color);">{health.counts.sessions}</div>
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.sessions}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Sessions</div>
 			</div>
 		</div>
@@ -296,28 +296,28 @@
 						<Book class="w-4 h-4" style="color: var(--text-muted);" />
 						<span class="text-sm" style="color: var(--text-muted);">Books</span>
 					</div>
-					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.total.totalBooks}</div>
+					<div class="text-xl font-bold" style="color: var(--accent);">{health.libraryStats.total.totalBooks}</div>
 				</div>
 				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
 					<div class="flex items-center gap-2 mb-1">
 						<FileText class="w-4 h-4" style="color: var(--text-muted);" />
 						<span class="text-sm" style="color: var(--text-muted);">With Ebooks</span>
 					</div>
-					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.total.booksWithEbooks}</div>
+					<div class="text-xl font-bold" style="color: var(--accent);">{health.libraryStats.total.booksWithEbooks}</div>
 				</div>
 				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
 					<div class="flex items-center gap-2 mb-1">
 						<User class="w-4 h-4" style="color: var(--text-muted);" />
 						<span class="text-sm" style="color: var(--text-muted);">Authors (linked)</span>
 					</div>
-					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.total.totalAuthors}</div>
+					<div class="text-xl font-bold" style="color: var(--accent);">{health.libraryStats.total.totalAuthors}</div>
 				</div>
 				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
 					<div class="flex items-center gap-2 mb-1">
 						<BookOpen class="w-4 h-4" style="color: var(--text-muted);" />
 						<span class="text-sm" style="color: var(--text-muted);">Series (linked)</span>
 					</div>
-					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.total.totalSeries}</div>
+					<div class="text-xl font-bold" style="color: var(--accent);">{health.libraryStats.total.totalSeries}</div>
 				</div>
 			</div>
 		</div>
@@ -339,28 +339,28 @@
 						<Book class="w-4 h-4" style="color: var(--text-muted);" />
 						<span class="text-sm" style="color: var(--text-muted);">Books</span>
 					</div>
-					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.publicLibrary.totalBooks}</div>
+					<div class="text-xl font-bold" style="color: var(--accent);">{health.libraryStats.publicLibrary.totalBooks}</div>
 				</div>
 				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
 					<div class="flex items-center gap-2 mb-1">
 						<FileText class="w-4 h-4" style="color: var(--text-muted);" />
 						<span class="text-sm" style="color: var(--text-muted);">With Ebooks</span>
 					</div>
-					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.publicLibrary.booksWithEbooks}</div>
+					<div class="text-xl font-bold" style="color: var(--accent);">{health.libraryStats.publicLibrary.booksWithEbooks}</div>
 				</div>
 				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
 					<div class="flex items-center gap-2 mb-1">
 						<User class="w-4 h-4" style="color: var(--text-muted);" />
 						<span class="text-sm" style="color: var(--text-muted);">Authors (linked)</span>
 					</div>
-					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.publicLibrary.totalAuthors}</div>
+					<div class="text-xl font-bold" style="color: var(--accent);">{health.libraryStats.publicLibrary.totalAuthors}</div>
 				</div>
 				<div class="p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
 					<div class="flex items-center gap-2 mb-1">
 						<BookOpen class="w-4 h-4" style="color: var(--text-muted);" />
 						<span class="text-sm" style="color: var(--text-muted);">Series (linked)</span>
 					</div>
-					<div class="text-xl font-bold" style="color: var(--accent-color);">{health.libraryStats.publicLibrary.totalSeries}</div>
+					<div class="text-xl font-bold" style="color: var(--accent);">{health.libraryStats.publicLibrary.totalSeries}</div>
 				</div>
 			</div>
 		</div>
@@ -397,7 +397,7 @@
 							</td>
 							<td class="py-2 px-3" style="color: var(--text-secondary);">{user.email}</td>
 							<td class="py-2 px-3 text-right">
-								<span class="px-2 py-1 rounded-full text-sm font-medium" style="background-color: var(--accent-color); color: white;">
+								<span class="px-2 py-1 rounded-full text-sm font-medium" style="background-color: var(--accent); color: white;">
 									{user.bookCount}
 								</span>
 							</td>
@@ -466,9 +466,9 @@
 			>
 				<div class="flex items-center gap-3 mb-2">
 					{#if repairLoading === 'sessions'}
-						<Loader2 class="w-5 h-5 animate-spin" style="color: var(--accent-color);" />
+						<Loader2 class="w-5 h-5 animate-spin" style="color: var(--accent);" />
 					{:else}
-						<Trash2 class="w-5 h-5" style="color: var(--accent-color);" />
+						<Trash2 class="w-5 h-5" style="color: var(--accent);" />
 					{/if}
 					<span class="font-medium" style="color: var(--text-primary);">Clean Sessions</span>
 				</div>
@@ -483,9 +483,9 @@
 			>
 				<div class="flex items-center gap-3 mb-2">
 					{#if repairLoading === 'orphaned'}
-						<Loader2 class="w-5 h-5 animate-spin" style="color: var(--accent-color);" />
+						<Loader2 class="w-5 h-5 animate-spin" style="color: var(--accent);" />
 					{:else}
-						<Wrench class="w-5 h-5" style="color: var(--accent-color);" />
+						<Wrench class="w-5 h-5" style="color: var(--accent);" />
 					{/if}
 					<span class="font-medium" style="color: var(--text-primary);">Clean Orphans</span>
 				</div>
@@ -500,9 +500,9 @@
 			>
 				<div class="flex items-center gap-3 mb-2">
 					{#if repairLoading === 'references'}
-						<Loader2 class="w-5 h-5 animate-spin" style="color: var(--accent-color);" />
+						<Loader2 class="w-5 h-5 animate-spin" style="color: var(--accent);" />
 					{:else}
-						<Database class="w-5 h-5" style="color: var(--accent-color);" />
+						<Database class="w-5 h-5" style="color: var(--accent);" />
 					{/if}
 					<span class="font-medium" style="color: var(--text-primary);">Fix References</span>
 				</div>

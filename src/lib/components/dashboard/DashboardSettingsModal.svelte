@@ -168,7 +168,7 @@
 							class="flex items-center gap-3 p-3 rounded-lg border transition-all"
 							style="
 								background-color: {dropTargetIndex === index ? 'var(--bg-hover)' : 'var(--bg-primary)'};
-								border-color: {dropTargetIndex === index ? 'var(--accent-color)' : 'var(--border-color)'};
+								border-color: {dropTargetIndex === index ? 'var(--accent)' : 'var(--border-color)'};
 								opacity: {draggedIndex === index ? '0.5' : '1'};
 							"
 							draggable="true"
@@ -196,7 +196,7 @@
 							<button
 								type="button"
 								class="relative w-11 h-6 rounded-full transition-colors"
-								style="background-color: {section.enabled ? 'var(--accent-color)' : 'var(--bg-tertiary)'};"
+								style="background-color: {section.enabled ? 'var(--accent)' : 'var(--bg-tertiary)'};"
 								onclick={() => toggleSection(section.id)}
 								aria-pressed={section.enabled}
 								aria-label="Toggle {sectionLabels[section.id]}"
@@ -215,7 +215,7 @@
 								style="background-color: var(--bg-primary); border-color: var(--border-color);"
 							>
 								<div class="flex items-center gap-2 mb-2">
-									<Sparkles class="w-4 h-4" style="color: var(--accent-color);" />
+									<Sparkles class="w-4 h-4" style="color: var(--accent);" />
 									<span class="text-sm font-medium" style="color: var(--text-primary);">
 										Select Magic Shelf
 									</span>
@@ -241,7 +241,7 @@
 									</select>
 								{:else}
 									<p class="text-sm" style="color: var(--text-muted);">
-										No Magic Shelves found. <a href="/shelves" class="underline" style="color: var(--accent-color);">Create one</a> first.
+										No Magic Shelves found. <a href="/shelves" class="underline" style="color: var(--accent);">Create one</a> first.
 									</p>
 								{/if}
 							</div>
@@ -262,8 +262,7 @@
 				</button>
 				<button
 					type="button"
-					class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-					style="background-color: var(--accent-color);"
+					class="btn-accent"
 					onclick={handleSave}
 					disabled={saving}
 				>

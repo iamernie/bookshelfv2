@@ -482,7 +482,7 @@
 					<div class="text-center">
 						<p class="text-sm" style="color: var(--text-muted);">
 							Already have an account?
-							<a href="/login" class="hover:underline" style="color: var(--accent-color);">
+							<a href="/login" class="hover:underline" style="color: var(--accent);">
 								Sign in
 							</a>
 						</p>

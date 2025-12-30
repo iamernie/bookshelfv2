@@ -92,18 +92,18 @@
 	<!-- Header -->
 	<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
 		<div>
-			<h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+			<h1 class="text-2xl font-bold flex items-center gap-2" style="color: var(--text-primary);">
 				<Bookmark class="w-7 h-7" />
 				Reading Statuses
 			</h1>
-			<p class="text-gray-500 mt-1">{total} statuses</p>
+			<p class="mt-1" style="color: var(--text-muted);">{total} statuses</p>
 		</div>
 	</div>
 
 	<!-- Info Banner -->
-	<div class="flex items-start gap-3 p-4 mb-6 bg-amber-50 border border-amber-200 rounded-lg">
-		<AlertTriangle class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-		<div class="text-sm text-amber-700">
+	<div class="flex items-start gap-3 p-4 mb-6 rounded-lg" style="background-color: var(--bg-warning); border: 1px solid var(--border-warning);">
+		<AlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: var(--text-warning);" />
+		<div class="text-sm" style="color: var(--text-warning);">
 			<p class="font-medium">Reading statuses are system-defined</p>
 			<p class="mt-1">Statuses like "Read", "Reading", "To Read", etc. are built into the application and cannot be added or removed. You can only rename them for localization purposes.</p>
 		</div>
@@ -116,9 +116,9 @@
 		</div>
 	{:else if statuses.length === 0}
 		<div class="text-center py-12">
-			<Bookmark class="w-12 h-12 text-gray-300 mx-auto mb-4" />
-			<h3 class="text-lg font-medium text-gray-900 mb-2">No statuses found</h3>
-			<p class="text-gray-500">Statuses should be initialized by the system.</p>
+			<Bookmark class="w-12 h-12 mx-auto mb-4" style="color: var(--text-muted);" />
+			<h3 class="text-lg font-medium mb-2" style="color: var(--text-primary);">No statuses found</h3>
+			<p style="color: var(--text-muted);">Statuses should be initialized by the system.</p>
 		</div>
 	{:else}
 		<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

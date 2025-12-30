@@ -104,7 +104,7 @@
 					{#if i < 3}
 						<div
 							class="w-8 h-0.5"
-							style="background-color: {isPast ? 'var(--accent-color)' : 'var(--bg-tertiary)'};"
+							style="background-color: {isPast ? 'var(--accent)' : 'var(--bg-tertiary)'};"
 						></div>
 					{/if}
 				</div>
@@ -115,7 +115,7 @@
 		<div class="card p-8">
 			{#if currentStep === 'welcome'}
 				<div class="text-center">
-					<div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--accent-color);">
+					<div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--accent);">
 						<Settings class="w-8 h-8 text-white" />
 					</div>
 					<h2 class="text-xl font-semibold mb-2" style="color: var(--text-primary);">Welcome to BookShelf</h2>
@@ -125,15 +125,15 @@
 
 					<div class="space-y-3 text-left mb-6">
 						<div class="flex items-center gap-3 p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
-							<Database class="w-5 h-5" style="color: var(--accent-color);" />
+							<Database class="w-5 h-5" style="color: var(--accent);" />
 							<span style="color: var(--text-primary);">Verify database connection</span>
 						</div>
 						<div class="flex items-center gap-3 p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
-							<User class="w-5 h-5" style="color: var(--accent-color);" />
+							<User class="w-5 h-5" style="color: var(--accent);" />
 							<span style="color: var(--text-primary);">Create admin account</span>
 						</div>
 						<div class="flex items-center gap-3 p-3 rounded-lg" style="background-color: var(--bg-tertiary);">
-							<CheckCircle class="w-5 h-5" style="color: var(--accent-color);" />
+							<CheckCircle class="w-5 h-5" style="color: var(--accent);" />
 							<span style="color: var(--text-primary);">Initialize default data</span>
 						</div>
 					</div>
@@ -149,7 +149,7 @@
 
 			{:else if currentStep === 'database'}
 				<div class="text-center">
-					<div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--accent-color);">
+					<div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--accent);">
 						<Database class="w-8 h-8 text-white" />
 					</div>
 					<h2 class="text-xl font-semibold mb-2" style="color: var(--text-primary);">Database Status</h2>
@@ -207,7 +207,7 @@
 			{:else if currentStep === 'admin'}
 				<div>
 					<div class="text-center mb-6">
-						<div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--accent-color);">
+						<div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--accent);">
 							<User class="w-8 h-8 text-white" />
 						</div>
 						<h2 class="text-xl font-semibold mb-2" style="color: var(--text-primary);">Create Admin Account</h2>

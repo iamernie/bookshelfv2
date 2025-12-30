@@ -103,15 +103,15 @@
 
 				<div class="flex-1">
 					<div class="flex items-center gap-2">
-						<h2 class="text-xl font-semibold text-gray-900">{tag.name}</h2>
+						<h2 class="text-xl font-semibold" style="color: var(--text-primary);">{tag.name}</h2>
 						{#if isSystem}
-							<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+							<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium" style="background-color: var(--bg-tertiary); color: var(--text-muted);">
 								<Lock class="w-3 h-3" />
 								System
 							</span>
 						{/if}
 					</div>
-					<div class="flex items-center gap-3 mt-1 text-sm text-gray-500">
+					<div class="flex items-center gap-3 mt-1 text-sm" style="color: var(--text-muted);">
 						<span class="flex items-center gap-1">
 							<BookOpen class="w-4 h-4" />
 							{tag.bookCount ?? books.length} {(tag.bookCount ?? books.length) === 1 ? 'book' : 'books'}
@@ -126,14 +126,14 @@
 				</div>
 
 				<div
-					class="w-8 h-8 rounded-full border-4 border-white shadow"
-					style="background-color: {tag.color || '#6c757d'}"
+					class="w-8 h-8 rounded-full shadow"
+					style="background-color: {tag.color || '#6c757d'}; border: 4px solid var(--bg-secondary);"
 				></div>
 			</div>
 
 			{#if books.length > 0}
 				<div>
-					<h3 class="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+					<h3 class="text-sm font-medium mb-3 flex items-center gap-2" style="color: var(--text-secondary);">
 						<BookOpen class="w-4 h-4" />
 						Books with this tag
 					</h3>
@@ -150,14 +150,14 @@
 						{/each}
 					</div>
 					{#if books.length > 12}
-						<p class="text-sm text-gray-500 mt-2">and {books.length - 12} more...</p>
+						<p class="text-sm mt-2" style="color: var(--text-muted);">and {books.length - 12} more...</p>
 					{/if}
 				</div>
 			{/if}
 
 			{#if series.length > 0}
 				<div>
-					<h3 class="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+					<h3 class="text-sm font-medium mb-3 flex items-center gap-2" style="color: var(--text-secondary);">
 						<Library class="w-4 h-4" />
 						Series with this tag
 					</h3>
@@ -165,7 +165,10 @@
 						{#each series as s}
 							<a
 								href="/series?id={s.id}"
-								class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
+								class="px-3 py-1.5 rounded-lg text-sm transition-colors"
+								style="background-color: var(--bg-tertiary); color: var(--text-secondary);"
+								onmouseenter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+								onmouseleave={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; }}
 							>
 								{s.title}
 							</a>
@@ -175,16 +178,16 @@
 			{/if}
 
 			<!-- Action buttons -->
-			<div class="flex justify-between pt-4 border-t">
+			<div class="flex justify-between pt-4" style="border-top: 1px solid var(--border-color);">
 				{#if isSystem}
-					<div class="flex items-center gap-2 text-sm text-amber-600">
+					<div class="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
 						<AlertTriangle class="w-4 h-4" />
 						System tags can't be deleted or renamed
 					</div>
 				{:else}
 					<button
 						type="button"
-						class="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-2"
+						class="btn-ghost px-4 py-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg transition-colors flex items-center gap-2"
 						onclick={handleDelete}
 						disabled={deleting}
 					>
@@ -194,7 +197,7 @@
 				{/if}
 				<button
 					type="button"
-					class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+					class="btn-accent flex items-center gap-2"
 					onclick={() => currentMode = 'edit'}
 				>
 					<Edit2 class="w-4 h-4" />
@@ -206,14 +209,14 @@
 		<!-- Edit/Add Mode -->
 		<form onsubmit={(e) => { e.preventDefault(); handleSave(); }} class="p-6 space-y-4">
 			{#if isSystem && currentMode === 'edit'}
-				<div class="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+				<div class="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
 					<Lock class="w-4 h-4 flex-shrink-0" />
 					<span>System tags can only have their color and icon changed. The name cannot be modified.</span>
 				</div>
 			{/if}
 
 			<div>
-				<label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+				<label for="name" class="label">
 					Name {#if !isSystem}<span class="text-red-500">*</span>{/if}
 				</label>
 				<input
@@ -222,18 +225,20 @@
 					bind:value={name}
 					required={!isSystem}
 					disabled={isSystem}
-					class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-500"
+					class="input"
+					class:opacity-50={isSystem}
+					class:cursor-not-allowed={isSystem}
 				/>
 			</div>
 
 			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
+				<label class="label">Color</label>
 				<div class="flex flex-wrap gap-2">
 					{#each colors as c}
 						<button
 							type="button"
-							class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 {color === c.value ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : 'border-white'}"
-							style="background-color: {c.value}"
+							class="w-8 h-8 rounded-full border-2 transition-transform hover:scale-110"
+							style="background-color: {c.value}; border-color: var(--bg-secondary); {color === c.value ? 'box-shadow: 0 0 0 2px var(--accent); transform: scale(1.1);' : ''}"
 							title={c.name}
 							onclick={() => color = c.value}
 						></button>
@@ -242,14 +247,14 @@
 			</div>
 
 			<div>
-				<label for="icon" class="block text-sm font-medium text-gray-700 mb-1">Icon (optional)</label>
+				<label for="icon" class="label">Icon (optional)</label>
 				<div class="flex gap-3">
 					<input
 						id="icon"
 						type="text"
 						bind:value={icon}
 						placeholder="e.g., heart, star"
-						class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+						class="input flex-1"
 					/>
 					<div
 						class="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -268,14 +273,14 @@
 						{/if}
 					</div>
 				</div>
-				<p class="text-xs text-gray-500 mt-1">Supported icons: heart, star. Leave empty for default tag icon.</p>
+				<p class="text-xs mt-1" style="color: var(--text-muted);">Supported icons: heart, star. Leave empty for default tag icon.</p>
 			</div>
 
 			<!-- Form buttons -->
-			<div class="flex justify-end gap-3 pt-4 border-t">
+			<div class="flex justify-end gap-3 pt-4" style="border-top: 1px solid var(--border-color);">
 				<button
 					type="button"
-					class="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+					class="btn-secondary"
 					onclick={() => currentMode === 'add' ? onClose() : currentMode = 'view'}
 				>
 					Cancel
@@ -283,7 +288,7 @@
 				<button
 					type="submit"
 					disabled={saving || (!isSystem && !name.trim())}
-					class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+					class="btn-accent"
 				>
 					{saving ? 'Saving...' : 'Save'}
 				</button>

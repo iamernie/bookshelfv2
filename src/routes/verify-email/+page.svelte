@@ -91,7 +91,7 @@
 				<!-- Verifying State -->
 				<div class="text-center space-y-4">
 					<div class="flex justify-center">
-						<Loader2 class="w-12 h-12 animate-spin" style="color: var(--accent-color);" />
+						<Loader2 class="w-12 h-12 animate-spin" style="color: var(--accent);" />
 					</div>
 					<h2 class="text-xl font-semibold" style="color: var(--text-primary);">
 						Verifying your email...
@@ -222,7 +222,7 @@
 					{/if}
 
 					<div class="text-center pt-4">
-						<a href="/login" class="text-sm hover:underline" style="color: var(--accent-color);">
+						<a href="/login" class="text-sm hover:underline" style="color: var(--accent);">
 							Back to Sign In
 						</a>
 					</div>

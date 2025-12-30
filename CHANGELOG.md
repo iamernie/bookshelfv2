@@ -7,6 +7,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-12-29
+
+### Major Release - BookShelf V2
+
+This is the first stable release of BookShelf V2, a complete rewrite from the ground up with modern technologies and a significantly expanded feature set.
+
+### Highlights
+
+#### Complete Audiobook Support
+- Full audiobook playback with custom audio player
+- Multi-track support (MP3 collections) and single-file M4B audiobooks
+- Chapter navigation with automatic chapter detection
+- Sleep timer with gradual volume fade
+- Bookmarks with notes
+- Playback speed control (0.5x - 2x)
+- Keyboard shortcuts for hands-free control
+- Progress syncing across devices
+- Automatic completion tracking (syncs to book status)
+
+#### Progressive Web App (PWA)
+- Install BookShelf to your home screen on mobile or desktop
+- Offline support via service worker caching
+- App-like experience with no browser chrome
+- Custom app icons and splash screens
+- Quick action shortcuts (Add Book, My Library, Audiobooks)
+
+#### Multi-User System
+- Role-based access (admin, member)
+- Personal libraries - each user has their own book collection
+- Public library for shared books with file requirements
+- OIDC/SSO authentication (Authentik, Keycloak, Google, GitHub)
+- Invite codes for controlled registration
+- Email verification and password reset
+
+#### Customizable Dashboard
+- Toggle sections on/off
+- Drag-and-drop section reordering
+- Smart Collection section (display any Magic Shelf on dashboard)
+- Reading goal progress
+- Continue Reading, Up Next in Series, Recently Added sections
+
+#### Ebook Reader
+- EPUB reader with progress persistence
+- PDF viewer
+- CBZ comic reader
+- Touch navigation on mobile
+- Metadata extraction from uploaded files
+
+#### Modern Tech Stack
+- SvelteKit 2 with Svelte 5
+- SQLite with Drizzle ORM
+- TypeScript throughout
+- Tailwind CSS
+- Lucide icons
+
+### Added
+- **PWA support** - Install as app, offline caching, home screen shortcuts
+- **Service worker** - Caches static assets for faster loads and offline access
+- **Optimized app icons** - Multiple sizes for all platforms (16px to 512px)
+- **Web app manifest** - Proper PWA configuration with theme colors and shortcuts
+
 ## [0.7.11] - 2025-12-29
 
 ### Added

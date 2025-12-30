@@ -121,7 +121,7 @@
 				<button
 					type="submit"
 					class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-					style="background-color: {enabled ? 'var(--accent-color)' : 'var(--bg-tertiary)'};"
+					style="background-color: {enabled ? 'var(--accent)' : 'var(--bg-tertiary)'};"
 				>
 					<span
 						class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
@@ -194,14 +194,14 @@
 						type="button"
 						class="p-4 rounded-lg text-left transition-all border-2"
 						style="background-color: var(--bg-tertiary); border-color: {selectedType === wtype.id
-							? 'var(--accent-color)'
+							? 'var(--accent)'
 							: 'transparent'};"
 						onclick={() => (selectedType = wtype.id)}
 					>
 						<div class="flex items-center gap-3 mb-2">
 							<wtype.icon
 								class="w-5 h-5"
-								style="color: {selectedType === wtype.id ? 'var(--accent-color)' : 'var(--text-muted)'};"
+								style="color: {selectedType === wtype.id ? 'var(--accent)' : 'var(--text-muted)'};"
 							/>
 							<span class="font-medium" style="color: var(--text-primary);">{wtype.name}</span>
 						</div>
@@ -228,7 +228,7 @@
 								type="button"
 								class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
 								style="background-color: {selectedTheme === 'light'
-									? 'var(--accent-color)'
+									? 'var(--accent)'
 									: 'var(--bg-tertiary)'}; color: {selectedTheme === 'light' ? 'white' : 'var(--text-primary)'};"
 								onclick={() => (selectedTheme = 'light')}
 							>
@@ -238,7 +238,7 @@
 								type="button"
 								class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
 								style="background-color: {selectedTheme === 'dark'
-									? 'var(--accent-color)'
+									? 'var(--accent)'
 									: 'var(--bg-tertiary)'}; color: {selectedTheme === 'dark' ? 'white' : 'var(--text-primary)'};"
 								onclick={() => (selectedTheme = 'dark')}
 							>
@@ -300,7 +300,7 @@
 						type="button"
 						class="px-3 py-1.5 rounded text-sm font-medium transition-colors"
 						style="background-color: {activeCodeTab === 'iframe'
-							? 'var(--accent-color)'
+							? 'var(--accent)'
 							: 'var(--bg-tertiary)'}; color: {activeCodeTab === 'iframe' ? 'white' : 'var(--text-primary)'};"
 						onclick={() => (activeCodeTab = 'iframe')}
 					>
@@ -311,7 +311,7 @@
 						type="button"
 						class="px-3 py-1.5 rounded text-sm font-medium transition-colors"
 						style="background-color: {activeCodeTab === 'json'
-							? 'var(--accent-color)'
+							? 'var(--accent)'
 							: 'var(--bg-tertiary)'}; color: {activeCodeTab === 'json' ? 'white' : 'var(--text-primary)'};"
 						onclick={() => (activeCodeTab = 'json')}
 					>

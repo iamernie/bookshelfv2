@@ -13,7 +13,7 @@
 <section class="mb-8">
 	<div class="flex items-center justify-between mb-4">
 		<div class="flex items-center gap-2">
-			<Sparkles class="w-5 h-5" style="color: var(--accent-color);" />
+			<Sparkles class="w-5 h-5" style="color: var(--accent);" />
 			<h2 class="text-xl font-semibold" style="color: var(--text-primary);">
 				{data.shelfName || 'Smart Collection'}
 			</h2>
@@ -23,7 +23,7 @@
 			<a
 				href="/shelves/{data.shelfId}"
 				class="flex items-center gap-1 text-sm font-medium transition-colors hover:opacity-80"
-				style="color: var(--accent-color);"
+				style="color: var(--accent);"
 			>
 				View All
 				<ArrowRight class="w-4 h-4" />
