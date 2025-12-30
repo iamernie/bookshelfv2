@@ -64,7 +64,7 @@ export const OPERATORS_BY_TYPE = {
 	text: ['equals', 'not_equals', 'contains', 'not_contains', 'is_null', 'is_not_null'],
 	number: ['equals', 'not_equals', 'greater_than', 'less_than', 'greater_or_equal', 'less_or_equal', 'between', 'is_null', 'is_not_null'],
 	select: ['equals', 'not_equals', 'in', 'not_in', 'is_null', 'is_not_null'],
-	date: ['equals', 'not_equals', 'greater_than', 'less_than', 'between', 'is_null', 'is_not_null'],
+	date: ['equals', 'not_equals', 'greater_than', 'less_than', 'greater_or_equal', 'less_or_equal', 'between', 'is_null', 'is_not_null'],
 	boolean: ['is_null', 'is_not_null']
 } as const;
 

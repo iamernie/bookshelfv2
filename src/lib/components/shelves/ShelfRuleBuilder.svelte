@@ -83,6 +83,8 @@
 			{ value: 'not_equals', label: 'is not' },
 			{ value: 'greater_than', label: 'after' },
 			{ value: 'less_than', label: 'before' },
+			{ value: 'greater_or_equal', label: 'on or after' },
+			{ value: 'less_or_equal', label: 'on or before' },
 			{ value: 'is_null', label: 'is empty' },
 			{ value: 'is_not_null', label: 'is not empty' }
 		],
