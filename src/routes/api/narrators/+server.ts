@@ -33,7 +33,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const narrator = await createNarrator({
 		name: data.name.trim(),
 		bio: data.bio?.trim() || null,
-		url: data.url?.trim() || null
+		website: data.website?.trim() || null
 	});
 
 	return json(narrator, { status: 201 });

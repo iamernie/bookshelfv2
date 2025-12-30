@@ -12,11 +12,11 @@ const config = {
 			$stores: 'src/lib/stores',
 			$types: 'src/lib/types'
 		},
-		// Disable CSRF origin check for self-hosted deployments
+		// Allow all origins for self-hosted deployments
 		// Users may access via different origins (IP, hostname, reverse proxy)
 		// API routes are protected by session authentication
 		csrf: {
-			checkOrigin: false
+			trustedOrigins: ['*']
 		}
 	}
 };
