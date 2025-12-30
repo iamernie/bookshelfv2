@@ -49,12 +49,7 @@ export const GET: RequestHandler = async ({ params, cookies, url, locals }) => {
 		maxAge: 60 * 10 // 10 minutes
 	});
 
-	try {
-		// Build authorization URL and redirect
-		const authUrl = await buildAuthorizationUrl(provider, redirectUri, state, nonce);
-		throw redirect(302, authUrl);
-	} catch (e) {
-		console.error('[oidc] Failed to build authorization URL:', e);
-		throw redirect(302, '/login?error=oidc_error');
-	}
+	// Build authorization URL and redirect to OIDC provider
+	const authUrl = await buildAuthorizationUrl(provider, redirectUri, state, nonce);
+	throw redirect(302, authUrl);
 };

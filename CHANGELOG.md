@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] - 2025-12-30
+
+### Added
+- **OIDC Setup Instructions** - Comprehensive setup guide on the OIDC settings page
+  - Step-by-step instructions for Authentik, Keycloak, Google, and GitHub
+  - Links to official documentation for each provider
+  - Displays the correct Redirect URI (callback URL) to configure
+  - Troubleshooting tips for common issues
+
+### Fixed
+- **OIDC Authentication** - Fixed redirect loop preventing login with OIDC providers
+  - SvelteKit's redirect was being incorrectly caught as an error
+
 ## [2.2.0] - 2025-12-30
 
 ### Added

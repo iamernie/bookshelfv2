@@ -290,6 +290,131 @@
 		</p>
 	</div>
 
+	<!-- Setup Instructions -->
+	<details class="rounded-lg mb-6" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
+		<summary class="cursor-pointer p-4 flex items-center gap-2 font-medium" style="color: var(--text-primary);">
+			<AlertCircle class="w-5 h-5" style="color: var(--accent);" />
+			Setup Instructions & Provider Documentation
+		</summary>
+
+		<div class="px-4 pb-4 space-y-4">
+			<!-- Redirect URI Info -->
+			<div class="p-3 rounded-lg" style="background: var(--bg-tertiary);">
+				<p class="text-sm font-medium mb-2" style="color: var(--text-primary);">Redirect URI (Callback URL)</p>
+				<p class="text-xs mb-2" style="color: var(--text-muted);">Configure this in your identity provider:</p>
+				<code class="block text-xs px-3 py-2 rounded select-all" style="background: var(--bg-primary); color: var(--accent);">
+					{typeof window !== 'undefined' ? window.location.origin : 'https://your-bookshelf-url'}/auth/oidc/callback
+				</code>
+			</div>
+
+			<!-- Provider Guides -->
+			<div class="space-y-3">
+				<p class="text-sm font-medium" style="color: var(--text-primary);">Provider Setup Guides</p>
+
+				<!-- Authentik -->
+				<div class="p-3 rounded-lg" style="background: var(--bg-tertiary);">
+					<div class="flex items-center justify-between mb-2">
+						<span class="font-medium text-sm" style="color: var(--text-primary);">Authentik</span>
+						<a
+							href="https://docs.goauthentik.io/docs/applications"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-xs flex items-center gap-1 hover:underline"
+							style="color: var(--accent);"
+						>
+							Documentation <ExternalLink class="w-3 h-3" />
+						</a>
+					</div>
+					<ol class="text-xs space-y-1 list-decimal list-inside" style="color: var(--text-muted);">
+						<li>Go to <strong>Applications → Providers</strong>, create an <strong>OAuth2/OpenID Provider</strong></li>
+						<li>Set the Redirect URI to the callback URL above</li>
+						<li>Go to <strong>Applications → Applications</strong>, create a new application and link the provider</li>
+						<li>Copy the <strong>Client ID</strong> and <strong>Client Secret</strong> from the provider settings</li>
+						<li>Issuer URL format: <code style="color: var(--accent);">https://authentik.example.com/application/o/your-app-slug/</code></li>
+					</ol>
+				</div>
+
+				<!-- Keycloak -->
+				<div class="p-3 rounded-lg" style="background: var(--bg-tertiary);">
+					<div class="flex items-center justify-between mb-2">
+						<span class="font-medium text-sm" style="color: var(--text-primary);">Keycloak</span>
+						<a
+							href="https://www.keycloak.org/docs/latest/server_admin/#_oidc_clients"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-xs flex items-center gap-1 hover:underline"
+							style="color: var(--accent);"
+						>
+							Documentation <ExternalLink class="w-3 h-3" />
+						</a>
+					</div>
+					<ol class="text-xs space-y-1 list-decimal list-inside" style="color: var(--text-muted);">
+						<li>Go to <strong>Clients</strong> and click <strong>Create client</strong></li>
+						<li>Set Client type to <strong>OpenID Connect</strong></li>
+						<li>Enable <strong>Client authentication</strong> for confidential access</li>
+						<li>Add the Redirect URI to <strong>Valid redirect URIs</strong></li>
+						<li>Issuer URL format: <code style="color: var(--accent);">https://keycloak.example.com/realms/your-realm</code></li>
+					</ol>
+				</div>
+
+				<!-- Google -->
+				<div class="p-3 rounded-lg" style="background: var(--bg-tertiary);">
+					<div class="flex items-center justify-between mb-2">
+						<span class="font-medium text-sm" style="color: var(--text-primary);">Google</span>
+						<a
+							href="https://developers.google.com/identity/openid-connect/openid-connect"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-xs flex items-center gap-1 hover:underline"
+							style="color: var(--accent);"
+						>
+							Documentation <ExternalLink class="w-3 h-3" />
+						</a>
+					</div>
+					<ol class="text-xs space-y-1 list-decimal list-inside" style="color: var(--text-muted);">
+						<li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" class="hover:underline" style="color: var(--accent);">Google Cloud Console</a></li>
+						<li>Create a new <strong>OAuth 2.0 Client ID</strong> (Web application type)</li>
+						<li>Add the Redirect URI to <strong>Authorized redirect URIs</strong></li>
+						<li>Issuer URL: <code style="color: var(--accent);">https://accounts.google.com</code></li>
+					</ol>
+				</div>
+
+				<!-- GitHub -->
+				<div class="p-3 rounded-lg" style="background: var(--bg-tertiary);">
+					<div class="flex items-center justify-between mb-2">
+						<span class="font-medium text-sm" style="color: var(--text-primary);">GitHub</span>
+						<a
+							href="https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/creating-an-oauth-app"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="text-xs flex items-center gap-1 hover:underline"
+							style="color: var(--accent);"
+						>
+							Documentation <ExternalLink class="w-3 h-3" />
+						</a>
+					</div>
+					<ol class="text-xs space-y-1 list-decimal list-inside" style="color: var(--text-muted);">
+						<li>Go to <a href="https://github.com/settings/developers" target="_blank" rel="noopener noreferrer" class="hover:underline" style="color: var(--accent);">GitHub Developer Settings</a></li>
+						<li>Click <strong>New OAuth App</strong></li>
+						<li>Set Authorization callback URL to the Redirect URI above</li>
+						<li>Note: GitHub uses OAuth2, not full OIDC. Use issuer: <code style="color: var(--accent);">https://github.com</code></li>
+					</ol>
+				</div>
+			</div>
+
+			<!-- Troubleshooting -->
+			<div class="p-3 rounded-lg" style="background: var(--bg-tertiary);">
+				<p class="text-sm font-medium mb-2" style="color: var(--text-primary);">Troubleshooting</p>
+				<ul class="text-xs space-y-1" style="color: var(--text-muted);">
+					<li>• <strong>Redirect URI mismatch:</strong> Ensure the callback URL in your provider exactly matches (including trailing slashes)</li>
+					<li>• <strong>Invalid issuer:</strong> The issuer URL should NOT include <code>.well-known/openid-configuration</code></li>
+					<li>• <strong>Connection failed:</strong> Verify your server can reach the identity provider (check firewall/DNS)</li>
+					<li>• <strong>Missing claims:</strong> Ensure your provider is configured to include <code>email</code> and <code>name</code> claims</li>
+				</ul>
+			</div>
+		</div>
+	</details>
+
 	<!-- Providers List -->
 	{#if providers.length === 0}
 		<div class="text-center py-12 rounded-lg" style="background: var(--bg-secondary);">
