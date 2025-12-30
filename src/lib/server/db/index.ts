@@ -1083,11 +1083,14 @@ function runMigrations() {
 	if (tableExists('books')) {
 		safeAddColumn('books', 'ownerId', 'INTEGER REFERENCES users(id)');
 
-		// Migrate existing books to admin user (id=1) if they don't have an owner
+		// Migrate existing PERSONAL books to admin user if they don't have an owner
+		// Public library books (libraryType = 'public') should NOT have an owner
 		try {
-			// Check if we have any books without an owner
+			// Check if we have any personal books without an owner
 			const unownedBooks = sqlite.prepare(`
-				SELECT COUNT(*) as count FROM books WHERE ownerId IS NULL
+				SELECT COUNT(*) as count FROM books
+				WHERE ownerId IS NULL
+				AND (libraryType IS NULL OR libraryType = 'personal')
 			`).get() as { count: number };
 
 			if (unownedBooks.count > 0) {
@@ -1103,17 +1106,43 @@ function runMigrations() {
 
 				const ownerId = adminUser?.id || fallbackUser?.id || 1;
 
+				// Only assign owner to personal books, NOT public library books
 				const result = sqlite.prepare(`
-					UPDATE books SET ownerId = ? WHERE ownerId IS NULL
+					UPDATE books SET ownerId = ?
+					WHERE ownerId IS NULL
+					AND (libraryType IS NULL OR libraryType = 'personal')
 				`).run(ownerId);
 
 				if (result.changes > 0) {
-					console.log(`[db] Assigned ${result.changes} existing books to user ${ownerId}`);
+					console.log(`[db] Assigned ${result.changes} existing personal books to user ${ownerId}`);
 					migrationsMade = true;
 				}
 			}
 		} catch (e) {
 			console.error('[db] Failed to migrate book ownership:', e);
+		}
+
+		// Fix: Clear ownerId from public library books (they shouldn't have an owner)
+		try {
+			const publicWithOwner = sqlite.prepare(`
+				SELECT COUNT(*) as count FROM books
+				WHERE libraryType = 'public' AND ownerId IS NOT NULL
+			`).get() as { count: number };
+
+			if (publicWithOwner.count > 0) {
+				ensureBackup();
+				const result = sqlite.prepare(`
+					UPDATE books SET ownerId = NULL
+					WHERE libraryType = 'public' AND ownerId IS NOT NULL
+				`).run();
+
+				if (result.changes > 0) {
+					console.log(`[db] Cleared ownerId from ${result.changes} public library books`);
+					migrationsMade = true;
+				}
+			}
+		} catch (e) {
+			console.error('[db] Failed to clear ownerId from public books:', e);
 		}
 
 		// Create index for ownerId queries
