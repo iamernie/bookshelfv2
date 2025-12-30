@@ -54,6 +54,9 @@ This document outlines planned features, improvements, and future direction for 
   - Show/hide individual sections (Reading Goal, Continue Reading, Up Next, Recently Added, Recently Completed)
   - Smart Collection section to display any Magic Shelf on the dashboard
   - Settings persist per user
+- [x] **Mobile reader improvements** - Fixed ebook and audiobook playback on mobile devices
+  - Touch navigation zones for ebook reader
+  - Autoplay restriction handling for audio player
 
 ---
 

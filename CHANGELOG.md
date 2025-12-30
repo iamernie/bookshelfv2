@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.11] - 2025-12-29
+
+### Added
+- **Admin settings for audiobook storage** - Configure audiobook storage path and file naming pattern in Settings → Storage
+- **Dropdown selectors for settings** - Converted freeform fields to dropdowns where appropriate (Default Role, Default Sort, Default View, Amazon Domain)
+
+### Fixed
+- **Mobile audiobook playback** - Fixed audio not playing on mobile devices due to browser autoplay restrictions
+- **Mobile ebook navigation** - Fixed ebook reader page navigation not working on mobile devices
+  - Added touch zones on left/right edges for tap-to-navigate
+  - Added click handler inside epub iframe for navigation
+  - Fixed chapter title stuck on "Loading..." - now properly shows chapter name or "Reading..."
+
 ## [0.7.10] - 2025-12-29
 
 ### Added

@@ -184,24 +184,35 @@
 			audioElement.currentTime = startTime;
 			audioElement.playbackRate = playbackRate;
 
-			audioElement.onloadedmetadata = () => {
+			audioElement.onloadedmetadata = async () => {
 				isLoading = false;
 				duration = audioElement.duration;
 				if (wasPlaying) {
-					audioElement.play();
+					try {
+						await audioElement.play();
+					} catch (err) {
+						console.warn('[AudioPlayer] Auto-play after track load prevented:', err);
+					}
 				}
 			};
 		}
 	}
 
 	// Play/Pause toggle
-	function togglePlay() {
+	async function togglePlay() {
 		if (!audioElement) return;
 
 		if (isPlaying) {
 			audioElement.pause();
 		} else {
-			audioElement.play();
+			try {
+				await audioElement.play();
+			} catch (err) {
+				// Handle autoplay restriction on mobile
+				console.warn('[AudioPlayer] Play was prevented:', err);
+				// On mobile, we may need user interaction first
+				// The play attempt should still work on subsequent taps
+			}
 		}
 	}
 
@@ -540,13 +551,17 @@
 		reportProgress();
 	}
 
-	function onTrackEnded() {
+	async function onTrackEnded() {
 		if (currentTrackIndex < tracks.length - 1) {
 			// Go to next track
 			currentTrackIndex++;
 			loadTrack(currentTrackIndex, 0);
-			if (isPlaying) {
-				audioElement?.play();
+			if (isPlaying && audioElement) {
+				try {
+					await audioElement.play();
+				} catch (err) {
+					console.warn('[AudioPlayer] Auto-play next track prevented:', err);
+				}
 			}
 		} else {
 			// Audiobook finished

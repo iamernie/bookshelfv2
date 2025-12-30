@@ -40,6 +40,20 @@ export const DEFAULT_SETTINGS = {
 		label: 'Cover Path Pattern',
 		description: 'Pattern for organizing covers. Same placeholders as ebook pattern.'
 	},
+	'storage.audiobooks_path': {
+		value: './data/audiobooks',
+		type: 'string',
+		category: 'storage',
+		label: 'Audiobooks Path',
+		description: 'Directory where audiobook files are stored'
+	},
+	'storage.audiobook_path_pattern': {
+		value: '{author}/<{series}/>{title}',
+		type: 'string',
+		category: 'storage',
+		label: 'Audiobook Path Pattern',
+		description: 'Pattern for organizing audiobooks. Same placeholders as ebook pattern.'
+	},
 	'storage.auto_organize': {
 		value: 'false',
 		type: 'boolean',
@@ -86,10 +100,15 @@ export const DEFAULT_SETTINGS = {
 	},
 	'registration.default_role': {
 		value: 'member',
-		type: 'string',
+		type: 'select',
 		category: 'registration',
 		label: 'Default Role for New Users',
-		description: 'Role assigned to newly registered users (member, viewer, guest)'
+		description: 'Role assigned to newly registered users',
+		options: [
+			{ value: 'member', label: 'Member' },
+			{ value: 'viewer', label: 'Viewer' },
+			{ value: 'guest', label: 'Guest' }
+		]
 	},
 	'registration.require_admin_approval': {
 		value: 'false',
@@ -115,17 +134,29 @@ export const DEFAULT_SETTINGS = {
 	},
 	'display.default_sort': {
 		value: 'title',
-		type: 'string',
+		type: 'select',
 		category: 'display',
 		label: 'Default Sort',
-		description: 'Default sorting for book lists (title, author, rating, date)'
+		description: 'Default sorting for book lists',
+		options: [
+			{ value: 'title', label: 'Title' },
+			{ value: 'author', label: 'Author' },
+			{ value: 'rating', label: 'Rating' },
+			{ value: 'createdAt', label: 'Date Added' },
+			{ value: 'publishYear', label: 'Publish Year' }
+		]
 	},
 	'display.default_view': {
 		value: 'grid',
-		type: 'string',
+		type: 'select',
 		category: 'display',
 		label: 'Default View',
-		description: 'Default view mode (grid, list, compact)'
+		description: 'Default view mode for book lists',
+		options: [
+			{ value: 'grid', label: 'Grid' },
+			{ value: 'list', label: 'List' },
+			{ value: 'compact', label: 'Compact' }
+		]
 	},
 	// OPDS settings
 	'opds.enabled': {
@@ -202,10 +233,22 @@ export const DEFAULT_SETTINGS = {
 	},
 	'metadata.amazon_domain': {
 		value: 'com',
-		type: 'string',
+		type: 'select',
 		category: 'metadata',
 		label: 'Amazon Domain',
-		description: 'Amazon domain to use (com, co.uk, de, fr, it, es, ca, com.au, co.jp, in)'
+		description: 'Amazon regional domain to use for lookups',
+		options: [
+			{ value: 'com', label: 'United States (.com)' },
+			{ value: 'co.uk', label: 'United Kingdom (.co.uk)' },
+			{ value: 'de', label: 'Germany (.de)' },
+			{ value: 'fr', label: 'France (.fr)' },
+			{ value: 'it', label: 'Italy (.it)' },
+			{ value: 'es', label: 'Spain (.es)' },
+			{ value: 'ca', label: 'Canada (.ca)' },
+			{ value: 'com.au', label: 'Australia (.com.au)' },
+			{ value: 'co.jp', label: 'Japan (.co.jp)' },
+			{ value: 'in', label: 'India (.in)' }
+		]
 	},
 	'metadata.comicvine_enabled': {
 		value: 'false',

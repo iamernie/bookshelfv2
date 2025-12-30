@@ -11,6 +11,11 @@
 		example: string;
 	}
 
+	interface SettingOption {
+		value: string;
+		label: string;
+	}
+
 	interface Setting {
 		key: string;
 		value: string;
@@ -18,6 +23,7 @@
 		category: string;
 		label: string;
 		description: string;
+		options?: SettingOption[];
 	}
 
 	let { data } = $props();
@@ -59,6 +65,7 @@
 	let placeholders = $state<Placeholder[]>([]);
 	let ebookPatternPreview = $state('');
 	let coverPatternPreview = $state('');
+	let audiobookPatternPreview = $state('');
 	let showPatternHelp = $state(false);
 
 	// Email test state
@@ -90,7 +97,7 @@
 	});
 
 	// Update pattern previews when patterns change
-	async function updatePatternPreview(pattern: string, type: 'ebook' | 'cover') {
+	async function updatePatternPreview(pattern: string, type: 'ebook' | 'cover' | 'audiobook') {
 		try {
 			const res = await fetch('/api/settings/patterns', {
 				method: 'POST',
@@ -100,8 +107,10 @@
 			const data = await res.json();
 			if (type === 'ebook') {
 				ebookPatternPreview = data.preview || '';
-			} else {
+			} else if (type === 'cover') {
 				coverPatternPreview = data.preview || '';
+			} else {
+				audiobookPatternPreview = data.preview || '';
 			}
 		} catch (err) {
 			console.error('Failed to preview pattern:', err);
@@ -112,8 +121,10 @@
 	$effect(() => {
 		const ebookPattern = editedSettings['storage.ebook_path_pattern'];
 		const coverPattern = editedSettings['storage.cover_path_pattern'];
+		const audiobookPattern = editedSettings['storage.audiobook_path_pattern'];
 		if (ebookPattern) updatePatternPreview(ebookPattern, 'ebook');
 		if (coverPattern) updatePatternPreview(coverPattern, 'cover');
+		if (audiobookPattern) updatePatternPreview(audiobookPattern, 'audiobook');
 	});
 
 	// Initialize edited settings from data
@@ -769,7 +780,7 @@
 									<label for={setting.key} class="font-medium" style="color: var(--text-primary);">{setting.label}</label>
 									<p class="text-sm mt-0.5" style="color: var(--text-muted);">{setting.description}</p>
 									{#if isPatternSetting}
-										{@const preview = setting.key === 'storage.ebook_path_pattern' ? ebookPatternPreview : coverPatternPreview}
+										{@const preview = setting.key === 'storage.ebook_path_pattern' ? ebookPatternPreview : setting.key === 'storage.cover_path_pattern' ? coverPatternPreview : audiobookPatternPreview}
 										{#if preview}
 											<div class="mt-2 flex items-center gap-2">
 												<span class="text-xs font-medium" style="color: var(--text-muted);">Preview:</span>
@@ -793,6 +804,19 @@
 												<option value={String(status.id)}>{status.name}</option>
 											{/each}
 										</select>
+									{:else if setting.type === 'select' && setting.options}
+										<select
+											id={setting.key}
+											value={editedSettings[setting.key] ?? setting.value}
+											onchange={(e) => updateSetting(setting.key, (e.target as HTMLSelectElement).value)}
+											disabled={!data.isAdmin}
+											class="w-full px-3 py-2 rounded-lg text-sm"
+											style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+										>
+											{#each setting.options as option}
+												<option value={option.value}>{option.label}</option>
+											{/each}
+										</select>
 									{:else if setting.type === 'boolean'}
 										<button
 											type="button"
@@ -813,7 +837,8 @@
 												oninput={(e) => {
 													const value = (e.target as HTMLInputElement).value;
 													updateSetting(setting.key, value);
-													updatePatternPreview(value, setting.key === 'storage.ebook_path_pattern' ? 'ebook' : 'cover');
+													const patternType = setting.key === 'storage.ebook_path_pattern' ? 'ebook' : setting.key === 'storage.cover_path_pattern' ? 'cover' : 'audiobook';
+													updatePatternPreview(value, patternType);
 												}}
 												disabled={!data.isAdmin}
 												class="w-full px-3 py-2 rounded-lg text-sm font-mono"
@@ -893,7 +918,7 @@
 						Storage paths can be absolute (starting with /) or relative to the application root.
 						When changing storage paths, existing files will NOT be automatically moved.
 					</p>
-					<div class="mt-3 grid grid-cols-2 gap-4 text-sm">
+					<div class="mt-3 grid grid-cols-3 gap-4 text-sm">
 						<div>
 							<span class="font-medium" style="color: var(--text-secondary);">Default Covers:</span>
 							<code class="ml-2 px-2 py-0.5 rounded" style="background: var(--bg-tertiary);">./static/covers</code>
@@ -901,6 +926,10 @@
 						<div>
 							<span class="font-medium" style="color: var(--text-secondary);">Default Ebooks:</span>
 							<code class="ml-2 px-2 py-0.5 rounded" style="background: var(--bg-tertiary);">./static/ebooks</code>
+						</div>
+						<div>
+							<span class="font-medium" style="color: var(--text-secondary);">Default Audiobooks:</span>
+							<code class="ml-2 px-2 py-0.5 rounded" style="background: var(--bg-tertiary);">./data/audiobooks</code>
 						</div>
 					</div>
 				</div>

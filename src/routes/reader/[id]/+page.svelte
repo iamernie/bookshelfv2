@@ -111,6 +111,15 @@
 			return;
 		}
 
+		// Set a timeout for loading - if it takes too long, show error
+		const loadTimeout = setTimeout(() => {
+			if (loading) {
+				console.error('Reader load timeout');
+				errorMessage = 'The ebook is taking too long to load. Please try refreshing the page.';
+				loading = false;
+			}
+		}, 30000); // 30 second timeout
+
 		try {
 			// Import JSZip first (required by epub.js)
 			const JSZip = (await import('jszip')).default;
@@ -138,11 +147,19 @@
 			// Wait for book to be ready
 			await book.ready;
 
+			clearTimeout(loadTimeout);
 			loading = false;
 
 			// Load table of contents
 			const nav = await book.loaded.navigation;
 			toc = nav.toc || [];
+
+			// Set initial chapter title from saved progress or default
+			if (data.progress?.chapter) {
+				chapterTitle = data.progress.chapter;
+			} else {
+				chapterTitle = 'Reading...';
+			}
 
 			// Display at saved location or start
 			if (data.progress?.location) {
@@ -160,7 +177,30 @@
 
 			// Keyboard navigation inside epub
 			rendition.on('keyup', handleKeyboard);
+
+			// Handle click/tap inside epub iframe for navigation
+			// This works better than touch events for mobile compatibility
+			rendition.on('click', (e: MouseEvent) => {
+				// Get the position relative to the viewport
+				const screenWidth = window.innerWidth;
+				const clickX = e.clientX || (e as any).screenX;
+
+				// Tap in left 20% = prev, tap in right 20% = next
+				if (clickX < screenWidth * 0.2) {
+					prevPage();
+				} else if (clickX > screenWidth * 0.8) {
+					nextPage();
+				}
+				// Middle area - could toggle UI visibility
+			});
+
+			// Handle display errors
+			rendition.on('displayError', (err: any) => {
+				console.error('Display error:', err);
+				errorMessage = 'Error displaying page. The ebook may be malformed.';
+			});
 		} catch (err) {
+			clearTimeout(loadTimeout);
 			console.error('Error initializing reader:', err);
 			errorMessage = 'Failed to load ebook. The file may be corrupted.';
 			loading = false;
@@ -173,15 +213,41 @@
 
 		progressPercent = Math.round((location.start.percentage || 0) * 100);
 
-		// Try to get chapter title
-		if (book?.navigation) {
-			book.navigation.get(location.start.href).then((chapter: any) => {
-				if (chapter) {
-					chapterTitle = chapter.label || 'Chapter';
+		// Try to get chapter title from the current location
+		try {
+			// First, try to get it from the location itself if available
+			if (location.start?.index !== undefined && toc.length > 0) {
+				// Find the chapter that contains this location
+				const currentHref = location.start.href;
+				if (currentHref) {
+					const foundChapter = toc.find((ch: any) =>
+						currentHref.includes(ch.href) || ch.href?.includes(currentHref.split('#')[0])
+					);
+					if (foundChapter) {
+						chapterTitle = foundChapter.label || 'Reading...';
+						return;
+					}
 				}
-			}).catch(() => {
+			}
+
+			// Fallback: try book.navigation.get
+			if (book?.navigation && location.start?.href) {
+				book.navigation.get(location.start.href).then((chapter: any) => {
+					if (chapter?.label) {
+						chapterTitle = chapter.label;
+					} else {
+						chapterTitle = 'Reading...';
+					}
+				}).catch(() => {
+					chapterTitle = 'Reading...';
+				});
+			} else {
+				// No navigation available, just show generic text
 				chapterTitle = 'Reading...';
-			});
+			}
+		} catch (err) {
+			console.warn('[Reader] Error updating chapter title:', err);
+			chapterTitle = 'Reading...';
 		}
 	}
 
@@ -213,12 +279,28 @@
 	}
 
 	// Navigation
-	function prevPage() {
-		rendition?.prev();
+	async function prevPage() {
+		if (!rendition) {
+			console.warn('[Reader] prevPage called but no rendition');
+			return;
+		}
+		try {
+			await rendition.prev();
+		} catch (err) {
+			console.error('[Reader] Error navigating to previous page:', err);
+		}
 	}
 
-	function nextPage() {
-		rendition?.next();
+	async function nextPage() {
+		if (!rendition) {
+			console.warn('[Reader] nextPage called but no rendition');
+			return;
+		}
+		try {
+			await rendition.next();
+		} catch (err) {
+			console.error('[Reader] Error navigating to next page:', err);
+		}
 	}
 
 	function goToChapter(href: string) {
@@ -265,23 +347,46 @@
 		});
 	}
 
-	// Touch swipe handling
+	// Touch handling for navigation
 	let touchStartX = 0;
+	let touchStartY = 0;
+	let touchStartTime = 0;
 
 	function handleTouchStart(e: TouchEvent) {
 		touchStartX = e.changedTouches[0].screenX;
+		touchStartY = e.changedTouches[0].screenY;
+		touchStartTime = Date.now();
 	}
 
 	function handleTouchEnd(e: TouchEvent) {
 		const touchEndX = e.changedTouches[0].screenX;
-		const diff = touchStartX - touchEndX;
+		const touchEndY = e.changedTouches[0].screenY;
+		const touchDuration = Date.now() - touchStartTime;
+		const diffX = touchStartX - touchEndX;
+		const diffY = touchStartY - touchEndY;
 
-		if (Math.abs(diff) > 50) {
-			if (diff > 0) {
+		// Swipe detection (quick horizontal movement)
+		if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) && touchDuration < 500) {
+			if (diffX > 0) {
 				nextPage();
 			} else {
 				prevPage();
 			}
+			return;
+		}
+
+		// Tap detection - tap on left/right edge to navigate
+		if (touchDuration < 300 && Math.abs(diffX) < 10 && Math.abs(diffY) < 10) {
+			const screenWidth = window.innerWidth;
+			const tapX = touchEndX;
+
+			// Tap in left 25% = prev, tap in right 25% = next
+			if (tapX < screenWidth * 0.25) {
+				prevPage();
+			} else if (tapX > screenWidth * 0.75) {
+				nextPage();
+			}
+			// Tap in middle 50% - do nothing (could toggle UI)
 		}
 	}
 
@@ -535,10 +640,27 @@
 	<div
 		class="reader-container"
 		class:fullscreen={isFullscreen}
-		ontouchstart={handleTouchStart}
-		ontouchend={handleTouchEnd}
 	>
 		<div bind:this={readerViewEl} class="reader-view"></div>
+
+		<!-- Mobile touch zones (overlay on top of iframe for navigation) -->
+		<div class="touch-zones">
+			<button
+				type="button"
+				class="touch-zone touch-zone-left"
+				onclick={prevPage}
+				ontouchend={(e) => { e.preventDefault(); prevPage(); }}
+				aria-label="Previous page"
+			></button>
+			<div class="touch-zone touch-zone-center"></div>
+			<button
+				type="button"
+				class="touch-zone touch-zone-right"
+				onclick={nextPage}
+				ontouchend={(e) => { e.preventDefault(); nextPage(); }}
+				aria-label="Next page"
+			></button>
+		</div>
 	</div>
 
 	<!-- Navigation arrows -->
@@ -903,6 +1025,61 @@
 	@media (pointer: coarse) {
 		.nav-arrow {
 			display: none;
+		}
+	}
+
+	/* Touch zones for mobile navigation */
+	.touch-zones {
+		display: none;
+		position: absolute;
+		inset: 0;
+		z-index: 50;
+		pointer-events: none;
+	}
+
+	.touch-zone {
+		pointer-events: auto;
+		background: transparent;
+		border: none;
+		padding: 0;
+		margin: 0;
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	.touch-zone:focus {
+		outline: none;
+	}
+
+	.touch-zone-left,
+	.touch-zone-right {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 20%;
+	}
+
+	.touch-zone-left {
+		left: 0;
+	}
+
+	.touch-zone-right {
+		right: 0;
+	}
+
+	.touch-zone-center {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 20%;
+		right: 20%;
+		pointer-events: none;
+	}
+
+	/* Show touch zones only on touch devices */
+	@media (pointer: coarse) {
+		.touch-zones {
+			display: block;
 		}
 	}
 </style>

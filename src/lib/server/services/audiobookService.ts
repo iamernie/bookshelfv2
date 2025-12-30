@@ -26,6 +26,7 @@ import { parseFile } from 'music-metadata';
 import { existsSync, mkdirSync, unlinkSync, statSync } from 'fs';
 import { join, dirname, basename, extname } from 'path';
 import { env } from '$env/dynamic/private';
+import { getSetting } from './settingsService';
 
 // ============================================================================
 // Types
@@ -58,9 +59,32 @@ export interface AudiobookListResult {
 // File Storage Configuration
 // ============================================================================
 
+// Cache for the audiobooks path to avoid repeated async calls
+let _audiobooksPathCache: string | null = null;
+
+async function getAudiobooksBasePathAsync(): Promise<string> {
+	if (_audiobooksPathCache) {
+		return _audiobooksPathCache;
+	}
+	const path = await getSetting('storage.audiobooks_path');
+	_audiobooksPathCache = path;
+	return path;
+}
+
+// Synchronous version for cases where we can't use async
 function getAudiobooksBasePath(): string {
+	// If we have a cached value, use it
+	if (_audiobooksPathCache) {
+		return _audiobooksPathCache;
+	}
+	// Fall back to default - the async version will update the cache
 	const dataPath = env.DATA_PATH || './data';
 	return join(dataPath, 'audiobooks');
+}
+
+// Clear cache when settings might have changed
+export function clearAudiobooksPathCache(): void {
+	_audiobooksPathCache = null;
 }
 
 function getAudiobookPath(userId: number, audiobookId: number): string {
