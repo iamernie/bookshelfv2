@@ -3,10 +3,12 @@
  * Aggregates data for the enhanced dashboard with customizable widgets
  */
 
-import { db, books, authors, series, statuses, bookAuthors, bookSeries, genres, formats, tags, bookTags, settings, userBooks } from '$lib/server/db';
+import { db, books, authors, series, statuses, bookAuthors, bookSeries, genres, formats, tags, bookTags, settings, userBooks, magicShelves } from '$lib/server/db';
 import { eq, sql, desc, asc, and, isNotNull, ne, gte, lt, or, count, inArray } from 'drizzle-orm';
 import { getBooksCardData } from './bookService';
 import { getGoalForDashboard } from './goalsService';
+import { getDashboardConfig, getEnabledSections, type DashboardConfig, type DashboardSection, type FilterConfig } from './userPreferencesService';
+import { getShelfBooks } from './magicShelfService';
 import type { BookCardData } from '$lib/types';
 
 // Status keys
@@ -563,6 +565,78 @@ export async function saveDashboardWidgetSettings(config: DashboardWidgetConfig[
 }
 
 // ============================================
+// Smart Collection Data
+// ============================================
+export interface SmartCollectionData {
+	books: BookCardData[];
+	shelfName?: string;
+	shelfId?: number;
+	isCustomFilter?: boolean;
+}
+
+/**
+ * Get smart collection books for dashboard
+ * Can use either a Magic Shelf or a custom inline filter
+ */
+export async function getSmartCollectionBooks(
+	userId: number,
+	section: DashboardSection,
+	limit = 12
+): Promise<SmartCollectionData | null> {
+	// If using a Magic Shelf
+	if (section.shelfId) {
+		try {
+			// Get shelf info
+			const shelf = await db.select({
+				id: magicShelves.id,
+				name: magicShelves.name,
+				filterJson: magicShelves.filterJson,
+				sortField: magicShelves.sortField,
+				sortOrder: magicShelves.sortOrder
+			})
+				.from(magicShelves)
+				.where(eq(magicShelves.id, section.shelfId))
+				.limit(1);
+
+			if (shelf.length === 0) {
+				return null;
+			}
+
+			const shelfData = shelf[0];
+			const result = await getShelfBooks(section.shelfId, { userId, limit });
+
+			return {
+				books: result?.books || [],
+				shelfName: shelfData.name,
+				shelfId: shelfData.id,
+				isCustomFilter: false
+			};
+		} catch (e) {
+			console.error('[dashboard] Failed to get smart collection books:', e);
+			return null;
+		}
+	}
+
+	// If using a custom inline filter
+	if (section.customFilter) {
+		try {
+			// For now, use the same filter logic as magic shelves
+			// This would need to be expanded to support inline filters
+			// For MVP, just return empty - users should use existing Magic Shelves
+			return {
+				books: [],
+				isCustomFilter: true
+			};
+		} catch (e) {
+			console.error('[dashboard] Failed to get custom filter books:', e);
+			return null;
+		}
+	}
+
+	return null;
+}
+
+// ============================================
 // Full Dashboard Data
 // ============================================
 export interface DashboardData {
@@ -579,9 +653,23 @@ export interface DashboardData {
 	topAuthors: TopAuthor[];
 	widgetConfig: DashboardWidgetConfig[];
 	statuses: { id: number; name: string; color: string | null; icon: string | null; key: string | null }[];
+	// New dashboard config
+	dashboardConfig: DashboardConfig;
+	smartCollectionData: SmartCollectionData | null;
+	magicShelves: { id: number; name: string; icon: string | null; iconColor: string | null }[];
 }
 
 export async function getFullDashboardData(userId?: number): Promise<DashboardData> {
+	// Get dashboard config first (needed to determine what to fetch)
+	const dashboardConfig = userId
+		? await getDashboardConfig(userId)
+		: { sections: [] };
+
+	// Find smart collection section if enabled
+	const smartSection = dashboardConfig.sections.find(
+		s => s.id === 'smart-collection' && s.enabled
+	);
+
 	const [
 		stats,
 		goalData,
@@ -595,7 +683,9 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 		monthlyReading,
 		topAuthors,
 		widgetConfig,
-		allStatuses
+		allStatuses,
+		allMagicShelves,
+		smartCollectionData
 	] = await Promise.all([
 		getStatsOverview(userId),
 		getGoalForDashboard(userId),
@@ -609,7 +699,23 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 		getMonthlyReadingData(userId),
 		getTopAuthors(userId, 5),
 		getDashboardWidgetSettings(userId),
-		db.select().from(statuses).orderBy(statuses.sortOrder)
+		db.select().from(statuses).orderBy(statuses.sortOrder),
+		// Get magic shelves for the settings modal
+		userId
+			? db.select({
+				id: magicShelves.id,
+				name: magicShelves.name,
+				icon: magicShelves.icon,
+				iconColor: magicShelves.iconColor
+			})
+				.from(magicShelves)
+				.where(eq(magicShelves.userId, userId))
+				.orderBy(magicShelves.displayOrder)
+			: Promise.resolve([]),
+		// Get smart collection books if section is enabled
+		smartSection && userId
+			? getSmartCollectionBooks(userId, smartSection, 12)
+			: Promise.resolve(null)
 	]);
 
 	return {
@@ -625,6 +731,9 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 		monthlyReading,
 		topAuthors,
 		widgetConfig,
-		statuses: allStatuses
+		statuses: allStatuses,
+		dashboardConfig,
+		smartCollectionData,
+		magicShelves: allMagicShelves
 	};
 }

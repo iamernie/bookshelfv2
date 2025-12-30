@@ -992,6 +992,11 @@ function runMigrations() {
 		)
 	`);
 
+	// Add dashboardConfig column to user_preferences (if missing)
+	if (tableExists('user_preferences')) {
+		safeAddColumn('user_preferences', 'dashboardConfig', 'TEXT');
+	}
+
 	// Create index for user_preferences queries
 	try {
 		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_user_preferences_user ON user_preferences(userId)');

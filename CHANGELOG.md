@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.9] - 2025-12-29
+
+### Added
+- **Customizable dashboard** - Click the gear icon on the dashboard header to:
+  - Toggle sections on/off (Reading Goal, Continue Reading, Smart Collection, Up Next in Series, Recently Added, Recently Completed)
+  - Drag and drop to reorder sections
+  - Add a Smart Collection section that displays books from any Magic Shelf
+
 ## [0.7.8] - 2025-12-29
 
 ### Changed

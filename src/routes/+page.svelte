@@ -20,14 +20,33 @@
 		Settings,
 		ChevronRight,
 		CheckCircle2,
-		Hash
+		Hash,
+		Sparkles
 	} from 'lucide-svelte';
 	import BookCard from '$lib/components/book/BookCard.svelte';
 	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
+	import DashboardSettingsModal from '$lib/components/dashboard/DashboardSettingsModal.svelte';
+	import SmartCollectionSection from '$lib/components/dashboard/SmartCollectionSection.svelte';
 	import type { BookCardData } from '$lib/types';
+	import type { DashboardConfig, DashboardSection, DashboardSectionId } from '$lib/server/services/userPreferencesService';
 	import { toasts } from '$lib/stores/toast';
 
 	let { data } = $props();
+
+	// Dashboard settings modal state
+	let showSettingsModal = $state(false);
+
+	// Get enabled sections in order
+	const enabledSections = $derived(
+		data.dashboardConfig?.sections
+			?.filter(s => s.enabled)
+			.sort((a, b) => a.order - b.order) || []
+	);
+
+	// Check if a section is enabled
+	function isSectionEnabled(id: DashboardSectionId): boolean {
+		return enabledSections.some(s => s.id === id);
+	}
 
 	function handleBookClick(book: BookCardData) {
 		goto(`/books/${book.id}`);
@@ -63,6 +82,27 @@
 
 	// Calculate max for bar chart
 	const maxMonthlyCount = $derived(Math.max(...data.monthlyReading.map(m => m.count), 1));
+
+	// Save dashboard config
+	async function saveDashboardConfig(config: DashboardConfig) {
+		try {
+			const res = await fetch('/api/dashboard/config', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ config })
+			});
+
+			if (res.ok) {
+				toasts.success('Dashboard settings saved');
+				await invalidateAll();
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to save settings');
+			}
+		} catch (e) {
+			toasts.error('Failed to save settings');
+		}
+	}
 </script>
 
 <svelte:head>
@@ -73,10 +113,15 @@
 	<!-- Header -->
 	<div class="flex items-center justify-between mb-6">
 		<h1 class="text-2xl font-bold" style="color: var(--text-primary);">Dashboard</h1>
-		<a href="/admin/settings" class="btn-ghost btn-sm flex items-center gap-1.5">
-			<Settings class="w-4 h-4" />
-			<span class="hidden sm:inline">Settings</span>
-		</a>
+		<button
+			type="button"
+			class="p-2 rounded-lg transition-colors hover:bg-[var(--bg-tertiary)]"
+			style="color: var(--text-muted);"
+			onclick={() => showSettingsModal = true}
+			title="Customize dashboard"
+		>
+			<Settings class="w-5 h-5" />
+		</button>
 	</div>
 
 	<!-- Primary Stats (larger cards) -->
@@ -154,7 +199,7 @@
 		<!-- Left Column (2/3) -->
 		<div class="lg:col-span-2 space-y-6">
 			<!-- Reading Goal Widget -->
-			{#if data.goalData}
+			{#if data.goalData && isSectionEnabled('reading-goal')}
 				<section class="card p-4">
 					<div class="flex items-center justify-between mb-3">
 						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
@@ -236,7 +281,7 @@
 			{/if}
 
 			<!-- Continue Reading -->
-			{#if data.continueReading.length > 0}
+			{#if data.continueReading.length > 0 && isSectionEnabled('continue-reading')}
 				<section>
 					<div class="flex items-center justify-between mb-3">
 						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
@@ -263,8 +308,13 @@
 				</section>
 			{/if}
 
+			<!-- Smart Collection -->
+			{#if data.smartCollectionData && isSectionEnabled('smart-collection')}
+				<SmartCollectionSection data={data.smartCollectionData} />
+			{/if}
+
 			<!-- Up Next in Series -->
-			{#if data.upNextInSeries.length > 0}
+			{#if data.upNextInSeries.length > 0 && isSectionEnabled('up-next-series')}
 				<section>
 					<div class="flex items-center justify-between mb-3">
 						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
@@ -308,7 +358,7 @@
 			{/if}
 
 			<!-- Recently Added -->
-			{#if data.recentlyAdded.length > 0}
+			{#if data.recentlyAdded.length > 0 && isSectionEnabled('recently-added')}
 				<section>
 					<div class="flex items-center justify-between mb-3">
 						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
@@ -335,7 +385,7 @@
 			{/if}
 
 			<!-- Recently Completed -->
-			{#if data.recentlyCompleted.length > 0}
+			{#if data.recentlyCompleted.length > 0 && isSectionEnabled('recently-completed')}
 				<section>
 					<div class="flex items-center justify-between mb-3">
 						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
@@ -532,6 +582,15 @@
 		</div>
 	</div>
 </div>
+
+<!-- Dashboard Settings Modal -->
+<DashboardSettingsModal
+	open={showSettingsModal}
+	config={data.dashboardConfig}
+	magicShelves={data.magicShelves}
+	onClose={() => showSettingsModal = false}
+	onSave={saveDashboardConfig}
+/>
 
 <style>
 	/* Primary stat cards (larger) */

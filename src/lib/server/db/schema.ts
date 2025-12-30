@@ -409,7 +409,8 @@ export const userPreferences = sqliteTable('user_preferences', {
 	theme: text('theme').default('system'), // light, dark, system
 	accentColor: text('accentColor').default('#3b82f6'),
 	// Dashboard preferences (JSON)
-	dashboardWidgets: text('dashboardWidgets'), // JSON array of widget config
+	dashboardWidgets: text('dashboardWidgets'), // JSON array of widget config (legacy)
+	dashboardConfig: text('dashboardConfig'), // JSON - full dashboard configuration with sections
 	// Default view preferences
 	defaultBooksView: text('defaultBooksView').default('grid'), // grid, list, table
 	defaultBooksSort: text('defaultBooksSort').default('title'),

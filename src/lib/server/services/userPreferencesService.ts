@@ -7,12 +7,75 @@ import { db, userPreferences } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 import type { UserPreference, NewUserPreference } from '$lib/server/db/schema';
 
+// ============================================
+// Dashboard Configuration Types
+// ============================================
+
+export type DashboardSectionId =
+	| 'reading-goal'
+	| 'continue-reading'
+	| 'smart-collection'
+	| 'up-next-series'
+	| 'recently-added'
+	| 'recently-completed';
+
+export interface DashboardSection {
+	id: DashboardSectionId;
+	enabled: boolean;
+	order: number;
+	// For smart-collection type only:
+	shelfId?: number;           // ID of Magic Shelf to use
+	customFilter?: FilterConfig; // OR inline filter (dashboard-only)
+}
+
+export interface FilterConfig {
+	logic: 'AND' | 'OR';
+	rules: FilterRule[];
+}
+
+export interface FilterRule {
+	field: string;
+	operator: string;
+	value: string | number | boolean | null;
+}
+
+export interface DashboardConfig {
+	sections: DashboardSection[];
+}
+
+// Default dashboard configuration
+export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
+	sections: [
+		{ id: 'reading-goal', enabled: true, order: 0 },
+		{ id: 'continue-reading', enabled: true, order: 1 },
+		{ id: 'smart-collection', enabled: false, order: 2 }, // Disabled by default
+		{ id: 'up-next-series', enabled: true, order: 3 },
+		{ id: 'recently-added', enabled: true, order: 4 },
+		{ id: 'recently-completed', enabled: true, order: 5 }
+	]
+};
+
+// Human-readable section names for UI
+export const DASHBOARD_SECTION_LABELS: Record<DashboardSectionId, string> = {
+	'reading-goal': 'Reading Goal',
+	'continue-reading': 'Continue Reading',
+	'smart-collection': 'Smart Collection',
+	'up-next-series': 'Up Next in Series',
+	'recently-added': 'Recently Added',
+	'recently-completed': 'Recently Completed'
+};
+
+// ============================================
+// User Preferences Types
+// ============================================
+
 export interface UserPreferencesData {
 	// Display
 	theme: 'light' | 'dark' | 'system';
 	accentColor: string;
 	// Dashboard
-	dashboardWidgets: DashboardWidgetConfig[] | null;
+	dashboardWidgets: DashboardWidgetConfig[] | null; // Legacy
+	dashboardConfig: DashboardConfig | null;
 	// Books view
 	defaultBooksView: 'grid' | 'list' | 'table';
 	defaultBooksSort: string;
@@ -40,6 +103,7 @@ const DEFAULT_PREFERENCES: UserPreferencesData = {
 	theme: 'system',
 	accentColor: '#3b82f6',
 	dashboardWidgets: null,
+	dashboardConfig: null, // Will use DEFAULT_DASHBOARD_CONFIG when null
 	defaultBooksView: 'grid',
 	defaultBooksSort: 'title',
 	defaultBooksSortOrder: 'asc',
@@ -70,10 +134,22 @@ export async function getUserPreferences(userId: number): Promise<UserPreference
 	}
 
 	const prefs = result[0];
+
+	// Parse dashboardConfig if present
+	let dashboardConfig: DashboardConfig | null = null;
+	if (prefs.dashboardConfig) {
+		try {
+			dashboardConfig = JSON.parse(prefs.dashboardConfig);
+		} catch {
+			dashboardConfig = null;
+		}
+	}
+
 	return {
 		theme: (prefs.theme as 'light' | 'dark' | 'system') || 'system',
 		accentColor: prefs.accentColor || '#3b82f6',
 		dashboardWidgets: prefs.dashboardWidgets ? JSON.parse(prefs.dashboardWidgets) : null,
+		dashboardConfig,
 		defaultBooksView: (prefs.defaultBooksView as 'grid' | 'list' | 'table') || 'grid',
 		defaultBooksSort: prefs.defaultBooksSort || 'title',
 		defaultBooksSortOrder: (prefs.defaultBooksSortOrder as 'asc' | 'desc') || 'asc',
@@ -139,6 +215,9 @@ export async function updateUserPreferences(
 	if (updates.dashboardWidgets !== undefined) {
 		updateData.dashboardWidgets = updates.dashboardWidgets ? JSON.stringify(updates.dashboardWidgets) : null;
 	}
+	if (updates.dashboardConfig !== undefined) {
+		updateData.dashboardConfig = updates.dashboardConfig ? JSON.stringify(updates.dashboardConfig) : null;
+	}
 	if (updates.defaultBooksView !== undefined) updateData.defaultBooksView = updates.defaultBooksView;
 	if (updates.defaultBooksSort !== undefined) updateData.defaultBooksSort = updates.defaultBooksSort;
 	if (updates.defaultBooksSortOrder !== undefined) updateData.defaultBooksSortOrder = updates.defaultBooksSortOrder;
@@ -158,6 +237,7 @@ export async function updateUserPreferences(
 			...DEFAULT_PREFERENCES,
 			...updateData,
 			dashboardWidgets: updateData.dashboardWidgets || null,
+			dashboardConfig: updateData.dashboardConfig || null,
 			createdAt: now
 		});
 	} else {
@@ -232,4 +312,139 @@ export async function getSidebarState(userId: number): Promise<boolean> {
  */
 export async function setSidebarState(userId: number, collapsed: boolean): Promise<void> {
 	await updateUserPreferences(userId, { sidebarCollapsed: collapsed });
+}
+
+// ============================================
+// Dashboard Configuration Functions
+// ============================================
+
+/**
+ * Get user's dashboard configuration
+ * Returns default config if user hasn't customized it
+ */
+export async function getDashboardConfig(userId: number): Promise<DashboardConfig> {
+	const prefs = await getUserPreferences(userId);
+	return prefs.dashboardConfig || { ...DEFAULT_DASHBOARD_CONFIG };
+}
+
+/**
+ * Save user's dashboard configuration
+ */
+export async function saveDashboardConfig(userId: number, config: DashboardConfig): Promise<void> {
+	await updateUserPreferences(userId, { dashboardConfig: config });
+}
+
+/**
+ * Get sorted enabled sections from dashboard config
+ * Returns sections in display order, filtered to only enabled ones
+ */
+export function getEnabledSections(config: DashboardConfig): DashboardSection[] {
+	return config.sections
+		.filter(section => section.enabled)
+		.sort((a, b) => a.order - b.order);
+}
+
+/**
+ * Update a single section in the dashboard config
+ */
+export async function updateDashboardSection(
+	userId: number,
+	sectionId: DashboardSectionId,
+	updates: Partial<Omit<DashboardSection, 'id'>>
+): Promise<DashboardConfig> {
+	const config = await getDashboardConfig(userId);
+
+	const sectionIndex = config.sections.findIndex(s => s.id === sectionId);
+	if (sectionIndex === -1) {
+		throw new Error(`Section '${sectionId}' not found in dashboard config`);
+	}
+
+	config.sections[sectionIndex] = {
+		...config.sections[sectionIndex],
+		...updates
+	};
+
+	await saveDashboardConfig(userId, config);
+	return config;
+}
+
+/**
+ * Reorder dashboard sections
+ * Takes an array of section IDs in the new order
+ */
+export async function reorderDashboardSections(
+	userId: number,
+	sectionOrder: DashboardSectionId[]
+): Promise<DashboardConfig> {
+	const config = await getDashboardConfig(userId);
+
+	// Update order based on position in array
+	sectionOrder.forEach((sectionId, index) => {
+		const section = config.sections.find(s => s.id === sectionId);
+		if (section) {
+			section.order = index;
+		}
+	});
+
+	// Sort sections by new order
+	config.sections.sort((a, b) => a.order - b.order);
+
+	await saveDashboardConfig(userId, config);
+	return config;
+}
+
+/**
+ * Toggle a section's enabled state
+ */
+export async function toggleDashboardSection(
+	userId: number,
+	sectionId: DashboardSectionId,
+	enabled?: boolean
+): Promise<DashboardConfig> {
+	const config = await getDashboardConfig(userId);
+
+	const section = config.sections.find(s => s.id === sectionId);
+	if (!section) {
+		throw new Error(`Section '${sectionId}' not found in dashboard config`);
+	}
+
+	section.enabled = enabled ?? !section.enabled;
+
+	await saveDashboardConfig(userId, config);
+	return config;
+}
+
+/**
+ * Configure smart collection section
+ */
+export async function configureSmartCollectionSection(
+	userId: number,
+	options: { shelfId?: number; customFilter?: FilterConfig }
+): Promise<DashboardConfig> {
+	const config = await getDashboardConfig(userId);
+
+	const section = config.sections.find(s => s.id === 'smart-collection');
+	if (!section) {
+		throw new Error("Smart collection section not found in dashboard config");
+	}
+
+	// Clear previous config and set new one
+	section.shelfId = options.shelfId;
+	section.customFilter = options.customFilter;
+	section.enabled = true; // Auto-enable when configured
+
+	await saveDashboardConfig(userId, config);
+	return config;
+}
+
+/**
+ * Reset dashboard config to defaults
+ */
+export async function resetDashboardConfig(userId: number): Promise<DashboardConfig> {
+	// Deep copy the default config to avoid mutating the original
+	const defaultConfig: DashboardConfig = {
+		sections: DEFAULT_DASHBOARD_CONFIG.sections.map(s => ({ ...s }))
+	};
+	await saveDashboardConfig(userId, defaultConfig);
+	return defaultConfig;
 }
