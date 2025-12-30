@@ -832,6 +832,11 @@ function runMigrations() {
 
 	// Add additional biographical fields to narrators (matching authors)
 	if (tableExists('narrators')) {
+		// Base V2 columns that might be missing from V1 databases
+		safeAddColumn('narrators', 'bio', 'TEXT');
+		safeAddColumn('narrators', 'photoUrl', 'TEXT');
+		safeAddColumn('narrators', 'website', 'TEXT');
+		// Extended biographical fields
 		safeAddColumn('narrators', 'birthDate', 'TEXT');
 		safeAddColumn('narrators', 'deathDate', 'TEXT');
 		safeAddColumn('narrators', 'birthPlace', 'TEXT');
