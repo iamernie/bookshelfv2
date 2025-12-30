@@ -568,7 +568,7 @@ export async function getAIRecommendationsForBook(
 			seriesTitle: series.title,
 			bookNum: books.bookNum,
 			genreName: genres.name,
-			description: books.description,
+			summary: books.summary,
 			rating: books.rating
 		})
 		.from(books)
@@ -612,12 +612,12 @@ export async function getAIRecommendationsForBook(
 	let bookContext = `"${book.title}" by ${authorNames}`;
 	if (seriesInfo) bookContext += `\nSeries: ${seriesInfo}`;
 	if (book.genreName) bookContext += `\nGenre: ${book.genreName}`;
-	if (book.description) {
-		// Truncate description to avoid token limits
-		const shortDesc = book.description.length > 500
-			? book.description.substring(0, 500) + '...'
-			: book.description;
-		bookContext += `\nDescription: ${shortDesc}`;
+	if (book.summary) {
+		// Truncate summary to avoid token limits
+		const shortSummary = book.summary.length > 500
+			? book.summary.substring(0, 500) + '...'
+			: book.summary;
+		bookContext += `\nSummary: ${shortSummary}`;
 	}
 
 	const prompt = `I just finished reading this book:
