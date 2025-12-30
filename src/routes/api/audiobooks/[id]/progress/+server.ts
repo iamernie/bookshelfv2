@@ -5,8 +5,19 @@ import {
 	getOrCreateProgress,
 	updateProgress,
 	markAsFinished,
-	resetProgress
+	resetProgress,
+	isAudiobookInUserLibrary
 } from '$lib/server/services/audiobookService';
+
+// Helper to check audiobook access
+async function checkAudiobookAccess(audiobook: Awaited<ReturnType<typeof getAudiobookById>>, userId: number): Promise<boolean> {
+	if (!audiobook) return false;
+	return (
+		audiobook.userId === userId ||
+		audiobook.libraryType === 'public' ||
+		(await isAudiobookInUserLibrary(userId, audiobook.id))
+	);
+}
 
 // GET /api/audiobooks/[id]/progress - Get current progress
 export const GET: RequestHandler = async ({ locals, params }) => {
@@ -25,8 +36,8 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 		throw error(404, 'Audiobook not found');
 	}
 
-	// Check ownership
-	if (audiobook.userId !== user.id) {
+	// Check access: user owns it, OR it's public, OR user has it in their library
+	if (!(await checkAudiobookAccess(audiobook, user.id))) {
 		throw error(403, 'Access denied');
 	}
 
@@ -51,8 +62,8 @@ export const POST: RequestHandler = async ({ locals, params, request }) => {
 		throw error(404, 'Audiobook not found');
 	}
 
-	// Check ownership
-	if (audiobook.userId !== user.id) {
+	// Check access: user owns it, OR it's public, OR user has it in their library
+	if (!(await checkAudiobookAccess(audiobook, user.id))) {
 		throw error(403, 'Access denied');
 	}
 

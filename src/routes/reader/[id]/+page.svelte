@@ -278,6 +278,41 @@
 		}
 	}
 
+	// Save progress using sendBeacon (more reliable for page unload)
+	function saveProgressBeacon() {
+		if (!currentLocation) return;
+
+		const progressData = JSON.stringify({
+			location: currentLocation.start.cfi,
+			percentage: currentLocation.start.percentage * 100,
+			chapter: chapterTitle
+		});
+
+		// sendBeacon is designed to survive page navigation/close
+		if (navigator.sendBeacon) {
+			navigator.sendBeacon(
+				`/api/ebooks/${data.book.id}/progress`,
+				new Blob([progressData], { type: 'application/json' })
+			);
+		}
+	}
+
+	// Handle visibility change (mobile Safari and tab switching)
+	function handleVisibilityChange() {
+		if (document.visibilityState === 'hidden' && currentLocation) {
+			// Page is being hidden (user switched apps, tabs, or minimized)
+			// Use sendBeacon for reliable delivery
+			saveProgressBeacon();
+		}
+	}
+
+	// Handle page hide (more reliable on iOS Safari)
+	function handlePageHide() {
+		if (currentLocation) {
+			saveProgressBeacon();
+		}
+	}
+
 	// Navigation
 	async function prevPage() {
 		if (!rendition) {
@@ -449,17 +484,25 @@
 		// Global keyboard handler
 		document.addEventListener('keyup', handleKeyboard);
 
+		// Save progress when page is hidden (mobile Safari, tab switching)
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		// Save progress on page hide (iOS Safari, page navigation)
+		window.addEventListener('pagehide', handlePageHide);
+
 		return () => {
 			document.removeEventListener('keyup', handleKeyboard);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			window.removeEventListener('pagehide', handlePageHide);
 		};
 	});
 
 	onDestroy(() => {
 		// End reading session
 		endReadingSession();
-		// Save progress before leaving
+		// Save progress before leaving using beacon for reliability
 		if (currentLocation) {
-			saveProgress();
+			saveProgressBeacon();
 		}
 		if (saveTimeout) {
 			clearTimeout(saveTimeout);

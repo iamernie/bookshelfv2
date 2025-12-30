@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { error, redirect } from '@sveltejs/kit';
-import { getAudiobookById, getBookmarks, getOrCreateProgress } from '$lib/server/services/audiobookService';
+import { getAudiobookById, getBookmarks, getOrCreateProgress, isAudiobookInUserLibrary } from '$lib/server/services/audiobookService';
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const user = locals.user;
@@ -18,8 +18,13 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		throw error(404, 'Audiobook not found');
 	}
 
-	// Check ownership (for now)
-	if (audiobook.userId !== user.id) {
+	// Check access: user owns it, OR it's public, OR user has it in their library
+	const hasAccess =
+		audiobook.userId === user.id ||
+		audiobook.libraryType === 'public' ||
+		(await isAudiobookInUserLibrary(user.id, id));
+
+	if (!hasAccess) {
 		throw error(403, 'Access denied');
 	}
 

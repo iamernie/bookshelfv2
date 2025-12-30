@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.8] - 2025-12-30
+
+### Fixed
+- **Ebook Reading Position Sync** - Reading progress now reliably syncs across devices
+  - Added `visibilitychange` and `pagehide` event handlers to save progress when page is hidden
+  - Using `sendBeacon` API for reliable progress saves on page close/navigation
+  - Fixes position not syncing when switching from iPhone to computer
+- **Audiobook Access Permissions** - Fixed audiobook streaming for public library audiobooks
+  - Stream, progress, and chapters APIs now properly check public access and user library membership
+  - No longer incorrectly denies access to audiobooks the user should be able to play
+
 ## [2.2.7] - 2025-12-30
 
 ### Added

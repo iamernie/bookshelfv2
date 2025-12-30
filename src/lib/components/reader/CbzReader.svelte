@@ -301,6 +301,39 @@
 		}
 	}
 
+	// Save progress using sendBeacon (more reliable for page unload)
+	function saveProgressBeacon() {
+		if (totalPages === 0) return;
+
+		const progressData = JSON.stringify({
+			location: `page:${currentPage}`,
+			percentage: ((currentPage + 1) / totalPages) * 100,
+			currentPage,
+			totalPages
+		});
+
+		if (navigator.sendBeacon) {
+			navigator.sendBeacon(
+				`/api/ebooks/${bookId}/progress`,
+				new Blob([progressData], { type: 'application/json' })
+			);
+		}
+	}
+
+	// Handle visibility change (mobile Safari and tab switching)
+	function handleVisibilityChange() {
+		if (document.visibilityState === 'hidden' && totalPages > 0) {
+			saveProgressBeacon();
+		}
+	}
+
+	// Handle page hide (more reliable on iOS Safari)
+	function handlePageHide() {
+		if (totalPages > 0) {
+			saveProgressBeacon();
+		}
+	}
+
 	// Image load handler
 	function handleImageLoad() {
 		imageLoading = false;
@@ -354,8 +387,16 @@
 		startReadingSession();
 		document.addEventListener('keyup', handleKeyboard);
 
+		// Save progress when page is hidden (mobile Safari, tab switching)
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		// Save progress on page hide (iOS Safari, page navigation)
+		window.addEventListener('pagehide', handlePageHide);
+
 		return () => {
 			document.removeEventListener('keyup', handleKeyboard);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+			window.removeEventListener('pagehide', handlePageHide);
 		};
 	});
 
@@ -364,7 +405,8 @@
 		if (saveTimeout) {
 			clearTimeout(saveTimeout);
 		}
-		saveProgress();
+		// Use beacon for reliable save on unload
+		saveProgressBeacon();
 	});
 </script>
 

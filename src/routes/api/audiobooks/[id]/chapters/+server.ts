@@ -6,8 +6,19 @@ import {
 	addChapter,
 	updateChapter,
 	deleteChapters,
-	extractAndSaveChapters
+	extractAndSaveChapters,
+	isAudiobookInUserLibrary
 } from '$lib/server/services/audiobookService';
+
+// Helper to check audiobook access
+async function checkAudiobookAccess(audiobook: Awaited<ReturnType<typeof getAudiobookById>>, userId: number): Promise<boolean> {
+	if (!audiobook) return false;
+	return (
+		audiobook.userId === userId ||
+		audiobook.libraryType === 'public' ||
+		(await isAudiobookInUserLibrary(userId, audiobook.id))
+	);
+}
 
 // GET /api/audiobooks/[id]/chapters - Get all chapters for an audiobook
 export const GET: RequestHandler = async ({ locals, params }) => {
@@ -27,8 +38,7 @@ export const GET: RequestHandler = async ({ locals, params }) => {
 	}
 
 	// Check access (owner, public, or in user library)
-	const hasAccess = audiobook.userId === user.id || audiobook.libraryType === 'public';
-	if (!hasAccess) {
+	if (!(await checkAudiobookAccess(audiobook, user.id))) {
 		throw error(403, 'Access denied');
 	}
 

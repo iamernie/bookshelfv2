@@ -4,7 +4,8 @@ import { createReadStream, statSync, existsSync } from 'fs';
 import { Readable } from 'stream';
 import {
 	getAudiobookById,
-	getAudiobookFileById
+	getAudiobookFileById,
+	isAudiobookInUserLibrary
 } from '$lib/server/services/audiobookService';
 
 // GET /api/audiobooks/[id]/stream/[fileId] - Stream audio file
@@ -27,8 +28,13 @@ export const GET: RequestHandler = async ({ locals, params, request }) => {
 		throw error(404, 'Audiobook not found');
 	}
 
-	// Check ownership (for now)
-	if (audiobook.userId !== user.id) {
+	// Check access: user owns it, OR it's public, OR user has it in their library
+	const hasAccess =
+		audiobook.userId === user.id ||
+		audiobook.libraryType === 'public' ||
+		(await isAudiobookInUserLibrary(user.id, audiobookId));
+
+	if (!hasAccess) {
 		throw error(403, 'Access denied');
 	}
 
