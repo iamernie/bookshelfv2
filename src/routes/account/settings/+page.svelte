@@ -25,7 +25,8 @@
 		Trash2,
 		Eye,
 		Edit,
-		KeyRound
+		KeyRound,
+		AlertCircle
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
 	import { theme as themeStore, type Theme } from '$lib/stores/theme';
@@ -538,6 +539,16 @@
 					<div class="mb-4 p-3 rounded-lg flex items-center gap-2" style="background: rgba(34, 197, 94, 0.1); color: #22c55e;">
 						<Check class="w-4 h-4" />
 						<span class="text-sm">Account linked successfully!</span>
+					</div>
+				{:else if data.alreadyLinked}
+					<div class="mb-4 p-3 rounded-lg flex items-center gap-2" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+						<Check class="w-4 h-4" />
+						<span class="text-sm">This account is already linked.</span>
+					</div>
+				{:else if data.linkingError}
+					<div class="mb-4 p-3 rounded-lg flex items-center gap-2" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+						<AlertCircle class="w-4 h-4" />
+						<span class="text-sm">{data.linkingError}</span>
 					</div>
 				{/if}
 

@@ -72,6 +72,31 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		// Check if this OIDC identity is already linked to a user
 		const existingLink = await findUserByOidc(provider.id, claims.sub);
 
+		// Handle account linking request (user was already logged in)
+		if (stateData.linkingUserId) {
+			if (existingLink) {
+				if (existingLink.user.id === stateData.linkingUserId) {
+					// Already linked to this user - just redirect back
+					throw redirect(302, '/account/settings?linked=already');
+				} else {
+					// Linked to a different user - can't link to two accounts
+					throw redirect(302, '/account/settings?error=already_linked');
+				}
+			}
+
+			// Create the link
+			await linkAccount(
+				stateData.linkingUserId,
+				provider.id,
+				claims.sub,
+				claims.email,
+				claims.name || claims.given_name
+			);
+
+			throw redirect(302, '/account/settings?linked=true');
+		}
+
+		// Not a linking request - this is a login attempt
 		if (existingLink) {
 			// User already linked - log them in
 			await updateLastLogin(existingLink.link.id);
@@ -86,20 +111,6 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 			});
 
 			throw redirect(302, stateData.returnUrl || '/');
-		}
-
-		// No existing link - check if this is an account linking request
-		if (stateData.linkingUserId) {
-			// User was logged in and initiated linking
-			await linkAccount(
-				stateData.linkingUserId,
-				provider.id,
-				claims.sub,
-				claims.email,
-				claims.name || claims.given_name
-			);
-
-			throw redirect(302, '/account/settings?linked=true');
 		}
 
 		// New OIDC user - redirect to complete page to link or create account

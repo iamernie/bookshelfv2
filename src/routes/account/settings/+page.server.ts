@@ -21,8 +21,15 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const linkedProviderIds = new Set(oidcLinks.map((l) => l.providerId));
 	const availableProviders = allProviders.filter((p) => !linkedProviderIds.has(p.id));
 
-	// Check for success message from linking
-	const linked = url.searchParams.get('linked') === 'true';
+	// Check for linking status from callback
+	const linkedParam = url.searchParams.get('linked');
+	const errorParam = url.searchParams.get('error');
+
+	const linkingStatus = {
+		justLinked: linkedParam === 'true',
+		alreadyLinked: linkedParam === 'already',
+		error: errorParam === 'already_linked' ? 'This identity is already linked to another account' : null
+	};
 
 	// Get library sharing data
 	const [myShares, sharedWithMe, shareableUsers] = await Promise.all([
@@ -51,7 +58,9 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			buttonColor: p.buttonColor,
 			iconUrl: p.iconUrl
 		})),
-		justLinked: linked,
+		justLinked: linkingStatus.justLinked,
+		alreadyLinked: linkingStatus.alreadyLinked,
+		linkingError: linkingStatus.error,
 		librarySharing: {
 			myShares,
 			sharedWithMe,

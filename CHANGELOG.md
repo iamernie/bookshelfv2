@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.2] - 2025-12-30
+
+### Fixed
+- **OIDC Account Linking** - Fixed logged-in users being redirected to dashboard instead of linking their account
+  - Account linking now properly handles the `linkingUserId` before checking for existing links
+  - Shows appropriate messages for "already linked", "linked to another account", and successful linking
+  - Added error/success feedback in the Connected Accounts section
+
 ## [2.2.1] - 2025-12-30
 
 ### Added
