@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { BookOpen, Star, Edit3, Info, BookOpenCheck, MoreVertical } from 'lucide-svelte';
+	import { BookOpen, Star, Edit3, Info, BookOpenCheck, MoreVertical, Headphones } from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
 	import QuickEditOverlay from './QuickEditOverlay.svelte';
@@ -66,7 +66,7 @@
 		if (selectable && (e.target as HTMLElement).closest('input[type=checkbox]')) {
 			return;
 		}
-		if ((e.target as HTMLElement).closest('.quick-edit-btn') || (e.target as HTMLElement).closest('.hover-action-btn') || (e.target as HTMLElement).closest('.book-card-menu') || (e.target as HTMLElement).closest('.status-bar-wrapper')) {
+		if ((e.target as HTMLElement).closest('.quick-edit-btn') || (e.target as HTMLElement).closest('.hover-action-btn') || (e.target as HTMLElement).closest('.book-card-menu') || (e.target as HTMLElement).closest('.status-bar-wrapper') || (e.target as HTMLElement).closest('.format-badge')) {
 			return;
 		}
 		onClick?.(book);
@@ -161,6 +161,13 @@
 		}
 	}
 
+	function handleListenClick(e: MouseEvent) {
+		e.stopPropagation();
+		if (book.audiobookId) {
+			window.location.href = `/audiobooks/${book.audiobookId}`;
+		}
+	}
+
 	function handleInfoClick(e: MouseEvent) {
 		e.stopPropagation();
 		if (onViewDetails) {
@@ -242,6 +249,18 @@
 						</button>
 					{/if}
 
+					<!-- Listen Button (if audiobook exists) -->
+					{#if book.audiobookId}
+						<button
+							type="button"
+							class="hover-action-btn p-2.5 rounded-full bg-white/90 text-gray-800 hover:bg-white hover:scale-110 transition-all shadow-lg"
+							onclick={handleListenClick}
+							title="Listen to audiobook"
+						>
+							<Headphones class="w-5 h-5" />
+						</button>
+					{/if}
+
 					<!-- Info Button -->
 					<button
 						type="button"
@@ -307,20 +326,33 @@
 			</div>
 		{/if}
 
-		<!-- Format Badge -->
-		{#if showFormat && book.format}
-			<div
-				class="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-white shadow-sm flex items-center gap-1"
-				style="background-color: {book.format.color || '#6c757d'}"
-				title={book.format.name}
-			>
-				<LucideIcon name={book.format.icon || 'book'} size={10} />
-				{book.format.name}
-			</div>
-		{:else if book.ebookPath}
-			<!-- Ebook Badge (fallback if no format) -->
-			<div class="absolute bottom-1 left-1 p-1 rounded-full" style="background-color: var(--accent); color: white;">
-				<BookOpen class="w-3 h-3" />
+		<!-- Media Format Badges (eBook/Audiobook) - Always visible, tappable -->
+		{#if book.ebookPath || book.audiobookId}
+			<div class="absolute bottom-1.5 left-1.5 right-1.5 flex gap-1.5 justify-start format-badges">
+				{#if book.ebookPath}
+					<button
+						type="button"
+						class="format-badge flex items-center gap-1 px-2 py-1 rounded-md text-white text-[11px] font-medium shadow-md hover:scale-105 active:scale-95 transition-transform"
+						style="background-color: #3b82f6;"
+						onclick={handleReadClick}
+						title="Read eBook"
+					>
+						<BookOpen class="w-3.5 h-3.5" />
+						<span class="hidden sm:inline">Read</span>
+					</button>
+				{/if}
+				{#if book.audiobookId}
+					<button
+						type="button"
+						class="format-badge flex items-center gap-1 px-2 py-1 rounded-md text-white text-[11px] font-medium shadow-md hover:scale-105 active:scale-95 transition-transform"
+						style="background-color: #8b5cf6;"
+						onclick={handleListenClick}
+						title="Listen to Audiobook"
+					>
+						<Headphones class="w-3.5 h-3.5" />
+						<span class="hidden sm:inline">Listen</span>
+					</button>
+				{/if}
 			</div>
 		{/if}
 

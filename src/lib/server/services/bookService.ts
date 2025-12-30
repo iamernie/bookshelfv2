@@ -1,4 +1,4 @@
-import { db, books, bookAuthors, bookSeries, bookTags, authors, series, statuses, genres, formats, narrators, tags, userBooks, userBookTags, metadataSuggestions, readingSessions, bookdropQueue } from '$lib/server/db';
+import { db, books, bookAuthors, bookSeries, bookTags, authors, series, statuses, genres, formats, narrators, tags, userBooks, userBookTags, metadataSuggestions, readingSessions, bookdropQueue, audiobooks } from '$lib/server/db';
 import { eq, like, sql, desc, asc, and, or, inArray } from 'drizzle-orm';
 import type { Book, NewBook } from '$lib/server/db/schema';
 
@@ -10,6 +10,7 @@ export interface BookWithRelations extends Book {
 	genre: { id: number; name: string } | null;
 	format: { id: number; name: string; icon: string | null; color: string | null } | null;
 	narrator: { id: number; name: string } | null;
+	audiobookId?: number | null;
 }
 
 export interface GetBooksOptions {
@@ -187,7 +188,7 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 
 	// Fetch relations for each book
 	const items = await Promise.all(booksList.map(async (book) => {
-		const [bookAuthorsData, bookSeriesData, bookTagsData, statusData, genreData, formatData, narratorData] = await Promise.all([
+		const [bookAuthorsData, bookSeriesData, bookTagsData, statusData, genreData, formatData, narratorData, audiobookData] = await Promise.all([
 			db.select({
 				id: authors.id,
 				name: authors.name,
@@ -216,7 +217,8 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 			book.statusId ? db.select().from(statuses).where(eq(statuses.id, book.statusId)).limit(1) : Promise.resolve([]),
 			book.genreId ? db.select().from(genres).where(eq(genres.id, book.genreId)).limit(1) : Promise.resolve([]),
 			book.formatId ? db.select().from(formats).where(eq(formats.id, book.formatId)).limit(1) : Promise.resolve([]),
-			book.narratorId ? db.select().from(narrators).where(eq(narrators.id, book.narratorId)).limit(1) : Promise.resolve([])
+			book.narratorId ? db.select().from(narrators).where(eq(narrators.id, book.narratorId)).limit(1) : Promise.resolve([]),
+			db.select({ id: audiobooks.id }).from(audiobooks).where(eq(audiobooks.bookId, book.id)).limit(1)
 		]);
 
 		return {
@@ -227,7 +229,8 @@ export async function getBooks(options: GetBooksOptions = {}): Promise<{
 			status: statusData[0] ? { id: statusData[0].id, name: statusData[0].name, color: statusData[0].color, icon: statusData[0].icon } : null,
 			genre: genreData[0] ? { id: genreData[0].id, name: genreData[0].name } : null,
 			format: formatData[0] ? { id: formatData[0].id, name: formatData[0].name, icon: formatData[0].icon, color: formatData[0].color } : null,
-			narrator: narratorData[0] ? { id: narratorData[0].id, name: narratorData[0].name } : null
+			narrator: narratorData[0] ? { id: narratorData[0].id, name: narratorData[0].name } : null,
+			audiobookId: audiobookData[0]?.id || null
 		};
 	}));
 
@@ -238,7 +241,7 @@ export async function getBookById(id: number): Promise<BookWithRelations | null>
 	const book = await db.select().from(books).where(eq(books.id, id)).limit(1);
 	if (!book[0]) return null;
 
-	const [bookAuthorsData, bookSeriesData, bookTagsData, statusData, genreData, formatData, narratorData] = await Promise.all([
+	const [bookAuthorsData, bookSeriesData, bookTagsData, statusData, genreData, formatData, narratorData, audiobookData] = await Promise.all([
 		db.select({
 			id: authors.id,
 			name: authors.name,
@@ -267,7 +270,8 @@ export async function getBookById(id: number): Promise<BookWithRelations | null>
 		book[0].statusId ? db.select().from(statuses).where(eq(statuses.id, book[0].statusId)).limit(1) : Promise.resolve([]),
 		book[0].genreId ? db.select().from(genres).where(eq(genres.id, book[0].genreId)).limit(1) : Promise.resolve([]),
 		book[0].formatId ? db.select().from(formats).where(eq(formats.id, book[0].formatId)).limit(1) : Promise.resolve([]),
-		book[0].narratorId ? db.select().from(narrators).where(eq(narrators.id, book[0].narratorId)).limit(1) : Promise.resolve([])
+		book[0].narratorId ? db.select().from(narrators).where(eq(narrators.id, book[0].narratorId)).limit(1) : Promise.resolve([]),
+		db.select({ id: audiobooks.id }).from(audiobooks).where(eq(audiobooks.bookId, id)).limit(1)
 	]);
 
 	return {
@@ -278,7 +282,8 @@ export async function getBookById(id: number): Promise<BookWithRelations | null>
 		status: statusData[0] ? { id: statusData[0].id, name: statusData[0].name, color: statusData[0].color, icon: statusData[0].icon } : null,
 		genre: genreData[0] ? { id: genreData[0].id, name: genreData[0].name } : null,
 		format: formatData[0] ? { id: formatData[0].id, name: formatData[0].name, icon: formatData[0].icon, color: formatData[0].color } : null,
-		narrator: narratorData[0] ? { id: narratorData[0].id, name: narratorData[0].name } : null
+		narrator: narratorData[0] ? { id: narratorData[0].id, name: narratorData[0].name } : null,
+		audiobookId: audiobookData[0]?.id || null
 	};
 }
 

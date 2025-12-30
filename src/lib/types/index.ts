@@ -10,6 +10,7 @@ export interface BookCardData {
 	rating?: number | null;
 	bookNum?: number | null;
 	ebookPath?: string | null;
+	audiobookId?: number | null;
 	authorName?: string | null;
 	seriesName?: string | null;
 	summary?: string | null;

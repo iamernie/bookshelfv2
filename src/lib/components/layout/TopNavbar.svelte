@@ -82,9 +82,11 @@
 
 		<!-- Search button -->
 		<button
+			type="button"
 			class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors"
 			style="background-color: var(--bg-tertiary); color: var(--text-muted);"
 			onclick={() => searchOpen = true}
+			aria-label="Open search"
 		>
 			<Search class="w-4 h-4" />
 			<span class="hidden sm:inline">Search...</span>

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.7] - 2025-12-29
+
+### Added
+- **Prominent eBook/Audiobook format badges on book cards** - Books with eBook or audiobook files now show prominent "Read" and "Listen" buttons directly on book covers for easy one-tap access to content, especially helpful on mobile devices
+
+### Fixed
+- **Global search button now works** - The search magnifying glass icon in the top navigation bar now properly opens the global search modal when clicked
+- **Search icon in books page is now clickable** - The search icon in the books page search bar now acts as a submit button
+
+## [0.7.6] - 2025-12-29
+
+### Fixed
+- Metadata extraction no longer hangs on large audio files (added timeout and optimized settings)
+
+## [0.7.5] - 2025-12-29
+
+### Added
+- Duplicate book detection when uploading files - prevents accidentally adding the same book twice
+
 ## [0.5.0] - 2025-12-27
 
 ### Added

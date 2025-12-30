@@ -27,6 +27,7 @@
 			seriesName: book.series[0]?.title || null,
 			bookNum: book.series[0]?.bookNum || null,
 			ebookPath: book.ebookPath,
+			audiobookId: book.audiobookId,
 			status: book.status,
 			genre: book.genre,
 			format: book.format,
@@ -360,7 +361,13 @@
 				<div class="flex flex-col sm:flex-row gap-4">
 					<!-- Search -->
 					<form onsubmit={(e) => { e.preventDefault(); handleSearch(); }} class="flex-1 relative">
-						<Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style="color: var(--text-muted);" />
+						<button
+							type="submit"
+							class="absolute left-3 top-1/2 -translate-y-1/2 p-0 bg-transparent border-none cursor-pointer hover:opacity-80"
+							title="Search"
+						>
+							<Search class="w-5 h-5" style="color: var(--text-muted);" />
+						</button>
 						<input
 							type="text"
 							placeholder="Search books..."
