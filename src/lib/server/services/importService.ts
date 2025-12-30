@@ -222,12 +222,12 @@ interface MappedRow {
  * Map Goodreads row to standardized format
  */
 export function mapGoodreadsRow(row: Record<string, string>): MappedRow {
-	// Map Goodreads status to our status
+	// Map Goodreads shelf to our status key (matched by key in CSV import)
 	let status = '';
 	const shelf = row['Exclusive Shelf'] || '';
-	if (shelf === 'read') status = 'Read';
-	else if (shelf === 'currently-reading') status = 'Reading';
-	else if (shelf === 'to-read') status = 'To Read';
+	if (shelf === 'read') status = 'read'; // Maps to status with key 'READ' (Done)
+	else if (shelf === 'currently-reading') status = 'current'; // Maps to key 'CURRENT'
+	else if (shelf === 'to-read') status = 'next'; // Maps to key 'NEXT'
 
 	// Clean ISBN values - Goodreads wraps them in ="" format
 	const cleanIsbn = (val: string) => val ? val.replace(/[="]/g, '').trim() : '';

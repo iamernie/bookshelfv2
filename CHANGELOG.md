@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.8] - 2025-12-29
+
+### Changed
+- **Renamed "Read" status to "Done"** - To avoid confusion with the "Read" button for reading ebooks, the completed book status is now called "Done" with a circle-check icon. Existing databases are automatically migrated.
+
+### Fixed
+- **Import reliability** - Audible and Goodreads imports now use status keys instead of names for more reliable matching
+
 ## [0.7.7] - 2025-12-29
 
 ### Added

@@ -1326,6 +1326,22 @@ function runMigrations() {
 		console.error('[db] Failed to update V1 user email verification:', e);
 	}
 
+	// Rename "Read" status to "Done" (to avoid confusion with "Read" ebook button)
+	// Only updates if the status with key 'READ' still has the old name 'Read'
+	try {
+		const result = sqlite.prepare(`
+			UPDATE statuses
+			SET name = 'Done', icon = 'circle-check', updatedAt = datetime('now')
+			WHERE key = 'READ' AND name = 'Read'
+		`).run();
+		if (result.changes > 0) {
+			console.log(`[db] Renamed 'Read' status to 'Done'`);
+			migrationsMade = true;
+		}
+	} catch (e) {
+		console.error('[db] Failed to rename Read status:', e);
+	}
+
 	// Finalize
 	updateStatus('Finalizing...');
 	completeStep('Finalizing');

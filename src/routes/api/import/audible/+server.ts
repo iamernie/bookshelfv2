@@ -58,7 +58,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		db.select({ id: series.id, title: series.title }).from(series).orderBy(series.title),
 		db.select({ id: narrators.id, name: narrators.name }).from(narrators).orderBy(narrators.name),
 		db.select({ id: formats.id, name: formats.name }).from(formats).orderBy(formats.name),
-		db.select({ id: statuses.id, name: statuses.name }).from(statuses).orderBy(statuses.id),
+		db.select({ id: statuses.id, name: statuses.name, key: statuses.key }).from(statuses).orderBy(statuses.id),
 		db.select({ id: genres.id, name: genres.name }).from(genres).orderBy(genres.name)
 	]);
 
@@ -66,10 +66,11 @@ export const POST: RequestHandler = async ({ request }) => {
 	const audiobookFormat = allFormats.find(f => f.name.toLowerCase() === 'audiobook');
 	const defaultFormatId = audiobookFormat?.id || null;
 
-	// Find "Read" status for default when listen date is in the past
-	const readStatus = allStatuses.find(s => s.name.toLowerCase() === 'read');
-	const unreadStatus = allStatuses.find(s => s.name.toLowerCase() === 'unread' || s.name.toLowerCase() === 'to-read');
-	const defaultReadStatusId = readStatus?.id || null;
+	// Find "Done" status for default when listen date is in the past
+	// Use key for reliable lookup (key stays constant even if user renames the status)
+	const doneStatus = allStatuses.find(s => s.key === 'READ');
+	const unreadStatus = allStatuses.find(s => s.key === 'NEXT' || s.name.toLowerCase() === 'to-read' || s.name.toLowerCase() === 'unread');
+	const defaultDoneStatusId = doneStatus?.id || null;
 	const defaultUnreadStatusId = unreadStatus?.id || null;
 
 	// Check each book for duplicates
@@ -97,9 +98,9 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		}
 
-		// Default status: Read if listen date is in the past, otherwise Unread
+		// Default status: Done if listen date is in the past, otherwise Unread
 		const defaultStatusId = isDateInPast(book.listenDate)
-			? defaultReadStatusId
+			? defaultDoneStatusId
 			: defaultUnreadStatusId;
 
 		return {

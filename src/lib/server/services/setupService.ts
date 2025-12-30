@@ -104,7 +104,7 @@ export async function initializeDefaultData(): Promise<{ success: boolean; error
 		const [statusCount] = await db.select({ count: count() }).from(statuses);
 		if (statusCount.count === 0) {
 			await db.insert(statuses).values([
-				{ name: 'Read', key: 'READ', color: '#10b981', icon: 'check-circle', isSystem: true, sortOrder: 1, createdAt: now, updatedAt: now },
+				{ name: 'Done', key: 'READ', color: '#10b981', icon: 'circle-check', isSystem: true, sortOrder: 1, createdAt: now, updatedAt: now },
 				{ name: 'Currently Reading', key: 'CURRENT', color: '#3b82f6', icon: 'book-open', isSystem: true, sortOrder: 2, createdAt: now, updatedAt: now },
 				{ name: 'To Read', key: 'NEXT', color: '#f59e0b', icon: 'bookmark', isSystem: true, sortOrder: 3, createdAt: now, updatedAt: now },
 				{ name: 'Did Not Finish', key: 'DNF', color: '#ef4444', icon: 'x-circle', isSystem: true, sortOrder: 4, createdAt: now, updatedAt: now },
