@@ -29,7 +29,7 @@
 	let { data } = $props();
 
 	// Tab state
-	type TabId = 'general' | 'storage' | 'metadata' | 'opds' | 'import' | 'registration' | 'email' | 'oidc' | 'ai';
+	type TabId = 'general' | 'storage' | 'metadata' | 'opds' | 'import' | 'registration' | 'email' | 'oidc' | 'ai' | 'ui';
 	let activeTab = $state<TabId>('general');
 
 	// Tab definitions
@@ -42,7 +42,8 @@
 		{ id: 'registration', label: 'Users', icon: UserPlus, description: 'User registration' },
 		{ id: 'email', label: 'Email', icon: Mail, description: 'SMTP email settings' },
 		{ id: 'oidc', label: 'SSO', icon: KeyRound, description: 'OIDC/SSO providers' },
-		{ id: 'ai', label: 'AI', icon: Sparkles, description: 'AI recommendations' }
+		{ id: 'ai', label: 'AI', icon: Sparkles, description: 'AI recommendations' },
+		{ id: 'ui', label: 'UI', icon: Monitor, description: 'User interface settings' }
 	];
 
 	// Local copy of settings for editing
@@ -83,7 +84,8 @@
 		opds: 'opds',
 		import: 'import',
 		registration: 'registration',
-		email: 'email'
+		email: 'email',
+		ui: 'ui'
 	};
 
 	// Fetch placeholders on mount
@@ -179,6 +181,11 @@
 			icon: Mail,
 			title: 'Email / SMTP',
 			description: 'Configure SMTP settings for email notifications'
+		},
+		ui: {
+			icon: Monitor,
+			title: 'User Interface',
+			description: 'Configure UI behavior and notifications'
 		}
 	};
 

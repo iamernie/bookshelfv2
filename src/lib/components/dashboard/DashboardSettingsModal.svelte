@@ -22,7 +22,7 @@
 	// Section labels
 	const sectionLabels: Record<DashboardSectionId, string> = {
 		'reading-goal': 'Reading Goal',
-		'continue-reading': 'Continue Reading',
+		'continue-reading': 'Currently Reading',
 		'smart-collection': 'Smart Collection',
 		'up-next-series': 'Up Next in Series',
 		'recently-added': 'Recently Added',
@@ -106,6 +106,26 @@
 				? { ...s, shelfId, customFilter: undefined }
 				: s
 		);
+	}
+
+	function updateCompanionSection(companionSection: 'up-next-series' | 'smart-collection' | 'none') {
+		sections = sections.map(s =>
+			s.id === 'continue-reading'
+				? { ...s, companionSection }
+				: s
+		);
+	}
+
+	function updateCompanionShelf(shelfId: number | undefined) {
+		sections = sections.map(s =>
+			s.id === 'continue-reading'
+				? { ...s, shelfId }
+				: s
+		);
+	}
+
+	function getContinueReadingSection(): DashboardSection | undefined {
+		return sections.find(s => s.id === 'continue-reading');
 	}
 
 	async function handleSave() {
@@ -207,6 +227,62 @@
 								></span>
 							</button>
 						</div>
+
+						<!-- Currently Reading companion section config -->
+						{#if section.id === 'continue-reading' && section.enabled}
+							<div
+								class="ml-8 p-3 rounded-lg border"
+								style="background-color: var(--bg-primary); border-color: var(--border-color);"
+							>
+								<div class="flex items-center gap-2 mb-2">
+									<span class="text-sm font-medium" style="color: var(--text-primary);">
+										Show beside Currently Reading
+									</span>
+								</div>
+
+								<select
+									class="w-full px-3 py-2 rounded-lg border text-sm mb-2"
+									style="
+										background-color: var(--bg-secondary);
+										border-color: var(--border-color);
+										color: var(--text-primary);
+									"
+									value={section.companionSection || 'up-next-series'}
+									onchange={(e) => updateCompanionSection(e.currentTarget.value as 'up-next-series' | 'smart-collection' | 'none')}
+								>
+									<option value="up-next-series">Up Next in Series (default)</option>
+									<option value="smart-collection">Smart Collection</option>
+									<option value="none">Nothing (full width)</option>
+								</select>
+
+								<!-- Show Magic Shelf selector when smart-collection is selected as companion -->
+								{#if section.companionSection === 'smart-collection'}
+									{#if magicShelves.length > 0}
+										<select
+											class="w-full px-3 py-2 rounded-lg border text-sm"
+											style="
+												background-color: var(--bg-secondary);
+												border-color: var(--border-color);
+												color: var(--text-primary);
+											"
+											value={section.shelfId || ''}
+											onchange={(e) => updateCompanionShelf(
+												e.currentTarget.value ? parseInt(e.currentTarget.value) : undefined
+											)}
+										>
+											<option value="">-- Select a shelf --</option>
+											{#each magicShelves as shelf}
+												<option value={shelf.id}>{shelf.name}</option>
+											{/each}
+										</select>
+									{:else}
+										<p class="text-sm" style="color: var(--text-muted);">
+											No Magic Shelves found. <a href="/shelves" class="underline" style="color: var(--accent);">Create one</a> first.
+										</p>
+									{/if}
+								{/if}
+							</div>
+						{/if}
 
 						<!-- Smart Collection config (shown when section is enabled) -->
 						{#if section.id === 'smart-collection' && section.enabled}

@@ -26,6 +26,8 @@ export interface DashboardSection {
 	// For smart-collection type only:
 	shelfId?: number;           // ID of Magic Shelf to use
 	customFilter?: FilterConfig; // OR inline filter (dashboard-only)
+	// For continue-reading section:
+	companionSection?: 'up-next-series' | 'smart-collection' | 'none'; // What to show beside it
 }
 
 export interface FilterConfig {
@@ -47,7 +49,7 @@ export interface DashboardConfig {
 export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
 	sections: [
 		{ id: 'reading-goal', enabled: true, order: 0 },
-		{ id: 'continue-reading', enabled: true, order: 1 },
+		{ id: 'continue-reading', enabled: true, order: 1, companionSection: 'up-next-series' },
 		{ id: 'smart-collection', enabled: false, order: 2 }, // Disabled by default
 		{ id: 'up-next-series', enabled: true, order: 3 },
 		{ id: 'recently-added', enabled: true, order: 4 },
@@ -58,7 +60,7 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
 // Human-readable section names for UI
 export const DASHBOARD_SECTION_LABELS: Record<DashboardSectionId, string> = {
 	'reading-goal': 'Reading Goal',
-	'continue-reading': 'Continue Reading',
+	'continue-reading': 'Currently Reading',
 	'smart-collection': 'Smart Collection',
 	'up-next-series': 'Up Next in Series',
 	'recently-added': 'Recently Added',

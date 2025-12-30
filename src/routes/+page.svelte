@@ -280,41 +280,130 @@
 				</section>
 			{/if}
 
-			<!-- Continue Reading -->
-			{#if data.continueReading.length > 0 && isSectionEnabled('continue-reading')}
-				<section>
-					<div class="flex items-center justify-between mb-3">
-						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
-							<BookMarked class="w-5 h-5" style="color: var(--accent);" />
-							Continue Reading
-						</h2>
-						<a href="/books?status=CURRENT" class="text-sm flex items-center gap-1 hover:underline" style="color: var(--accent);">
-							View all
-							<ChevronRight class="w-4 h-4" />
-						</a>
+			<!-- Currently Reading with Companion Section -->
+			{#if isSectionEnabled('continue-reading')}
+				{@const continueReadingSection = data.dashboardConfig?.sections.find(s => s.id === 'continue-reading')}
+				{@const companionType = continueReadingSection?.companionSection || 'up-next-series'}
+				{@const showCompanion = companionType !== 'none'}
+				{@const hasContinueReading = data.continueReading.length > 0}
+				{@const hasUpNext = data.upNextInSeries.length > 0}
+				{@const hasCompanionData = companionType === 'up-next-series' ? hasUpNext : (companionType === 'smart-collection' && data.companionSmartCollectionData)}
+
+				{#if hasContinueReading || hasCompanionData}
+					<div class={showCompanion && hasCompanionData ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : ''}>
+						<!-- Currently Reading -->
+						{#if hasContinueReading}
+							<section>
+								<div class="flex items-center justify-between mb-3">
+									<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+										<BookMarked class="w-5 h-5" style="color: var(--accent);" />
+										Currently Reading
+									</h2>
+									<a href="/books?status=CURRENT" class="text-sm flex items-center gap-1 hover:underline" style="color: var(--accent);">
+										View all
+										<ChevronRight class="w-4 h-4" />
+									</a>
+								</div>
+								<div class={showCompanion && hasCompanionData ? 'grid grid-cols-2 sm:grid-cols-3 gap-3' : 'grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3'}>
+									{#each data.continueReading.slice(0, showCompanion && hasCompanionData ? 3 : 6) as book}
+										<BookCard
+											{book}
+											onClick={handleBookClick}
+											showStatus={false}
+											quickEdit={true}
+											statuses={data.statuses}
+											onQuickEdit={handleQuickEdit}
+										/>
+									{/each}
+								</div>
+							</section>
+						{/if}
+
+						<!-- Companion Section -->
+						{#if showCompanion && hasCompanionData}
+							{#if companionType === 'up-next-series' && hasUpNext}
+								<section>
+									<div class="flex items-center justify-between mb-3">
+										<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+											<Hash class="w-5 h-5" style="color: var(--accent);" />
+											Up Next in Series
+										</h2>
+										<a href="/series" class="text-sm flex items-center gap-1 hover:underline" style="color: var(--accent);">
+											All series
+											<ChevronRight class="w-4 h-4" />
+										</a>
+									</div>
+									<div class="space-y-2">
+										{#each data.upNextInSeries.slice(0, 3) as item}
+											<a
+												href="/books/{item.book.id}"
+												class="card p-3 flex gap-3 hover:shadow-md transition-shadow group"
+											>
+												<div class="w-12 flex-shrink-0 rounded overflow-hidden aspect-[2/3]" style="background-color: var(--bg-tertiary);">
+													<img
+														src={item.book.coverImageUrl || '/placeholder.png'}
+														alt={item.book.title}
+														class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+														onerror={(e) => { (e.currentTarget as HTMLImageElement).onerror = null; (e.currentTarget as HTMLImageElement).src = '/placeholder.png'; }}
+													/>
+												</div>
+												<div class="flex-1 min-w-0">
+													<p class="text-sm font-medium line-clamp-2 mb-1" style="color: var(--text-primary);">{item.book.title}</p>
+													<p class="text-xs mb-1" style="color: var(--accent);">
+														{item.seriesTitle}
+														{#if item.bookNum} #{item.bookNum}{/if}
+													</p>
+													<div class="flex items-center gap-1 text-xs" style="color: var(--text-muted);">
+														<CheckCircle2 class="w-3 h-3" />
+														<span>{item.seriesProgress.read}/{item.seriesProgress.total} read</span>
+													</div>
+												</div>
+											</a>
+										{/each}
+									</div>
+								</section>
+							{:else if companionType === 'smart-collection' && data.companionSmartCollectionData}
+								<section>
+									<div class="flex items-center justify-between mb-3">
+										<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+											<Sparkles class="w-5 h-5" style="color: var(--accent);" />
+											{data.companionSmartCollectionData.shelfName}
+										</h2>
+										{#if data.companionSmartCollectionData.shelfId}
+											<a href="/shelves/{data.companionSmartCollectionData.shelfId}" class="text-sm flex items-center gap-1 hover:underline" style="color: var(--accent);">
+												View all
+												<ChevronRight class="w-4 h-4" />
+											</a>
+										{/if}
+									</div>
+									<div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+										{#each data.companionSmartCollectionData.books.slice(0, 3) as book}
+											<BookCard
+												{book}
+												onClick={handleBookClick}
+												quickEdit={true}
+												statuses={data.statuses}
+												onQuickEdit={handleQuickEdit}
+											/>
+										{/each}
+									</div>
+								</section>
+							{/if}
+						{/if}
 					</div>
-					<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-						{#each data.continueReading as book}
-							<BookCard
-								{book}
-								onClick={handleBookClick}
-								showStatus={false}
-								quickEdit={true}
-								statuses={data.statuses}
-								onQuickEdit={handleQuickEdit}
-							/>
-						{/each}
-					</div>
-				</section>
+				{/if}
 			{/if}
 
-			<!-- Smart Collection -->
+			<!-- Smart Collection (standalone, if enabled separately) -->
 			{#if data.smartCollectionData && isSectionEnabled('smart-collection')}
 				<SmartCollectionSection data={data.smartCollectionData} />
 			{/if}
 
-			<!-- Up Next in Series -->
+			<!-- Up Next in Series (standalone, when not used as companion) -->
 			{#if data.upNextInSeries.length > 0 && isSectionEnabled('up-next-series')}
+			{@const continueReadingSectionForUpNext = data.dashboardConfig?.sections.find(s => s.id === 'continue-reading')}
+			{@const upNextAsCompanion = continueReadingSectionForUpNext?.companionSection === 'up-next-series' && continueReadingSectionForUpNext?.enabled && data.continueReading.length > 0}
+			{#if !upNextAsCompanion}
 				<section>
 					<div class="flex items-center justify-between mb-3">
 						<h2 class="text-lg font-semibold flex items-center gap-2" style="color: var(--text-primary);">
@@ -355,6 +444,7 @@
 						{/each}
 					</div>
 				</section>
+			{/if}
 			{/if}
 
 			<!-- Recently Added -->

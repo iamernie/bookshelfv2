@@ -306,6 +306,14 @@ export const DEFAULT_SETTINGS = {
 		category: 'email',
 		label: 'From Address',
 		description: 'Email address shown as sender (e.g., BookShelf <noreply@example.com>)'
+	},
+	// UI settings
+	'ui.show_whats_new_modal': {
+		value: 'true',
+		type: 'boolean',
+		category: 'ui',
+		label: 'Show What\'s New Modal',
+		description: 'Display the What\'s New popup when the app is updated to a new version (admin users only)'
 	}
 } as const;
 

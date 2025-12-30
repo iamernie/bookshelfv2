@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2025-12-30
+
+### Added
+- **What's New Modal** - Admin users see a changelog popup after app updates
+  - Shows latest version changes with organized sections
+  - "Don't show again for this version" checkbox
+  - Links to full changelog page at /admin/changelog
+  - Toggle in Settings → UI to disable globally
+  - Environment variable `DISABLE_WHATS_NEW=true` to disable completely
+- **Customizable Dashboard Companion Section** - Choose what shows beside Currently Reading
+  - Options: Up Next in Series (default), Smart Collection, or Nothing (full width)
+  - Side-by-side layout when companion section has content
+  - Configure in Dashboard Settings modal
+- **Updated App Logo** - New colorful logo for sidebar, favicon, and PWA icons
+
+### Changed
+- Renamed "Continue Reading" to "Currently Reading" throughout the app
+
 ## [2.1.1] - 2025-12-30
 
 ### Added

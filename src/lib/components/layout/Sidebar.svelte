@@ -104,9 +104,7 @@
 <aside class="sidebar h-full flex flex-col overflow-hidden transition-all duration-300" class:collapsed style="width: {collapsed ? '64px' : '256px'};">
 	<!-- Logo / Brand -->
 	<div class="p-4 flex items-center gap-3" class:justify-center={collapsed}>
-		<div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background-color: var(--accent);">
-			<BookOpen class="w-5 h-5 text-white" />
-		</div>
+		<img src="/bookshelflogo.png" alt="BookShelf" class="w-8 h-8 flex-shrink-0" />
 		{#if !collapsed}
 			<span class="text-lg font-bold whitespace-nowrap" style="color: var(--text-primary);">BookShelf</span>
 		{/if}

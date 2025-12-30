@@ -99,7 +99,7 @@ This document outlines planned features, improvements, and future direction for 
 ### Short Term
 - [ ] Barcode/ISBN scanner (mobile camera)
 - [ ] Public landing page (optional)
-- [ ] "What's New" changelog modal
+- [x] "What's New" changelog modal - Shows latest changes after updates (admin only)
 
 ### Medium Term
 - [ ] Reading analytics (time tracking, pace)

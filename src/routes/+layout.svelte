@@ -3,6 +3,7 @@
 	import Sidebar from '$lib/components/layout/Sidebar.svelte';
 	import TopNavbar from '$lib/components/layout/TopNavbar.svelte';
 	import Toast from '$lib/components/ui/Toast.svelte';
+	import WhatsNewModal from '$lib/components/WhatsNewModal.svelte';
 	import { toasts } from '$lib/stores/toast';
 	import { page } from '$app/stores';
 
@@ -63,3 +64,12 @@
 		<Toast {toast} />
 	{/each}
 </div>
+
+<!-- What's New modal for admin users -->
+{#if data.whatsNew?.show && data.whatsNew.changelog}
+	<WhatsNewModal
+		version={data.whatsNew.version}
+		changelog={data.whatsNew.changelog}
+		onClose={() => {}}
+	/>
+{/if}

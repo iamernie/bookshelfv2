@@ -656,6 +656,7 @@ export interface DashboardData {
 	// New dashboard config
 	dashboardConfig: DashboardConfig;
 	smartCollectionData: SmartCollectionData | null;
+	companionSmartCollectionData: SmartCollectionData | null;
 	magicShelves: { id: number; name: string; icon: string | null; iconColor: string | null }[];
 }
 
@@ -669,6 +670,13 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 	const smartSection = dashboardConfig.sections.find(
 		s => s.id === 'smart-collection' && s.enabled
 	);
+
+	// Find continue-reading section for companion smart collection
+	const continueReadingSection = dashboardConfig.sections.find(
+		s => s.id === 'continue-reading' && s.enabled
+	);
+	const companionIsSmartCollection = continueReadingSection?.companionSection === 'smart-collection';
+	const companionShelfId = continueReadingSection?.shelfId;
 
 	const [
 		stats,
@@ -685,7 +693,8 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 		widgetConfig,
 		allStatuses,
 		allMagicShelves,
-		smartCollectionData
+		smartCollectionData,
+		companionSmartCollectionData
 	] = await Promise.all([
 		getStatsOverview(userId),
 		getGoalForDashboard(userId),
@@ -715,6 +724,10 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 		// Get smart collection books if section is enabled
 		smartSection && userId
 			? getSmartCollectionBooks(userId, smartSection, 12)
+			: Promise.resolve(null),
+		// Get companion smart collection books if configured
+		companionIsSmartCollection && companionShelfId && userId
+			? getSmartCollectionBooks(userId, { id: 'smart-collection', enabled: true, order: 0, shelfId: companionShelfId }, 6)
 			: Promise.resolve(null)
 	]);
 
@@ -734,6 +747,7 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 		statuses: allStatuses,
 		dashboardConfig,
 		smartCollectionData,
+		companionSmartCollectionData,
 		magicShelves: allMagicShelves
 	};
 }

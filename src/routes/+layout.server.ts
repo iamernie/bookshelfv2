@@ -4,6 +4,8 @@ import { genres, statuses, books, magicShelves, userBooks } from '$lib/server/db
 import { sql, eq, count, asc, or, and, ne, inArray } from 'drizzle-orm';
 import { getAllShelves, getShelfBookCounts } from '$lib/server/services/magicShelfService';
 import { getSettingAs } from '$lib/server/services/settingsService';
+import { getLatestVersion, type ChangelogVersion } from '$lib/server/services/changelogService';
+import { APP_CONFIG } from '$lib/config/app';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	const userId = locals.user?.id;
@@ -65,6 +67,27 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	// Get public library setting
 	const publicLibraryEnabled = await getSettingAs<boolean>('library.enable_public_library', 'boolean');
 
+	// Get What's New modal data for admin users
+	let whatsNewData: { show: boolean; version: string; changelog: ChangelogVersion | null } | null = null;
+	if (locals.user?.role === 'admin') {
+		// Check environment variable first
+		const disabledByEnv = process.env.DISABLE_WHATS_NEW === 'true';
+
+		if (!disabledByEnv) {
+			// Check system setting
+			const showModal = await getSettingAs<boolean>('ui.show_whats_new_modal', 'boolean');
+
+			if (showModal) {
+				const changelog = getLatestVersion();
+				whatsNewData = {
+					show: true,
+					version: APP_CONFIG.version,
+					changelog
+				};
+			}
+		}
+	}
+
 	return {
 		user: locals.user,
 		sidebar: {
@@ -74,6 +97,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			totalBooks: total,
 			isAdmin: locals.user?.role === 'admin',
 			publicLibraryEnabled
-		}
+		},
+		whatsNew: whatsNewData
 	};
 };
