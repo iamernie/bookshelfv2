@@ -543,6 +543,176 @@ export async function getSimilarBooks(bookId: number, limit: number = 8): Promis
 }
 
 /**
+ * Get AI recommendations based on a specific book
+ */
+export async function getAIRecommendationsForBook(
+	bookId: number,
+	limit: number = 5
+): Promise<{ recommendations: AIRecommendation[]; model: string } | { error: string }> {
+	const aiSettings = await getAISettings();
+
+	if (!aiSettings.enabled) {
+		return { error: 'AI recommendations are disabled. Enable them in Admin Settings.' };
+	}
+
+	if (!aiSettings.apiKey) {
+		return { error: 'OpenAI API key not configured. Set it in Admin Settings.' };
+	}
+
+	// Get the book with all its details
+	const bookResult = await db
+		.select({
+			id: books.id,
+			title: books.title,
+			authorName: authors.name,
+			seriesTitle: series.title,
+			bookNum: books.bookNum,
+			genreName: genres.name,
+			description: books.description,
+			rating: books.rating
+		})
+		.from(books)
+		.leftJoin(authors, eq(books.authorId, authors.id))
+		.leftJoin(series, eq(books.seriesId, series.id))
+		.leftJoin(genres, eq(books.genreId, genres.id))
+		.where(eq(books.id, bookId))
+		.limit(1);
+
+	if (bookResult.length === 0) {
+		return { error: 'Book not found' };
+	}
+
+	const book = bookResult[0];
+
+	// Get all authors for this book
+	const bookAuthorRows = await db
+		.select({ name: authors.name, role: bookAuthors.role })
+		.from(bookAuthors)
+		.innerJoin(authors, eq(bookAuthors.authorId, authors.id))
+		.where(eq(bookAuthors.bookId, bookId));
+
+	const authorNames = bookAuthorRows.length > 0
+		? bookAuthorRows.map(a => a.name).join(', ')
+		: book.authorName || 'Unknown Author';
+
+	// Get all series for this book
+	const bookSeriesRows = await db
+		.select({ title: series.title, bookNum: bookSeries.bookNum })
+		.from(bookSeries)
+		.innerJoin(series, eq(bookSeries.seriesId, series.id))
+		.where(eq(bookSeries.bookId, bookId));
+
+	const seriesInfo = bookSeriesRows.length > 0
+		? bookSeriesRows.map(s => `${s.title}${s.bookNum ? ` #${s.bookNum}` : ''}`).join(', ')
+		: book.seriesTitle
+			? `${book.seriesTitle}${book.bookNum ? ` #${book.bookNum}` : ''}`
+			: null;
+
+	// Build context for the prompt
+	let bookContext = `"${book.title}" by ${authorNames}`;
+	if (seriesInfo) bookContext += `\nSeries: ${seriesInfo}`;
+	if (book.genreName) bookContext += `\nGenre: ${book.genreName}`;
+	if (book.description) {
+		// Truncate description to avoid token limits
+		const shortDesc = book.description.length > 500
+			? book.description.substring(0, 500) + '...'
+			: book.description;
+		bookContext += `\nDescription: ${shortDesc}`;
+	}
+
+	const prompt = `I just finished reading this book:
+
+${bookContext}
+
+Please recommend ${limit} similar books I might enjoy. Consider:
+- The author's writing style and other works
+- The series if applicable (similar series in the genre)
+- The themes, tone, and genre
+- Books that fans of this book typically enjoy
+
+For each recommendation, provide:
+1. Title (exact, searchable title)
+2. Author name
+3. A brief reason why someone who liked the book above would enjoy this one
+
+Format your response as a JSON array with objects containing: title, author, reason
+
+Example format:
+[{"title": "Book Title", "author": "Author Name", "reason": "Short reason..."}]`;
+
+	try {
+		const response = await fetch('https://api.openai.com/v1/chat/completions', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${aiSettings.apiKey}`
+			},
+			body: JSON.stringify({
+				model: aiSettings.model,
+				messages: [
+					{
+						role: 'system',
+						content:
+							'You are a knowledgeable book recommendation assistant. Always respond with valid JSON arrays only, no extra text. Recommend well-known, real books that are actually similar to the given book.'
+					},
+					{ role: 'user', content: prompt }
+				],
+				temperature: 0.7,
+				max_tokens: 1500
+			})
+		});
+
+		if (!response.ok) {
+			const error = await response.json();
+			log.error('OpenAI API error for book recommendation', error);
+			return { error: error.error?.message || 'Failed to get recommendations' };
+		}
+
+		const data = await response.json();
+		const content = data.choices[0]?.message?.content || '[]';
+
+		// Parse JSON response
+		let recommendations: AIRecommendation[];
+		try {
+			recommendations = JSON.parse(content);
+		} catch {
+			const jsonMatch = content.match(/\[[\s\S]*\]/);
+			if (jsonMatch) {
+				recommendations = JSON.parse(jsonMatch[0]);
+			} else {
+				log.error('Failed to parse AI response for book', { content });
+				return { error: 'Failed to parse AI response' };
+			}
+		}
+
+		// Check if recommended books exist in library
+		const enrichedRecommendations = await Promise.all(
+			recommendations.map(async (rec) => {
+				const existingBook = await db
+					.select({ id: books.id })
+					.from(books)
+					.where(sql`LOWER(${books.title}) = LOWER(${rec.title})`)
+					.limit(1);
+
+				return {
+					...rec,
+					inLibrary: existingBook.length > 0,
+					bookId: existingBook[0]?.id
+				};
+			})
+		);
+
+		return {
+			recommendations: enrichedRecommendations,
+			model: aiSettings.model
+		};
+	} catch (error) {
+		log.error('AI book recommendation error', { error, bookId });
+		return { error: error instanceof Error ? error.message : 'Failed to get recommendations' };
+	}
+}
+
+/**
  * Add AI recommendation to library as wishlist item
  */
 export async function addRecommendationToLibrary(data: {

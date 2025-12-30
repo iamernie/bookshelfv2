@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.9] - 2025-12-30
+
+### Added
+- **AI Book Recommendations** - Get personalized book suggestions based on any book
+  - New "Get Recommendations" button in the Similar Books tab on book detail pages
+  - AI analyzes the book's title, author, series, genre, and description
+  - Click "Add to Wishlist" to add recommended books directly to your library
+  - Requires OpenAI API key configured in Admin Settings
+
 ## [2.2.8] - 2025-12-30
 
 ### Fixed

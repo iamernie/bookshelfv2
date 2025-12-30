@@ -30,7 +30,11 @@
 		HardDrive,
 		Upload,
 		RotateCcw,
-		CheckCircle
+		CheckCircle,
+		Wand2,
+		Loader2,
+		BookPlus,
+		ExternalLink as LinkIcon
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
 	import { formatDate } from '$lib/utils/date';
@@ -237,6 +241,72 @@
 	let editSummaryValue = $state('');
 	let editNotesValue = $state('');
 	let editSeriesNotesValue = $state('');
+
+	// AI Recommendations state
+	interface AIRecommendation {
+		title: string;
+		author: string;
+		reason: string;
+		inLibrary?: boolean;
+		bookId?: number;
+	}
+	let aiRecommendations = $state<AIRecommendation[]>([]);
+	let loadingAI = $state(false);
+	let aiError = $state<string | null>(null);
+	let addingToLibrary = $state<string | null>(null); // title of book being added
+
+	async function getAIRecommendations() {
+		loadingAI = true;
+		aiError = null;
+		aiRecommendations = [];
+
+		try {
+			const res = await fetch(`/api/books/${data.book.id}/ai-recommendations`);
+			const result = await res.json();
+
+			if (result.success) {
+				aiRecommendations = result.recommendations;
+			} else {
+				aiError = result.error || 'Failed to get recommendations';
+			}
+		} catch (err) {
+			aiError = 'Failed to connect to AI service';
+		} finally {
+			loadingAI = false;
+		}
+	}
+
+	async function addToWishlist(rec: AIRecommendation) {
+		addingToLibrary = rec.title;
+		try {
+			const res = await fetch(`/api/books/${data.book.id}/ai-recommendations`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ title: rec.title, author: rec.author })
+			});
+			const result = await res.json();
+
+			if (result.success) {
+				toasts.success(`"${rec.title}" added to wishlist`);
+				// Update the recommendation to show it's now in library
+				aiRecommendations = aiRecommendations.map(r =>
+					r.title === rec.title ? { ...r, inLibrary: true, bookId: result.bookId } : r
+				);
+			} else if (result.bookId) {
+				// Already exists
+				toasts.info(`"${rec.title}" is already in your library`);
+				aiRecommendations = aiRecommendations.map(r =>
+					r.title === rec.title ? { ...r, inLibrary: true, bookId: result.bookId } : r
+				);
+			} else {
+				toasts.error(result.error || 'Failed to add book');
+			}
+		} catch (err) {
+			toasts.error('Failed to add book to library');
+		} finally {
+			addingToLibrary = null;
+		}
+	}
 
 	// Initialize edit values when editing starts
 	function startEditSummary() {
@@ -1332,6 +1402,8 @@
 				{:else if activeTab === 'similar'}
 				<!-- Similar Books Tab -->
 				<div class="card p-4">
+					<!-- Similar Books from Library -->
+					<h3 class="font-semibold mb-3" style="color: var(--text-primary);">From Your Library</h3>
 					{#if data.similarBooks && data.similarBooks.length > 0}
 						<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
 							{#each data.similarBooks as book}
@@ -1358,14 +1430,97 @@
 							{/each}
 						</div>
 					{:else}
-						<div class="text-center py-6">
-							<Sparkles class="w-10 h-10 mx-auto mb-2" style="color: var(--text-muted); opacity: 0.5;" />
-							<p class="text-sm" style="color: var(--text-muted);">No similar books found</p>
-							<p class="text-xs mt-1" style="color: var(--text-muted);">
-								Based on shared authors, series, genres, and tags.
-							</p>
+						<div class="text-center py-4">
+							<p class="text-sm" style="color: var(--text-muted);">No similar books in your library</p>
 						</div>
 					{/if}
+
+					<!-- AI Recommendations Section -->
+					<div class="mt-6 pt-6" style="border-top: 1px solid var(--border-color);">
+						<div class="flex items-center justify-between mb-3">
+							<h3 class="font-semibold flex items-center gap-2" style="color: var(--text-primary);">
+								<Wand2 class="w-4 h-4" style="color: var(--accent);" />
+								AI Recommendations
+							</h3>
+							<button
+								type="button"
+								onclick={getAIRecommendations}
+								disabled={loadingAI}
+								class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+								style="background: var(--accent); color: white;"
+							>
+								{#if loadingAI}
+									<Loader2 class="w-4 h-4 animate-spin" />
+									Thinking...
+								{:else}
+									<Sparkles class="w-4 h-4" />
+									Get Recommendations
+								{/if}
+							</button>
+						</div>
+
+						{#if aiError}
+							<div class="p-3 rounded-lg text-sm" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">
+								{aiError}
+							</div>
+						{:else if aiRecommendations.length > 0}
+							<div class="space-y-3">
+								{#each aiRecommendations as rec}
+									<div
+										class="p-3 rounded-lg"
+										style="background: var(--bg-tertiary); border: 1px solid var(--border-color);"
+									>
+										<div class="flex items-start justify-between gap-3">
+											<div class="flex-1 min-w-0">
+												<p class="font-medium" style="color: var(--text-primary);">
+													{rec.title}
+												</p>
+												<p class="text-sm" style="color: var(--text-muted);">
+													by {rec.author}
+												</p>
+												<p class="text-sm mt-1" style="color: var(--text-secondary);">
+													{rec.reason}
+												</p>
+											</div>
+											<div class="flex-shrink-0">
+												{#if rec.inLibrary && rec.bookId}
+													<a
+														href="/books/{rec.bookId}"
+														class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium"
+														style="background: var(--bg-secondary); color: var(--text-primary);"
+													>
+														<BookOpen class="w-3.5 h-3.5" />
+														View
+													</a>
+												{:else}
+													<button
+														type="button"
+														onclick={() => addToWishlist(rec)}
+														disabled={addingToLibrary === rec.title}
+														class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors"
+														style="background: var(--accent); color: white;"
+													>
+														{#if addingToLibrary === rec.title}
+															<Loader2 class="w-3.5 h-3.5 animate-spin" />
+														{:else}
+															<BookPlus class="w-3.5 h-3.5" />
+														{/if}
+														Add to Wishlist
+													</button>
+												{/if}
+											</div>
+										</div>
+									</div>
+								{/each}
+							</div>
+						{:else if !loadingAI}
+							<div class="text-center py-4">
+								<p class="text-sm" style="color: var(--text-muted);">
+									Click "Get Recommendations" to find similar books using AI
+								</p>
+							</div>
+						{/if}
+					</div>
 				</div>
 				{/if}
 			</div>
