@@ -210,14 +210,16 @@ export interface OidcClaims {
 
 export async function handleCallback(
 	provider: OidcProvider,
-	code: string,
+	callbackUrl: URL,
 	redirectUri: string,
 	expectedNonce: string
 ): Promise<OidcTokenResult> {
 	const config = await getOidcConfig(provider);
 
 	// Exchange code for tokens
-	const tokens = await client.authorizationCodeGrant(config, new URL(redirectUri), {
+	// openid-client v6 expects the full callback URL with query params (code, state)
+	// and the original redirect_uri for validation
+	const tokens = await client.authorizationCodeGrant(config, callbackUrl, {
 		expectedNonce,
 		idTokenExpected: true
 	});

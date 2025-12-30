@@ -60,9 +60,13 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 	const baseUrl = env.PUBLIC_BASE_URL || url.origin;
 	const redirectUri = `${baseUrl}/auth/oidc/callback`;
 
+	// Build the full callback URL that openid-client v6 needs
+	// It extracts the code and state from the URL's query parameters
+	const callbackUrl = new URL(url.pathname + url.search, baseUrl);
+
 	try {
 		// Exchange code for tokens and get user claims
-		const tokenResult = await handleCallback(provider, code, redirectUri, stateData.nonce);
+		const tokenResult = await handleCallback(provider, callbackUrl, redirectUri, stateData.nonce);
 		const { claims } = tokenResult;
 
 		// Check if this OIDC identity is already linked to a user
