@@ -17,7 +17,9 @@
 		Pencil,
 		Grid,
 		List,
-		SquareCheck
+		SquareCheck,
+		Tag,
+		X
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import BookCard from '$lib/components/book/BookCard.svelte';
@@ -47,6 +49,11 @@
 	let editingNotes = $state(false);
 	let savingBio = $state(false);
 	let savingNotes = $state(false);
+	let editingTags = $state(false);
+	let togglingTag = $state<number | null>(null);
+
+	// Keep a local copy of author tags for immediate UI updates
+	let authorTags = $state(data.authorTags);
 
 	// Book IDs for selection
 	let bookIds = $derived(data.books.map(b => b.id));
@@ -152,6 +159,35 @@
 
 	function cancelNotesEdit() {
 		editingNotes = false;
+	}
+
+	async function toggleTag(tagId: number) {
+		togglingTag = tagId;
+		try {
+			const res = await fetch('/api/tags/toggle', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ authorId: data.author.id, tagId })
+			});
+			if (res.ok) {
+				const result = await res.json();
+				if (result.action === 'added') {
+					const addedTag = data.options.tags.find(t => t.id === tagId);
+					if (addedTag) {
+						authorTags = [...authorTags, addedTag];
+					}
+					toasts.success('Tag added');
+				} else {
+					authorTags = authorTags.filter(t => t.id !== tagId);
+					toasts.success('Tag removed');
+				}
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to toggle tag');
+			}
+		} finally {
+			togglingTag = null;
+		}
 	}
 
 	async function handleDelete() {
@@ -391,6 +427,68 @@
 					{/each}
 				{:else}
 					<span class="no-series">No series</span>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Tags -->
+		<div class="detail-card">
+			<div class="detail-header">
+				<h3 class="detail-title">Tags</h3>
+				<button type="button" class="edit-icon-btn" onclick={() => editingTags = !editingTags} title={editingTags ? 'Done' : 'Edit tags'}>
+					{#if editingTags}
+						<Check class="w-3 h-3" />
+					{:else}
+						<Pencil class="w-3 h-3" />
+					{/if}
+				</button>
+			</div>
+			<div class="tags-display">
+				{#if editingTags}
+					<!-- Show all tags with toggle buttons -->
+					<div class="tags-edit-grid">
+						{#each data.options.tags as tag (tag.id)}
+							{@const isSelected = authorTags.some(t => t.id === tag.id)}
+							<button
+								type="button"
+								class="tag-toggle"
+								class:selected={isSelected}
+								disabled={togglingTag === tag.id}
+								onclick={() => toggleTag(tag.id)}
+								style="--tag-color: {tag.color || '#6c757d'}"
+							>
+								{#if tag.icon}
+									<DynamicIcon icon={tag.icon} size={12} />
+								{:else}
+									<span class="tag-dot" style="background-color: {tag.color || '#6c757d'}"></span>
+								{/if}
+								{tag.name}
+								{#if isSelected}
+									<X class="w-3 h-3 remove-icon" />
+								{/if}
+							</button>
+						{/each}
+					</div>
+				{:else}
+					<!-- Show current tags -->
+					{#if authorTags.length > 0}
+						<div class="tags-list">
+							{#each authorTags as tag (tag.id)}
+								<a href="/authors?tag={tag.id}" class="author-tag" style="--tag-color: {tag.color || '#6c757d'}">
+									{#if tag.icon}
+										<DynamicIcon icon={tag.icon} size={12} />
+									{:else}
+										<span class="tag-dot" style="background-color: {tag.color || '#6c757d'}"></span>
+									{/if}
+									{tag.name}
+								</a>
+							{/each}
+						</div>
+					{:else}
+						<button type="button" class="detail-content-btn" onclick={() => editingTags = true}>
+							<span class="detail-placeholder">Click to add tags...</span>
+						</button>
+					{/if}
 				{/if}
 			</div>
 		</div>
@@ -812,15 +910,15 @@
 		color: var(--text-muted);
 	}
 
-	/* Details Grid - Compact layout for Bio, Notes, Series */
+	/* Details Grid - Compact layout for Bio, Notes, Series, Tags */
 	.details-grid {
 		display: grid;
-		grid-template-columns: 1fr 1fr 1fr;
+		grid-template-columns: repeat(4, 1fr);
 		gap: 1rem;
 		margin-bottom: 1.5rem;
 	}
 
-	@media (max-width: 900px) {
+	@media (max-width: 1100px) {
 		.details-grid {
 			grid-template-columns: 1fr 1fr;
 		}
@@ -1125,5 +1223,87 @@
 
 	.empty-state p {
 		margin: 0;
+	}
+
+	/* Tags */
+	.tags-display {
+		min-height: 1.5rem;
+	}
+
+	.tags-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+
+	.author-tag {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.2rem 0.5rem;
+		border-radius: 0.375rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		color: var(--tag-color);
+		background-color: color-mix(in srgb, var(--tag-color) 15%, transparent);
+		text-decoration: none;
+		transition: all 0.2s;
+	}
+
+	.author-tag:hover {
+		background-color: color-mix(in srgb, var(--tag-color) 25%, transparent);
+	}
+
+	.tag-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.tags-edit-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+
+	.tag-toggle {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.25rem 0.5rem;
+		border-radius: 0.375rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		border: 1px solid var(--border-color);
+		background-color: var(--bg-tertiary);
+		color: var(--text-secondary);
+		transition: all 0.2s;
+	}
+
+	.tag-toggle:hover:not(:disabled) {
+		border-color: var(--tag-color);
+		background-color: color-mix(in srgb, var(--tag-color) 10%, transparent);
+	}
+
+	.tag-toggle.selected {
+		border-color: var(--tag-color);
+		background-color: color-mix(in srgb, var(--tag-color) 20%, transparent);
+		color: var(--tag-color);
+	}
+
+	.tag-toggle:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.tag-toggle .remove-icon {
+		margin-left: 0.125rem;
+		opacity: 0.7;
+	}
+
+	.tag-toggle:hover .remove-icon {
+		opacity: 1;
 	}
 </style>

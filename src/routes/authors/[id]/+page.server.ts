@@ -1,6 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getAuthorWithBooks } from '$lib/server/services/authorService';
-import { getAllTags } from '$lib/server/services/tagService';
+import { getAllTags, getAuthorTags } from '$lib/server/services/tagService';
 import { getAllStatuses } from '$lib/server/services/statusService';
 import { getAllNarrators } from '$lib/server/services/narratorService';
 import { getAllFormats } from '$lib/server/services/formatService';
@@ -16,9 +16,10 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const userId = locals.user?.id;
 
-	const [result, tags, statuses, authors, narrators, allSeries, formats, genres] = await Promise.all([
+	const [result, tags, authorTags, statuses, authors, narrators, allSeries, formats, genres] = await Promise.all([
 		getAuthorWithBooks(id, userId),
 		getAllTags(),
+		getAuthorTags(id),
 		getAllStatuses(),
 		getAllAuthors(),
 		getAllNarrators(),
@@ -33,6 +34,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	return {
 		author: result.author,
+		authorTags,
 		books: result.books,
 		series: result.series,
 		options: {

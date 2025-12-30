@@ -13,8 +13,10 @@
 		Search,
 		Download,
 		X,
-		Library
+		Library,
+		Tag
 	} from 'lucide-svelte';
+	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { toasts } from '$lib/stores/toast';
 	import { formatDate, toInputDate } from '$lib/utils/date';
 
@@ -62,6 +64,37 @@
 	let selectedResult = $state<WikiSearchResult | null>(null);
 	let importing = $state(false);
 	let searchSource = $state<'all' | 'wikipedia' | 'fandom'>('all');
+
+	// Tag state
+	let authorTags = $state(data.authorTags);
+	let togglingTag = $state<number | null>(null);
+
+	async function toggleTag(tagId: number) {
+		togglingTag = tagId;
+		try {
+			const res = await fetch('/api/tags/toggle', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ authorId: author.id, tagId })
+			});
+			if (res.ok) {
+				const result = await res.json();
+				if (result.action === 'added') {
+					const addedTag = data.allTags.find(t => t.id === tagId);
+					if (addedTag) {
+						authorTags = [...authorTags, addedTag];
+					}
+				} else {
+					authorTags = authorTags.filter(t => t.id !== tagId);
+				}
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to toggle tag');
+			}
+		} finally {
+			togglingTag = null;
+		}
+	}
 
 	async function handleSave() {
 		if (!name.trim()) return;
@@ -638,6 +671,40 @@
 							></textarea>
 						</div>
 
+						<!-- Tags -->
+						<div
+							class="rounded-lg p-4"
+							style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);"
+						>
+							<h3 class="text-xs font-medium mb-3 flex items-center gap-2" style="color: var(--text-muted);">
+								<Tag class="w-3.5 h-3.5" />
+								Tags
+							</h3>
+							<div class="flex flex-wrap gap-2">
+								{#each data.allTags as tag (tag.id)}
+									{@const isSelected = authorTags.some(t => t.id === tag.id)}
+									<button
+										type="button"
+										class="tag-toggle-btn"
+										class:selected={isSelected}
+										disabled={togglingTag === tag.id}
+										onclick={() => toggleTag(tag.id)}
+										style="--tag-color: {tag.color || '#6c757d'}"
+									>
+										{#if tag.icon}
+											<DynamicIcon icon={tag.icon} size={12} />
+										{:else}
+											<span class="tag-dot" style="background-color: {tag.color || '#6c757d'}"></span>
+										{/if}
+										{tag.name}
+									</button>
+								{/each}
+								{#if data.allTags.length === 0}
+									<span class="text-xs" style="color: var(--text-muted);">No tags available. Create tags in the catalog manager.</span>
+								{/if}
+							</div>
+						</div>
+
 						<!-- Books by Author (Read-only reference) -->
 						{#if data.books.length > 0}
 							<div
@@ -719,5 +786,44 @@
 
 	:global(.animate-spin) {
 		animation: spin 1s linear infinite;
+	}
+
+	/* Tag toggle buttons */
+	.tag-toggle-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
+		padding: 0.375rem 0.625rem;
+		border-radius: 0.375rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		cursor: pointer;
+		border: 1px solid var(--border-color);
+		background-color: var(--bg-tertiary);
+		color: var(--text-secondary);
+		transition: all 0.2s;
+	}
+
+	.tag-toggle-btn:hover:not(:disabled) {
+		border-color: var(--tag-color);
+		background-color: color-mix(in srgb, var(--tag-color) 10%, transparent);
+	}
+
+	.tag-toggle-btn.selected {
+		border-color: var(--tag-color);
+		background-color: color-mix(in srgb, var(--tag-color) 20%, transparent);
+		color: var(--tag-color);
+	}
+
+	.tag-toggle-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.tag-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		flex-shrink: 0;
 	}
 </style>

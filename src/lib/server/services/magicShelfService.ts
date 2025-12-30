@@ -193,8 +193,19 @@ const BOOK_COLUMNS: Record<string, keyof typeof books> = {
 	publisher: 'publisher'
 };
 
+// Resolve dynamic date values like $today
+function resolveDateValue(value: string | number | string[] | number[] | null): string | number | string[] | number[] | null {
+	if (value === '$today') {
+		// Return today's date in YYYY-MM-DD format
+		return new Date().toISOString().split('T')[0];
+	}
+	return value;
+}
+
 function buildCondition(rule: FilterRule): SQL<unknown> | null {
-	const { field, operator, value } = rule;
+	const { field, operator } = rule;
+	// Resolve dynamic date values
+	const value = resolveDateValue(rule.value);
 
 	// Handle junction table fields (author, series, tag)
 	if (field === 'authorId' || field === 'seriesId' || field === 'tagId') {

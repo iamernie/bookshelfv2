@@ -1,8 +1,15 @@
-import { db, authors, bookAuthors, books, statuses, genres, bookSeries, series } from '$lib/server/db';
+import { db, authors, bookAuthors, books, statuses, genres, bookSeries, series, authorTags, tags } from '$lib/server/db';
 import { eq, like, sql, desc, asc, and, inArray, or } from 'drizzle-orm';
 import type { Author, NewAuthor } from '$lib/server/db/schema';
 import { getBooksCardData } from './bookService';
 import type { BookCardData } from '$lib/types';
+
+interface TagInfo {
+	id: number;
+	name: string;
+	color: string | null;
+	icon: string | null;
+}
 
 /**
  * Generate SQL condition to filter books by user's library
@@ -23,6 +30,7 @@ export interface AuthorWithStats extends Author {
 	completionPercentage: number;
 	inferredGenre?: { id: number; name: string; color: string | null } | null;
 	coverBook?: { id: number; title: string; coverUrl: string | null } | null;
+	tags?: TagInfo[];
 }
 
 // Legacy interface for backwards compatibility
@@ -165,18 +173,46 @@ export async function getAuthors(options: GetAuthorsOptions = {}): Promise<{
 		.limit(limit)
 		.offset(offset);
 
-	// If stats are requested, get additional data for cover books and inferred genres
+	// If stats are requested, get additional data for cover books, inferred genres, and tags
 	let enrichedItems: AuthorWithStats[] = items.map((item) => ({
 		...item,
 		averageRating: item.averageRating ? parseFloat(item.averageRating.toFixed(2)) : null,
 		completionPercentage: item.completionPercentage || 0,
 		inferredGenre: null,
-		coverBook: null
+		coverBook: null,
+		tags: []
 	}));
 
 	if (includeStats && enrichedItems.length > 0) {
-		// Get cover books and inferred genres for all authors
+		// Get cover books, inferred genres, and tags for all authors
 		const authorIds = enrichedItems.map((a) => a.id);
+
+		// Get tags for all authors
+		const authorTagsData = await db
+			.select({
+				authorId: authorTags.authorId,
+				tagId: tags.id,
+				tagName: tags.name,
+				tagColor: tags.color,
+				tagIcon: tags.icon
+			})
+			.from(authorTags)
+			.innerJoin(tags, eq(authorTags.tagId, tags.id))
+			.where(inArray(authorTags.authorId, authorIds));
+
+		// Group tags by authorId
+		const tagsByAuthor = new Map<number, TagInfo[]>();
+		for (const t of authorTagsData) {
+			if (!tagsByAuthor.has(t.authorId)) {
+				tagsByAuthor.set(t.authorId, []);
+			}
+			tagsByAuthor.get(t.authorId)!.push({
+				id: t.tagId,
+				name: t.tagName,
+				color: t.tagColor,
+				icon: t.tagIcon
+			});
+		}
 
 		// Get all books for these authors
 		const authorBooks = await db
@@ -249,7 +285,8 @@ export async function getAuthors(options: GetAuthorsOptions = {}): Promise<{
 			return {
 				...author,
 				coverBook,
-				inferredGenre
+				inferredGenre,
+				tags: tagsByAuthor.get(author.id) || []
 			};
 		});
 	}

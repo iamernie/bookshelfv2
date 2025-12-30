@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2025-12-30
+
+### Added
+- **Author Tags** - Authors now support tags just like books and series
+  - Tag authors from their detail page or edit page
+  - Tags display on AuthorCard with colors and icons
+  - Filter authors by tag from the authors page
+- **Improved Tag Visibility** - Tags are now more prominent and interactive
+  - BookCard shows up to 4 tags (up from 2) with colors
+  - BookRow shows up to 3 tags with colors
+  - All tags are now clickable links that filter by that tag
+- **Inline Tag Editor** - New component for editing tags directly on detail pages
+  - Add/remove tags without opening edit mode
+  - Shows tags with colors and icons
+  - Used on book detail pages
+- **Quick Tag Picker** - New reusable dropdown component for rapid tagging
+- **Dynamic Date Filters for Smart Collections** - Use "Today" as a relative date
+  - Create shelves like "Upcoming Books" (release date after today)
+  - Create shelves like "Recently Released" (release date before today)
+  - Date rules now have a dropdown to choose between "Today" or a specific date
+
 ## [2.0.0] - 2025-12-29
 
 ### Major Release - BookShelf V2

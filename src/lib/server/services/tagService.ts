@@ -1,4 +1,4 @@
-import { db, tags, bookTags, seriesTags, books, series } from '$lib/server/db';
+import { db, tags, bookTags, seriesTags, authorTags, books, series, authors } from '$lib/server/db';
 import { eq, like, asc, desc, sql, and, or } from 'drizzle-orm';
 import type { Tag } from '$lib/server/db/schema';
 
@@ -25,6 +25,7 @@ const SYSTEM_TAGS = [
 export interface TagWithCount extends Tag {
 	bookCount: number;
 	seriesCount: number;
+	authorCount: number;
 }
 
 export interface GetTagsOptions {
@@ -102,10 +103,17 @@ export async function getTags(options: GetTagsOptions = {}): Promise<{
 				.from(seriesTags)
 				.where(eq(seriesTags.tagId, tag.id));
 
+			// Author count
+			const authorCountResult = await db
+				.select({ count: sql<number>`count(*)` })
+				.from(authorTags)
+				.where(eq(authorTags.tagId, tag.id));
+
 			return {
 				...tag,
 				bookCount,
-				seriesCount: seriesCountResult[0]?.count ?? 0
+				seriesCount: seriesCountResult[0]?.count ?? 0,
+				authorCount: authorCountResult[0]?.count ?? 0
 			};
 		})
 	);
@@ -158,10 +166,16 @@ export async function getTagById(id: number, userId?: number): Promise<TagWithCo
 		.from(seriesTags)
 		.where(eq(seriesTags.tagId, id));
 
+	const authorCountResult = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(authorTags)
+		.where(eq(authorTags.tagId, id));
+
 	return {
 		...tag[0],
 		bookCount,
-		seriesCount: seriesCountResult[0]?.count ?? 0
+		seriesCount: seriesCountResult[0]?.count ?? 0,
+		authorCount: authorCountResult[0]?.count ?? 0
 	};
 }
 
@@ -233,6 +247,7 @@ export async function deleteTag(id: number): Promise<boolean> {
 	// Delete all associations first (cascade should handle this, but being explicit)
 	await db.delete(bookTags).where(eq(bookTags.tagId, id));
 	await db.delete(seriesTags).where(eq(seriesTags.tagId, id));
+	await db.delete(authorTags).where(eq(authorTags.tagId, id));
 
 	// Delete the tag
 	const result = await db.delete(tags).where(eq(tags.id, id));
@@ -364,4 +379,66 @@ export async function getAllTags(): Promise<{ id: number; name: string; color: s
 		})
 		.from(tags)
 		.orderBy(desc(tags.isSystem), asc(tags.name));
+}
+
+// ========== Author Tag Functions ==========
+
+// Toggle tag on an author
+export async function toggleAuthorTag(authorId: number, tagId: number): Promise<{ action: 'added' | 'removed' }> {
+	const existing = await db
+		.select()
+		.from(authorTags)
+		.where(sql`${authorTags.authorId} = ${authorId} AND ${authorTags.tagId} = ${tagId}`)
+		.limit(1);
+
+	if (existing[0]) {
+		await db.delete(authorTags).where(sql`${authorTags.authorId} = ${authorId} AND ${authorTags.tagId} = ${tagId}`);
+		return { action: 'removed' };
+	} else {
+		const now = new Date().toISOString();
+		await db.insert(authorTags).values({ authorId, tagId, createdAt: now, updatedAt: now });
+		return { action: 'added' };
+	}
+}
+
+// Get tags for an author
+export async function getAuthorTags(authorId: number): Promise<{ id: number; name: string; color: string | null; icon: string | null; isSystem: boolean | null }[]> {
+	const tagIds = await db
+		.select({ tagId: authorTags.tagId })
+		.from(authorTags)
+		.where(eq(authorTags.authorId, authorId));
+
+	if (tagIds.length === 0) return [];
+
+	const tagList = await db
+		.select({
+			id: tags.id,
+			name: tags.name,
+			color: tags.color,
+			icon: tags.icon,
+			isSystem: tags.isSystem
+		})
+		.from(tags)
+		.where(sql`${tags.id} IN (${tagIds.map((t) => t.tagId).join(',')})`)
+		.orderBy(desc(tags.isSystem), asc(tags.name));
+
+	return tagList;
+}
+
+// Get authors with a specific tag
+export async function getAuthorsWithTag(tagId: number): Promise<{ id: number; name: string; photoUrl: string | null }[]> {
+	const authorIds = await db
+		.select({ authorId: authorTags.authorId })
+		.from(authorTags)
+		.where(eq(authorTags.tagId, tagId));
+
+	if (authorIds.length === 0) return [];
+
+	const authorList = await db
+		.select({ id: authors.id, name: authors.name, photoUrl: authors.photoUrl })
+		.from(authors)
+		.where(sql`${authors.id} IN (${authorIds.map((a) => a.authorId).join(',')})`)
+		.orderBy(asc(authors.name));
+
+	return authorList;
 }

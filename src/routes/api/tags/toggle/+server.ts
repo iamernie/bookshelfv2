@@ -1,8 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { toggleBookTag, toggleSeriesTag } from '$lib/server/services/tagService';
+import { toggleBookTag, toggleSeriesTag, toggleAuthorTag } from '$lib/server/services/tagService';
 
-// Toggle a tag on a book or series
+// Toggle a tag on a book, series, or author
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
@@ -14,12 +14,14 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		throw error(400, { message: 'Tag ID is required' });
 	}
 
-	if (!data.bookId && !data.seriesId) {
-		throw error(400, { message: 'Either bookId or seriesId is required' });
+	if (!data.bookId && !data.seriesId && !data.authorId) {
+		throw error(400, { message: 'Either bookId, seriesId, or authorId is required' });
 	}
 
-	if (data.bookId && data.seriesId) {
-		throw error(400, { message: 'Cannot specify both bookId and seriesId' });
+	// Ensure only one entity type is specified
+	const specifiedIds = [data.bookId, data.seriesId, data.authorId].filter(Boolean);
+	if (specifiedIds.length > 1) {
+		throw error(400, { message: 'Can only specify one of bookId, seriesId, or authorId' });
 	}
 
 	const tagId = parseInt(data.tagId);
@@ -42,6 +44,15 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			throw error(400, { message: 'Invalid series ID' });
 		}
 		const result = await toggleSeriesTag(seriesId, tagId);
+		return json({ success: true, ...result });
+	}
+
+	if (data.authorId) {
+		const authorId = parseInt(data.authorId);
+		if (isNaN(authorId)) {
+			throw error(400, { message: 'Invalid author ID' });
+		}
+		const result = await toggleAuthorTag(authorId, tagId);
 		return json({ success: true, ...result });
 	}
 

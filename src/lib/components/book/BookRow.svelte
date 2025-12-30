@@ -45,8 +45,8 @@
 		}
 	}
 
-	// Get first 2 tags for display
-	let displayTags = $derived((book.tags || []).slice(0, 2));
+	// Get first 3 tags for display in list view
+	let displayTags = $derived((book.tags || []).slice(0, 3));
 </script>
 
 <button
@@ -161,16 +161,18 @@
 			{#if displayTags.length > 0}
 				<div class="tags-container">
 					{#each displayTags as tag}
-						<span
-							class="tag-badge"
+						<a
+							href="/books?tag={tag.id}"
+							class="tag-badge hover:brightness-110 transition-all"
 							style="background-color: {tag.color || '#6c757d'}20; border-color: {tag.color || '#6c757d'}40; color: {tag.color || '#6c757d'}"
 							title={tag.name}
+							onclick={(e) => e.stopPropagation()}
 						>
 							{tag.name}
-						</span>
+						</a>
 					{/each}
-					{#if (book.tags?.length || 0) > 2}
-						<span class="tag-more">+{(book.tags?.length || 0) - 2}</span>
+					{#if (book.tags?.length || 0) > 3}
+						<span class="tag-more">+{(book.tags?.length || 0) - 3}</span>
 					{/if}
 				</div>
 			{:else}

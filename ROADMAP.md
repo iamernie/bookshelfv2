@@ -57,6 +57,10 @@ This document outlines planned features, improvements, and future direction for 
 - [x] **Mobile reader improvements** - Fixed ebook and audiobook playback on mobile devices
   - Touch navigation zones for ebook reader
   - Autoplay restriction handling for audio player
+- [x] **Author Tags** - Authors support tagging just like books and series
+- [x] **Enhanced Tag Visibility** - More tags shown on cards, clickable filters, color-coded display
+- [x] **Inline Tag Editor** - Edit tags directly on detail pages without entering edit mode
+- [x] **Dynamic Date Filters** - Use "Today" as a relative date value in smart collection rules
 
 ---
 

@@ -150,8 +150,8 @@
 		return iconMap[icon] || 'fas fa-tag';
 	}
 
-	// Get first 2 tags for display (to not clutter the card)
-	let displayTags = $derived((book.tags || []).slice(0, 2));
+	// Get first 4 tags for display (to show more tags without cluttering)
+	let displayTags = $derived((book.tags || []).slice(0, 4));
 
 	// Hover action handlers
 	function handleReadClick(e: MouseEvent) {
@@ -395,17 +395,19 @@
 		{#if showTags && displayTags.length > 0}
 			<div class="flex flex-wrap gap-1 mt-1">
 				{#each displayTags as tag}
-					<span
-						class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium"
-						style="background-color: {tag.color || '#6c757d'}25; color: {tag.color || '#6c757d'}"
+					<a
+						href="/books?tag={tag.id}"
+						class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium transition-all hover:brightness-110"
+						style="background-color: {tag.color || '#6c757d'}20; color: {tag.color || '#6c757d'}"
 						title={tag.name}
+						onclick={(e) => e.stopPropagation()}
 					>
 						<DynamicIcon icon={getTagIconClass(tag.icon)} size={8} />
 						{tag.name}
-					</span>
+					</a>
 				{/each}
-				{#if (book.tags?.length || 0) > 2}
-					<span class="text-[9px]" style="color: var(--text-muted);">+{(book.tags?.length || 0) - 2}</span>
+				{#if (book.tags?.length || 0) > 4}
+					<span class="text-[9px]" style="color: var(--text-muted);">+{(book.tags?.length || 0) - 4}</span>
 				{/if}
 			</div>
 		{/if}

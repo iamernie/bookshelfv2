@@ -254,12 +254,30 @@
 											onchange={(e) => updateRule(rule, 'value', parseFloat(e.currentTarget.value) || null)}
 										/>
 									{:else if fieldDef?.type === 'date'}
-										<input
-											type="date"
-											class="input-field text-sm py-1"
-											value={rule.value ?? ''}
-											onchange={(e) => updateRule(rule, 'value', e.currentTarget.value || null)}
-										/>
+									<div class="flex items-center gap-2">
+										<select
+											class="input-field text-sm py-1 min-w-[100px]"
+											value={rule.value === '$today' ? '$today' : 'custom'}
+											onchange={(e) => {
+												if (e.currentTarget.value === '$today') {
+													updateRule(rule, 'value', '$today');
+												} else {
+													updateRule(rule, 'value', null);
+												}
+											}}
+										>
+											<option value="$today">Today</option>
+											<option value="custom">Specific date</option>
+										</select>
+										{#if rule.value !== '$today'}
+											<input
+												type="date"
+												class="input-field text-sm py-1"
+												value={rule.value ?? ''}
+												onchange={(e) => updateRule(rule, 'value', e.currentTarget.value || null)}
+											/>
+										{/if}
+									</div>
 									{:else}
 										<input
 											type="text"

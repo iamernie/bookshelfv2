@@ -329,6 +329,14 @@ export const seriesTags = sqliteTable('seriestags', {
 	updatedAt: text('updatedAt').notNull()
 });
 
+export const authorTags = sqliteTable('authortags', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	authorId: integer('authorId').notNull().references(() => authors.id, { onDelete: 'cascade' }),
+	tagId: integer('tagId').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+	createdAt: text('createdAt').notNull(),
+	updatedAt: text('updatedAt').notNull()
+});
+
 // ============================================
 // Library Sharing (Per-User Libraries)
 // ============================================
@@ -615,7 +623,8 @@ export const booksRelations = relations(books, ({ one, many }) => ({
 }));
 
 export const authorsRelations = relations(authors, ({ many }) => ({
-	bookAuthors: many(bookAuthors)
+	bookAuthors: many(bookAuthors),
+	authorTags: many(authorTags)
 }));
 
 export const seriesRelations = relations(series, ({ one, many }) => ({
@@ -645,9 +654,15 @@ export const seriesTagsRelations = relations(seriesTags, ({ one }) => ({
 	tag: one(tags, { fields: [seriesTags.tagId], references: [tags.id] })
 }));
 
+export const authorTagsRelations = relations(authorTags, ({ one }) => ({
+	author: one(authors, { fields: [authorTags.authorId], references: [authors.id] }),
+	tag: one(tags, { fields: [authorTags.tagId], references: [tags.id] })
+}));
+
 export const tagsRelations = relations(tags, ({ many }) => ({
 	bookTags: many(bookTags),
 	seriesTags: many(seriesTags),
+	authorTags: many(authorTags),
 	userBookTags: many(userBookTags)
 }));
 
@@ -786,6 +801,8 @@ export type UserOidcLink = typeof userOidcLinks.$inferSelect;
 export type NewUserOidcLink = typeof userOidcLinks.$inferInsert;
 export type LibraryShare = typeof libraryShares.$inferSelect;
 export type NewLibraryShare = typeof libraryShares.$inferInsert;
+export type AuthorTag = typeof authorTags.$inferSelect;
+export type NewAuthorTag = typeof authorTags.$inferInsert;
 
 // Audiobook types
 export type Audiobook = typeof audiobooks.$inferSelect;

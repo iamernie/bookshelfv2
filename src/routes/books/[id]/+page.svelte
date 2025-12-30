@@ -37,6 +37,7 @@
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
 	import AudioPlayer from '$lib/components/audiobook/AudioPlayer.svelte';
+	import InlineTagEditor from '$lib/components/tag/InlineTagEditor.svelte';
 
 	let { data } = $props();
 
@@ -604,21 +605,16 @@
 				{/if}
 
 				<!-- Tags -->
-				{#if data.book.tags.length > 0}
-					<div class="flex items-center gap-1.5 mb-4">
-						<Tag class="w-4 h-4" style="color: var(--text-muted);" />
-						<div class="flex flex-wrap gap-1">
-							{#each data.book.tags as tag}
-								<span
-									class="px-1.5 py-0.5 rounded text-xs"
-									style="background-color: {tag.color || 'var(--bg-tertiary)'}; color: {tag.color ? 'white' : 'var(--text-secondary)'};"
-								>
-									{tag.name}
-								</span>
-							{/each}
-						</div>
-					</div>
-				{/if}
+				<div class="flex items-start gap-1.5 mb-4">
+					<Tag class="w-4 h-4 mt-1 flex-shrink-0" style="color: var(--text-muted);" />
+					<InlineTagEditor
+						entityType="book"
+						entityId={data.book.id}
+						currentTags={data.book.tags}
+						allTags={data.allTags}
+						onUpdate={() => invalidateAll()}
+					/>
+				</div>
 
 				<!-- Tab Navigation -->
 				<div class="mb-4 border-b" style="border-color: var(--border-color);">

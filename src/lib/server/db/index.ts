@@ -788,6 +788,27 @@ function runMigrations() {
 		)
 	`);
 
+	// ========== Author Tags junction table ==========
+	safeCreateTable('authortags', `
+		CREATE TABLE authortags (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			authorId INTEGER NOT NULL REFERENCES authors(id) ON DELETE CASCADE,
+			tagId INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+			createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Create indexes for seriestags and authortags
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_seriestags_series ON seriestags(seriesId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_seriestags_tag ON seriestags(tagId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_authortags_author ON authortags(authorId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_authortags_tag ON authortags(tagId)');
+	} catch {
+		// Indexes may already exist
+	}
+
 	// ========== Public Library Feature ==========
 
 	// Add libraryType column to books (personal vs public)

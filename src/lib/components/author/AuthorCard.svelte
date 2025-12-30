@@ -1,5 +1,13 @@
 <script lang="ts">
 	import { User, BookOpen, Star, TrendingUp } from 'lucide-svelte';
+	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
+
+	interface TagInfo {
+		id: number;
+		name: string;
+		color: string | null;
+		icon: string | null;
+	}
 
 	interface AuthorWithStats {
 		id: number;
@@ -11,6 +19,7 @@
 		completionPercentage?: number;
 		inferredGenre?: { id: number; name: string; color: string | null } | null;
 		coverBook?: { id: number; title: string; coverUrl: string | null } | null;
+		tags?: TagInfo[];
 	}
 
 	let {
@@ -20,6 +29,9 @@
 		author: AuthorWithStats;
 		onclick: () => void;
 	} = $props();
+
+	// Get up to 3 tags to display
+	let displayTags = $derived((author.tags || []).slice(0, 3));
 
 	// Format rating for display
 	let displayRating = $derived(
@@ -103,6 +115,25 @@
 					</span>
 				{/if}
 			</div>
+
+			<!-- Tags -->
+			{#if displayTags.length > 0}
+				<div class="tags-row">
+					{#each displayTags as tag (tag.id)}
+						<span class="author-tag" style="--tag-color: {tag.color || '#6c757d'}">
+							{#if tag.icon}
+								<DynamicIcon icon={tag.icon} size={10} />
+							{:else}
+								<span class="tag-dot" style="background-color: {tag.color || '#6c757d'}"></span>
+							{/if}
+							{tag.name}
+						</span>
+					{/each}
+					{#if (author.tags?.length || 0) > 3}
+						<span class="more-tags">+{(author.tags?.length || 0) - 3}</span>
+					{/if}
+				</div>
+			{/if}
 		</div>
 	</div>
 </button>
@@ -190,5 +221,37 @@
 		gap: 0.25rem;
 		font-size: 0.8rem;
 		color: var(--text-muted);
+	}
+
+	.tags-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+		margin-top: 0.25rem;
+	}
+
+	.author-tag {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.2rem;
+		padding: 0.125rem 0.375rem;
+		border-radius: 0.25rem;
+		font-size: 0.65rem;
+		font-weight: 500;
+		color: var(--tag-color);
+		background-color: color-mix(in srgb, var(--tag-color) 15%, transparent);
+	}
+
+	.tag-dot {
+		width: 5px;
+		height: 5px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.more-tags {
+		font-size: 0.6rem;
+		color: var(--text-muted);
+		padding: 0.125rem 0.25rem;
 	}
 </style>
