@@ -7,13 +7,23 @@
 	import NarratorModal from '$lib/components/narrator/NarratorModal.svelte';
 	import { toasts } from '$lib/stores/toast';
 
+	interface TagInfo {
+		id: number;
+		name: string;
+		color: string | null;
+		icon: string | null;
+	}
+
 	interface NarratorWithStats {
 		id: number;
 		name: string;
 		bio: string | null;
-		url: string | null;
+		photoUrl: string | null;
+		audiobookCount: number;
 		bookCount: number;
 		avgRating: number | null;
+		coverBook?: { id: number; title: string; coverImageUrl: string | null } | null;
+		tags?: TagInfo[];
 		createdAt: string | null;
 		updatedAt: string | null;
 	}
@@ -31,6 +41,7 @@
 		try {
 			const params = new URLSearchParams();
 			if (search) params.set('search', search);
+			params.set('includeStats', 'true');
 
 			const response = await fetch(`/api/narrators?${params}`);
 			if (!response.ok) throw new Error('Failed to load narrators');
@@ -47,9 +58,8 @@
 	}
 
 	function openNarrator(narrator: NarratorWithStats) {
-		// Navigate to the edit page instead of modal
-		const returnUrl = encodeURIComponent($page.url.pathname + $page.url.search);
-		goto(`/narrators/${narrator.id}/edit?returnTo=${returnUrl}`);
+		// Navigate to the detail page
+		goto(`/narrators/${narrator.id}`);
 	}
 
 	function openAddModal() {

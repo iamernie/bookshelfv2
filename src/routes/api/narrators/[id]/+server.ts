@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getNarratorById, updateNarrator, deleteNarrator, getBooksByNarrator } from '$lib/server/services/narratorService';
+import { getNarratorById, updateNarrator, deleteNarrator, getAudiobooksByNarrator, getNarratorTags } from '$lib/server/services/narratorService';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const id = parseInt(params.id);
@@ -13,9 +13,12 @@ export const GET: RequestHandler = async ({ params }) => {
 		throw error(404, { message: 'Narrator not found' });
 	}
 
-	const books = await getBooksByNarrator(id);
+	const [audiobooks, tags] = await Promise.all([
+		getAudiobooksByNarrator(id),
+		getNarratorTags(id)
+	]);
 
-	return json({ narrator, books });
+	return json({ narrator, audiobooks, tags });
 };
 
 export const PUT: RequestHandler = async ({ params, request, locals }) => {
@@ -37,7 +40,13 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	const narrator = await updateNarrator(id, {
 		name: data.name.trim(),
 		bio: data.bio?.trim() || null,
-		url: data.url?.trim() || null
+		birthDate: data.birthDate?.trim() || null,
+		deathDate: data.deathDate?.trim() || null,
+		birthPlace: data.birthPlace?.trim() || null,
+		photoUrl: data.photoUrl?.trim() || null,
+		website: data.website?.trim() || null,
+		wikipediaUrl: data.wikipediaUrl?.trim() || null,
+		comments: data.comments?.trim() || null
 	});
 
 	if (!narrator) {

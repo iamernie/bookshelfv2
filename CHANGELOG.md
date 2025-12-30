@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.6] - 2025-12-30
+
+### Added
+- **Enhanced Narrator System** - Narrators now match the author experience
+  - **Narrator Tags** - Tag narrators with custom tags, colors, and icons
+  - **Wikipedia Metadata Search** - Look up narrator info from Wikipedia and import bio, photo, dates
+  - **Narrator Detail Page** - New `/narrators/[id]` page with inline bio editing, stats, and audiobook grid
+  - **Extended Narrator Fields** - Birth/death dates, birthplace, photo URL, website, Wikipedia URL, comments
+  - **Narrator Cards** - Show photos, cover images, tags, and audiobook counts on list page
+
 ## [2.2.3] - 2025-12-30
 
 ### Fixed

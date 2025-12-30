@@ -1,4 +1,4 @@
-import { db, tags, bookTags, seriesTags, authorTags, books, series, authors } from '$lib/server/db';
+import { db, tags, bookTags, seriesTags, authorTags, narratorTags, books, series, authors, narrators } from '$lib/server/db';
 import { eq, like, asc, desc, sql, and, or } from 'drizzle-orm';
 import type { Tag } from '$lib/server/db/schema';
 
@@ -441,4 +441,66 @@ export async function getAuthorsWithTag(tagId: number): Promise<{ id: number; na
 		.orderBy(asc(authors.name));
 
 	return authorList;
+}
+
+// ========== Narrator Tag Functions ==========
+
+// Toggle tag on a narrator
+export async function toggleNarratorTag(narratorId: number, tagId: number): Promise<{ action: 'added' | 'removed' }> {
+	const existing = await db
+		.select()
+		.from(narratorTags)
+		.where(sql`${narratorTags.narratorId} = ${narratorId} AND ${narratorTags.tagId} = ${tagId}`)
+		.limit(1);
+
+	if (existing[0]) {
+		await db.delete(narratorTags).where(sql`${narratorTags.narratorId} = ${narratorId} AND ${narratorTags.tagId} = ${tagId}`);
+		return { action: 'removed' };
+	} else {
+		const now = new Date().toISOString();
+		await db.insert(narratorTags).values({ narratorId, tagId, createdAt: now, updatedAt: now });
+		return { action: 'added' };
+	}
+}
+
+// Get tags for a narrator
+export async function getNarratorTags(narratorId: number): Promise<{ id: number; name: string; color: string | null; icon: string | null; isSystem: boolean | null }[]> {
+	const tagIds = await db
+		.select({ tagId: narratorTags.tagId })
+		.from(narratorTags)
+		.where(eq(narratorTags.narratorId, narratorId));
+
+	if (tagIds.length === 0) return [];
+
+	const tagList = await db
+		.select({
+			id: tags.id,
+			name: tags.name,
+			color: tags.color,
+			icon: tags.icon,
+			isSystem: tags.isSystem
+		})
+		.from(tags)
+		.where(sql`${tags.id} IN (${tagIds.map((t) => t.tagId).join(',')})`)
+		.orderBy(desc(tags.isSystem), asc(tags.name));
+
+	return tagList;
+}
+
+// Get narrators with a specific tag
+export async function getNarratorsWithTag(tagId: number): Promise<{ id: number; name: string; photoUrl: string | null }[]> {
+	const narratorIds = await db
+		.select({ narratorId: narratorTags.narratorId })
+		.from(narratorTags)
+		.where(eq(narratorTags.tagId, tagId));
+
+	if (narratorIds.length === 0) return [];
+
+	const narratorList = await db
+		.select({ id: narrators.id, name: narrators.name, photoUrl: narrators.photoUrl })
+		.from(narrators)
+		.where(sql`${narrators.id} IN (${narratorIds.map((n) => n.narratorId).join(',')})`)
+		.orderBy(asc(narrators.name));
+
+	return narratorList;
 }

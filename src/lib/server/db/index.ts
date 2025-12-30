@@ -809,6 +809,36 @@ function runMigrations() {
 		// Indexes may already exist
 	}
 
+	// ========== Narrator Tags Feature ==========
+
+	// Narrator tags junction table (like authortags)
+	safeCreateTable('narratortags', `
+		CREATE TABLE narratortags (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			narratorId INTEGER NOT NULL REFERENCES narrators(id) ON DELETE CASCADE,
+			tagId INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+			createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Create indexes for narratortags
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_narratortags_narrator ON narratortags(narratorId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_narratortags_tag ON narratortags(tagId)');
+	} catch {
+		// Indexes may already exist
+	}
+
+	// Add additional biographical fields to narrators (matching authors)
+	if (tableExists('narrators')) {
+		safeAddColumn('narrators', 'birthDate', 'TEXT');
+		safeAddColumn('narrators', 'deathDate', 'TEXT');
+		safeAddColumn('narrators', 'birthPlace', 'TEXT');
+		safeAddColumn('narrators', 'wikipediaUrl', 'TEXT');
+		safeAddColumn('narrators', 'comments', 'TEXT');
+	}
+
 	// ========== Public Library Feature ==========
 
 	// Add libraryType column to books (personal vs public)

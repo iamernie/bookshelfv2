@@ -122,7 +122,13 @@ export const narrators = sqliteTable('narrators', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	name: text('name').notNull(),
 	bio: text('bio'),
-	url: text('url'),
+	birthDate: text('birthDate'),
+	deathDate: text('deathDate'),
+	birthPlace: text('birthPlace'),
+	photoUrl: text('photoUrl'),
+	website: text('website'),
+	wikipediaUrl: text('wikipediaUrl'),
+	comments: text('comments'),
 	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
 	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
 });
@@ -332,6 +338,14 @@ export const seriesTags = sqliteTable('seriestags', {
 export const authorTags = sqliteTable('authortags', {
 	id: integer('id').primaryKey({ autoIncrement: true }),
 	authorId: integer('authorId').notNull().references(() => authors.id, { onDelete: 'cascade' }),
+	tagId: integer('tagId').notNull().references(() => tags.id, { onDelete: 'cascade' }),
+	createdAt: text('createdAt').notNull(),
+	updatedAt: text('updatedAt').notNull()
+});
+
+export const narratorTags = sqliteTable('narratortags', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	narratorId: integer('narratorId').notNull().references(() => narrators.id, { onDelete: 'cascade' }),
 	tagId: integer('tagId').notNull().references(() => tags.id, { onDelete: 'cascade' }),
 	createdAt: text('createdAt').notNull(),
 	updatedAt: text('updatedAt').notNull()
@@ -659,10 +673,16 @@ export const authorTagsRelations = relations(authorTags, ({ one }) => ({
 	tag: one(tags, { fields: [authorTags.tagId], references: [tags.id] })
 }));
 
+export const narratorTagsRelations = relations(narratorTags, ({ one }) => ({
+	narrator: one(narrators, { fields: [narratorTags.narratorId], references: [narrators.id] }),
+	tag: one(tags, { fields: [narratorTags.tagId], references: [tags.id] })
+}));
+
 export const tagsRelations = relations(tags, ({ many }) => ({
 	bookTags: many(bookTags),
 	seriesTags: many(seriesTags),
 	authorTags: many(authorTags),
+	narratorTags: many(narratorTags),
 	userBookTags: many(userBookTags)
 }));
 

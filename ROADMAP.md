@@ -62,6 +62,7 @@ This document outlines planned features, improvements, and future direction for 
 - [x] **Inline Tag Editor** - Edit tags directly on detail pages without entering edit mode
 - [x] **Dynamic Date Filters** - Use "Today" as a relative date value in smart collection rules
 - [x] **Inline Rating & Status** - Edit book rating and status directly on detail page without entering edit mode
+- [x] **Enhanced Narrator System** - Narrators match author experience with tags, Wikipedia search, detail pages, and extended metadata fields
 
 ---
 
