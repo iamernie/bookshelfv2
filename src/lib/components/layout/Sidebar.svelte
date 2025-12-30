@@ -54,6 +54,7 @@
 		magicShelves?: MagicShelf[];
 		totalBooks: number;
 		isAdmin?: boolean;
+		publicLibraryEnabled?: boolean;
 	}
 
 	let { data }: { data: SidebarData } = $props();
@@ -130,10 +131,12 @@
 				{/if}
 			</a>
 
-			<a href="/library" class="sidebar-item" class:active={currentPath === '/library'} class:collapsed title={collapsed ? 'Public Library' : undefined}>
-				<Library class="w-5 h-5 flex-shrink-0" />
-				{#if !collapsed}<span>Public Library</span>{/if}
-			</a>
+			{#if data.publicLibraryEnabled !== false}
+				<a href="/library" class="sidebar-item" class:active={currentPath === '/library'} class:collapsed title={collapsed ? 'Public Library' : undefined}>
+					<Library class="w-5 h-5 flex-shrink-0" />
+					{#if !collapsed}<span>Public Library</span>{/if}
+				</a>
+			{/if}
 		</div>
 
 		<!-- Libraries Section -->

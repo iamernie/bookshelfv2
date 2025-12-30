@@ -49,6 +49,11 @@ This document outlines planned features, improvements, and future direction for 
 - [x] **Tabbed settings page** - Cleaner admin settings with organized tabs
 - [x] **Collapsible admin sidebar** - Better navigation for admin users
 - [x] **AI-powered recommendations** - Book suggestions based on reading history and preferences
+- [x] **Customizable dashboard** - Toggle, reorder, and configure dashboard sections
+  - Drag-and-drop section reordering
+  - Show/hide individual sections (Reading Goal, Continue Reading, Up Next, Recently Added, Recently Completed)
+  - Smart Collection section to display any Magic Shelf on the dashboard
+  - Settings persist per user
 
 ---
 

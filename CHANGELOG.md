@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.10] - 2025-12-29
+
+### Added
+- **Public Library Toggle** - Admins can now disable the public library feature in Settings → General
+  - When disabled, the "Public Library" sidebar link is hidden
+  - Library page only shows personal library tab
+  - Add Book page doesn't allow adding to public library
+  - Perfect for single-user or family deployments that don't need a shared library
+
+### Changed
+- **Consistent media upload buttons** - "Upload Ebook" and "Add Audiobook" buttons on book detail page now have consistent styling and both link to the Media tab in edit mode
+
 ## [0.7.9] - 2025-12-29
 
 ### Added

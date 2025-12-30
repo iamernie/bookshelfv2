@@ -28,6 +28,7 @@
 		Plus,
 		Music,
 		HardDrive,
+		Upload,
 		RotateCcw,
 		CheckCircle
 	} from 'lucide-svelte';
@@ -1140,9 +1141,17 @@
 							</div>
 						{:else}
 							<div class="card p-4 text-center" style="border: 1px dashed var(--border-color);">
-								<p class="text-sm" style="color: var(--text-muted);">
-									No ebook file attached. <a href="/books/{data.book.id}/edit" class="underline" style="color: var(--accent);">Upload one</a>
+								<p class="text-sm mb-3" style="color: var(--text-muted);">
+									No ebook file attached.
 								</p>
+								<a
+									href="/books/{data.book.id}/edit?tab=media"
+									class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+									style="background: var(--bg-tertiary); color: var(--text-primary);"
+								>
+									<Upload class="w-4 h-4" />
+									Upload Ebook
+								</a>
 							</div>
 						{/if}
 					</div>

@@ -3,6 +3,7 @@ import { db } from '$lib/server/db';
 import { genres, statuses, books, magicShelves, userBooks } from '$lib/server/db/schema';
 import { sql, eq, count, asc, or, and, ne, inArray } from 'drizzle-orm';
 import { getAllShelves, getShelfBookCounts } from '$lib/server/services/magicShelfService';
+import { getSettingAs } from '$lib/server/services/settingsService';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	const userId = locals.user?.id;
@@ -61,6 +62,9 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		}
 	}
 
+	// Get public library setting
+	const publicLibraryEnabled = await getSettingAs<boolean>('library.enable_public_library', 'boolean');
+
 	return {
 		user: locals.user,
 		sidebar: {
@@ -68,7 +72,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			statuses: statusesWithCounts,
 			magicShelves: magicShelvesData,
 			totalBooks: total,
-			isAdmin: locals.user?.role === 'admin'
+			isAdmin: locals.user?.role === 'admin',
+			publicLibraryEnabled
 		}
 	};
 };

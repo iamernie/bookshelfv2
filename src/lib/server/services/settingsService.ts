@@ -62,6 +62,13 @@ export const DEFAULT_SETTINGS = {
 		label: 'Default Status',
 		description: 'Default reading status for new books (Unread by default)'
 	},
+	'library.enable_public_library': {
+		value: 'true',
+		type: 'boolean',
+		category: 'library',
+		label: 'Enable Public Library',
+		description: 'Show the shared public library. When disabled, only personal libraries are available.'
+	},
 	// Registration settings
 	'registration.allow_signup': {
 		value: 'false',

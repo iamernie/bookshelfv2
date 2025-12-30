@@ -48,11 +48,18 @@
 		invalidateAll();
 	}
 
-	const libraryTabs = [
-		{ value: 'public', label: 'Public Library', icon: Library },
-		{ value: 'personal', label: 'Personal', icon: BookOpen },
-		{ value: 'all', label: 'All Books', icon: Grid }
-	];
+	// Filter library tabs based on public library setting
+	const libraryTabs = $derived(
+		data.publicLibraryEnabled !== false
+			? [
+					{ value: 'public', label: 'Public Library', icon: Library },
+					{ value: 'personal', label: 'Personal', icon: BookOpen },
+					{ value: 'all', label: 'All Books', icon: Grid }
+				]
+			: [
+					{ value: 'personal', label: 'My Library', icon: BookOpen }
+				]
+	);
 
 	function handleSearch(e: Event) {
 		e.preventDefault();
@@ -169,7 +176,7 @@
 					<p class="text-sm" style="color: var(--text-muted);">
 						{#if data.libraryStats}
 							{data.libraryStats.personal.total} in your library
-							{#if data.libraryStats.public.total > 0}
+							{#if data.publicLibraryEnabled !== false && data.libraryStats.public.total > 0}
 								&middot; {data.libraryStats.public.total} in public library
 							{/if}
 						{:else}
@@ -180,7 +187,7 @@
 			</div>
 
 			<div class="flex items-center gap-2">
-				{#if data.user}
+				{#if data.user && data.publicLibraryEnabled !== false}
 					<button
 						type="button"
 						class="btn-accent flex items-center gap-2"
@@ -209,15 +216,17 @@
 						<div class="text-2xl font-bold" style="color: var(--text-primary);">{data.libraryStats.personal.reading}</div>
 						<div class="text-xs" style="color: var(--text-muted);">Reading</div>
 					</div>
-					<div class="w-px self-stretch" style="background-color: var(--border-color);"></div>
-					<div class="text-center">
-						<div class="text-2xl font-bold" style="color: var(--accent);">{data.libraryStats.public.notInPersonal}</div>
-						<div class="text-xs" style="color: var(--text-muted);">Available to Add</div>
-					</div>
-					<div class="text-center">
-						<div class="text-2xl font-bold" style="color: var(--text-primary);">{data.libraryStats.all.total}</div>
-						<div class="text-xs" style="color: var(--text-muted);">Total Tracked</div>
-					</div>
+					{#if data.publicLibraryEnabled !== false}
+						<div class="w-px self-stretch" style="background-color: var(--border-color);"></div>
+						<div class="text-center">
+							<div class="text-2xl font-bold" style="color: var(--accent);">{data.libraryStats.public.notInPersonal}</div>
+							<div class="text-xs" style="color: var(--text-muted);">Available to Add</div>
+						</div>
+						<div class="text-center">
+							<div class="text-2xl font-bold" style="color: var(--text-primary);">{data.libraryStats.all.total}</div>
+							<div class="text-xs" style="color: var(--text-muted);">Total Tracked</div>
+						</div>
+					{/if}
 				</div>
 			</div>
 		{/if}
@@ -346,7 +355,7 @@
 						No books match your search criteria.
 					{/if}
 				</p>
-				{#if data.user && data.filters.library === 'public'}
+				{#if data.user && data.filters.library === 'public' && data.publicLibraryEnabled !== false}
 					<button
 						type="button"
 						class="btn-accent inline-flex items-center gap-2"

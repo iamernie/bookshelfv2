@@ -3,13 +3,17 @@ import { db, books, authors, bookAuthors, genres, statuses, userBooks } from '$l
 import { eq, sql, and, desc, asc, or, like } from 'drizzle-orm';
 import { getLibraryOverview } from '$lib/server/services/statsService';
 import { createLogger } from '$lib/server/services/loggerService';
+import { getSettingAs } from '$lib/server/services/settingsService';
 
 const log = createLogger('library-page');
 
 export const load: PageServerLoad = async ({ url, locals }) => {
 	const page = parseInt(url.searchParams.get('page') || '1');
 	const limit = parseInt(url.searchParams.get('limit') || '24');
-	const libraryFilter = url.searchParams.get('library') || 'public'; // public, personal, all
+	const publicLibraryEnabled = await getSettingAs<boolean>('library.enable_public_library', 'boolean');
+	// Default to personal library if public library is disabled
+	const defaultFilter = publicLibraryEnabled ? 'public' : 'personal';
+	const libraryFilter = url.searchParams.get('library') || defaultFilter;
 	const search = url.searchParams.get('q') || '';
 	const sortField = url.searchParams.get('sort') || 'createdAt';
 	const sortOrder = url.searchParams.get('order') || 'desc';
@@ -184,6 +188,7 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 		},
 		libraryStats,
 		genres: allGenres,
-		user: locals.user
+		user: locals.user,
+		publicLibraryEnabled
 	};
 };
