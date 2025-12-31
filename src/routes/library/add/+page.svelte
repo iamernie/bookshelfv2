@@ -4,7 +4,7 @@
 		Upload, FileAudio, FileText, BookOpen, ChevronLeft, X, Loader2,
 		Library, User, Search, Info, AlignLeft, Image, Fingerprint,
 		Headphones, Music, Check, AlertCircle, Star, Tag, Database,
-		Calendar, Globe, AlertTriangle, Link
+		Calendar, Globe, AlertTriangle, Link, Plus
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
 	import MetadataSearchModal from '$lib/components/book/MetadataSearchModal.svelte';
@@ -46,12 +46,16 @@
 	let authorRole = $state('Author');
 	let selectedAuthors = $state<{ id: number; name: string; role: string }[]>([]);
 	let showAuthorDropdown = $state(false);
+	let creatingAuthor = $state(false);
+	let availableAuthors = $state(data.options.authors);
 
 	// Series with book numbers
 	let seriesSearch = $state('');
 	let seriesBookNum = $state('');
 	let selectedSeries = $state<{ id: number; title: string; bookNum: string; bookNumEnd: string }[]>([]);
 	let showSeriesDropdown = $state(false);
+	let creatingSeries = $state(false);
+	let availableSeries = $state(data.options.series);
 
 	// Classification
 	let genreId = $state('');
@@ -156,17 +160,25 @@
 
 	// Filtered options
 	let filteredAuthors = $derived(
-		data.options.authors.filter(a =>
+		availableAuthors.filter(a =>
 			a.name.toLowerCase().includes(authorSearch.toLowerCase()) &&
 			!selectedAuthors.some(sa => sa.id === a.id)
 		).slice(0, 8)
 	);
+	let canCreateAuthor = $derived(
+		authorSearch.trim().length > 0 &&
+		!availableAuthors.some(a => a.name.toLowerCase() === authorSearch.trim().toLowerCase())
+	);
 
 	let filteredSeries = $derived(
-		data.options.series.filter(s =>
+		availableSeries.filter(s =>
 			s.title.toLowerCase().includes(seriesSearch.toLowerCase()) &&
 			!selectedSeries.some(ss => ss.id === s.id)
 		).slice(0, 8)
+	);
+	let canCreateSeries = $derived(
+		seriesSearch.trim().length > 0 &&
+		!availableSeries.some(s => s.title.toLowerCase() === seriesSearch.trim().toLowerCase())
 	);
 
 	const authorRoles = ['Author', 'Co-Author', 'Editor', 'Translator', 'Illustrator', 'Contributor', 'Foreword By', 'Afterword By'];
@@ -402,6 +414,64 @@
 
 	function removeSeries(id: number) {
 		selectedSeries = selectedSeries.filter(s => s.id !== id);
+	}
+
+	async function createNewAuthor() {
+		const name = authorSearch.trim();
+		if (!name) return;
+
+		creatingAuthor = true;
+		try {
+			const res = await fetch('/api/authors', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name })
+			});
+
+			if (res.ok) {
+				const newAuthor = await res.json();
+				availableAuthors = [...availableAuthors, { id: newAuthor.id, name: newAuthor.name }];
+				addAuthor({ id: newAuthor.id, name: newAuthor.name });
+				toasts.success(`Created author "${newAuthor.name}"`);
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to create author');
+			}
+		} catch (e) {
+			console.error('Failed to create author:', e);
+			toasts.error('Failed to create author');
+		} finally {
+			creatingAuthor = false;
+		}
+	}
+
+	async function createNewSeries() {
+		const title = seriesSearch.trim();
+		if (!title) return;
+
+		creatingSeries = true;
+		try {
+			const res = await fetch('/api/series', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ title })
+			});
+
+			if (res.ok) {
+				const newSeries = await res.json();
+				availableSeries = [...availableSeries, { id: newSeries.id, title: newSeries.title }];
+				addSeries({ id: newSeries.id, title: newSeries.title });
+				toasts.success(`Created series "${newSeries.title}"`);
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to create series');
+			}
+		} catch (e) {
+			console.error('Failed to create series:', e);
+			toasts.error('Failed to create series');
+		} finally {
+			creatingSeries = false;
+		}
 	}
 
 	function toggleTag(tagId: number) {
@@ -1119,11 +1189,12 @@
 									type="text"
 									bind:value={authorSearch}
 									onfocus={() => showAuthorDropdown = true}
+									oninput={() => showAuthorDropdown = true}
 									class="w-full px-4 py-2.5 rounded-lg border transition-colors"
 									style="background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);"
 									placeholder="Search authors..."
 								/>
-								{#if showAuthorDropdown && filteredAuthors.length > 0}
+								{#if showAuthorDropdown && (filteredAuthors.length > 0 || canCreateAuthor)}
 									<div class="absolute z-20 w-full mt-1 rounded-lg shadow-lg overflow-hidden" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
 										{#each filteredAuthors as author}
 											<button
@@ -1136,6 +1207,23 @@
 												{author.name}
 											</button>
 										{/each}
+										{#if canCreateAuthor}
+											<button
+												type="button"
+												class="w-full px-4 py-2 text-left transition-colors flex items-center gap-2 hover:bg-green-500/10"
+												style="color: #10b981; border-top: 1px solid var(--border-color);"
+												onclick={createNewAuthor}
+												disabled={creatingAuthor}
+											>
+												{#if creatingAuthor}
+													<Loader2 class="w-4 h-4 animate-spin" />
+													Creating...
+												{:else}
+													<Plus class="w-4 h-4" />
+													Create "{authorSearch.trim()}"
+												{/if}
+											</button>
+										{/if}
 									</div>
 								{/if}
 							</div>
@@ -1189,11 +1277,12 @@
 									type="text"
 									bind:value={seriesSearch}
 									onfocus={() => showSeriesDropdown = true}
+									oninput={() => showSeriesDropdown = true}
 									class="w-full px-4 py-2.5 rounded-lg border transition-colors"
 									style="background: var(--bg-primary); border-color: var(--border-color); color: var(--text-primary);"
 									placeholder="Search series..."
 								/>
-								{#if showSeriesDropdown && filteredSeries.length > 0}
+								{#if showSeriesDropdown && (filteredSeries.length > 0 || canCreateSeries)}
 									<div class="absolute z-20 w-full mt-1 rounded-lg shadow-lg overflow-hidden" style="background: var(--bg-secondary); border: 1px solid var(--border-color);">
 										{#each filteredSeries as s}
 											<button
@@ -1205,6 +1294,23 @@
 												{s.title}
 											</button>
 										{/each}
+										{#if canCreateSeries}
+											<button
+												type="button"
+												class="w-full px-4 py-2 text-left transition-colors flex items-center gap-2 hover:bg-green-500/10"
+												style="color: #10b981; border-top: 1px solid var(--border-color);"
+												onclick={createNewSeries}
+												disabled={creatingSeries}
+											>
+												{#if creatingSeries}
+													<Loader2 class="w-4 h-4 animate-spin" />
+													Creating...
+												{:else}
+													<Plus class="w-4 h-4" />
+													Create "{seriesSearch.trim()}"
+												{/if}
+											</button>
+										{/if}
 									</div>
 								{/if}
 							</div>
