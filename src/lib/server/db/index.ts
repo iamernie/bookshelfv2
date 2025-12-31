@@ -1354,6 +1354,11 @@ function runMigrations() {
 	} catch {
 		// Indexes may already exist
 	}
+
+	// Ensure audiobook_progress has duration column (may be missing from older databases)
+	safeAddColumn('audiobook_progress', 'duration', 'REAL DEFAULT 0');
+	safeAddColumn('audiobook_progress', 'progress', 'REAL DEFAULT 0');
+
 	completeStep('Creating audiobook tables');
 
 	// ========== Media Sources Tables ==========

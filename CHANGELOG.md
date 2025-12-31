@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.26] - 2025-12-31
+
+### Fixed
+- **Database Migration** - Added missing `duration` and `progress` columns to `audiobook_progress` table
+  - Fixes "no such column: ap.duration" error on dashboard for upgraded databases
+
 ## [2.2.25] - 2025-12-31
 
 ### Security
