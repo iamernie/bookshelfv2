@@ -15,6 +15,7 @@
 		Grid,
 		List,
 		Headphones,
+		BookOpen,
 		X
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
@@ -398,6 +399,43 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Books Section -->
+	{#if data.books && data.books.length > 0}
+		<div class="audiobooks-section">
+			<div class="audiobooks-header">
+				<h2 class="section-title">
+					<BookOpen class="w-5 h-5" />
+					Books ({data.books.length})
+				</h2>
+			</div>
+
+			<div class="audiobooks-grid">
+				{#each data.books as book (book.id)}
+					<a href="/books/{book.id}" class="audiobook-card">
+						{#if book.coverImageUrl}
+							<img
+								src={book.coverImageUrl}
+								alt={book.title}
+								class="audiobook-cover"
+							/>
+						{:else}
+							<div class="audiobook-cover-placeholder">
+								<BookOpen class="w-8 h-8" />
+							</div>
+						{/if}
+						<div class="audiobook-title">{book.title}</div>
+						{#if book.rating}
+							<div class="book-rating">
+								<Star class="w-3 h-3" style="color: #fbbf24; fill: #fbbf24;" />
+								<span>{book.rating}</span>
+							</div>
+						{/if}
+					</a>
+				{/each}
+			</div>
+		</div>
+	{/if}
 
 	<!-- Audiobooks Section -->
 	<div class="audiobooks-section">
@@ -974,6 +1012,15 @@
 		-webkit-line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+	}
+
+	.book-rating {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		margin-top: 0.25rem;
 	}
 
 	.audiobooks-list {
