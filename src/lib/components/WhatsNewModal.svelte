@@ -157,7 +157,7 @@
 								class="w-8 h-8 rounded-lg flex items-center justify-center"
 								style="background-color: var(--accent); opacity: 0.15;"
 							>
-								<IconComponent class="w-4 h-4" style="color: var(--accent);" />
+								<svelte:component this={IconComponent} class="w-4 h-4" style="color: var(--accent);" />
 							</div>
 							<h3 class="text-lg font-semibold" style="color: var(--text-primary);">
 								{section.title}

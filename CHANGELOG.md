@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.23] - 2025-12-31
+
+### Fixed
+- **What's New Modal Icons** - Fixed section icons not displaying in the What's New changelog modal
+  - Changed from direct component tag to `svelte:component` for proper dynamic component rendering
+
 ## [2.2.22] - 2025-12-31
 
 ### Fixed
