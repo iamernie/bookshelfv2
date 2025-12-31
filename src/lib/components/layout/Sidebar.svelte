@@ -137,14 +137,14 @@
 			{/if}
 		</div>
 
-		<!-- Libraries Section -->
+		<!-- Genres Section -->
 		{#if !collapsed}
 		<div class="mt-6">
 			<button
 				class="sidebar-section w-full flex items-center justify-between"
 				onclick={() => librariesOpen = !librariesOpen}
 			>
-				<span>Libraries</span>
+				<span>Genres</span>
 				{#if librariesOpen}
 					<ChevronDown class="w-4 h-4" />
 				{:else}
