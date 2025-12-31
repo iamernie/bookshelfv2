@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.20] - 2025-12-31
+
+### Fixed
+- **Admin Console Logs** - Fixed 404 error on admin logs endpoint in Docker production
+  - The `logs/` gitignore pattern was incorrectly ignoring `src/routes/api/admin/logs/`
+  - Changed to `/logs/` to only ignore root-level logs directory
+
+### Added
+- **Debug Chart Endpoint** - Added `/api/admin/debug-chart` for diagnosing chart data issues
+
 ## [2.2.19] - 2025-12-30
 
 ### Fixed

@@ -48,8 +48,8 @@ testing/databases/*.sqlite-*
 .DS_Store
 Thumbs.db
 
-# Logs
-logs/
+# Logs (at root level only, not src/routes/api/admin/logs/)
+/logs/
 *.log
 
 # Test
