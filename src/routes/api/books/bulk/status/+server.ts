@@ -1,7 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, books } from '$lib/server/db';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, and, isNull } from 'drizzle-orm';
+import { getStatusByKey } from '$lib/server/services/statusService';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) {
@@ -20,6 +21,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	const now = new Date().toISOString();
+	const today = now.split('T')[0]; // YYYY-MM-DD format
+
+	// Get status keys
+	const [currentStatus, readStatus] = await Promise.all([
+		getStatusByKey('CURRENT'),
+		getStatusByKey('READ')
+	]);
 
 	// Update all books in one query
 	await db
@@ -29,6 +37,28 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			updatedAt: now
 		})
 		.where(inArray(books.id, bookIds));
+
+	// Auto-set startReadingDate for CURRENT status (only for books without a date)
+	if (currentStatus && statusId === currentStatus.id) {
+		await db
+			.update(books)
+			.set({ startReadingDate: today, updatedAt: now })
+			.where(and(
+				inArray(books.id, bookIds),
+				isNull(books.startReadingDate)
+			));
+	}
+
+	// Auto-set completedDate for READ status (only for books without a date)
+	if (readStatus && statusId === readStatus.id) {
+		await db
+			.update(books)
+			.set({ completedDate: today, updatedAt: now })
+			.where(and(
+				inArray(books.id, bookIds),
+				isNull(books.completedDate)
+			));
+	}
 
 	return json({
 		success: true,

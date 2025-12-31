@@ -37,6 +37,11 @@ This document outlines planned features, improvements, and future direction for 
 - [x] CBZ comic reader
 - [x] Metadata extraction from EPUB files
 - [x] File naming patterns for organization
+- [ ] **MOBI format support** - Convert MOBI → EPUB on upload using Calibre
+  - Add Calibre to Docker image
+  - Auto-convert MOBI files on upload
+  - Extract metadata during conversion
+  - Store as EPUB internally for reading
 
 ### Other
 - [x] OPDS catalog feed
@@ -49,6 +54,27 @@ This document outlines planned features, improvements, and future direction for 
 - [x] **Tabbed settings page** - Cleaner admin settings with organized tabs
 - [x] **Collapsible admin sidebar** - Better navigation for admin users
 - [x] **AI-powered recommendations** - Book suggestions based on reading history and preferences
+- [x] **Customizable dashboard** - Toggle, reorder, and configure dashboard sections
+  - Drag-and-drop section reordering
+  - Show/hide individual sections (Reading Goal, Continue Reading, Up Next, Recently Added, Recently Completed)
+  - Smart Collection section to display any Magic Shelf on the dashboard
+  - Settings persist per user
+- [x] **Mobile reader improvements** - Fixed ebook and audiobook playback on mobile devices
+  - Touch navigation zones for ebook reader
+  - Autoplay restriction handling for audio player
+- [x] **Author Tags** - Authors support tagging just like books and series
+- [x] **Enhanced Tag Visibility** - More tags shown on cards, clickable filters, color-coded display
+- [x] **Inline Tag Editor** - Edit tags directly on detail pages without entering edit mode
+- [x] **Dynamic Date Filters** - Use "Today" as a relative date value in smart collection rules
+- [x] **Inline Rating & Status** - Edit book rating and status directly on detail page without entering edit mode
+- [x] **Enhanced Narrator System** - Narrators match author experience with tags, Wikipedia search, detail pages, and extended metadata fields
+- [x] **Inline Entity Creation** - Create authors, series, narrators, and genres directly from book add/edit forms without leaving the page
+- [x] **Bulk Edit Fixes** - Fixed bulk edit operations for series and authors in the action bar
+
+### Security (v2.3.3)
+- [x] Secure session cookies (`secure: true` in production)
+- [x] Admin-only settings API access
+- [x] Updated vulnerable dependencies (multer)
 
 ---
 
@@ -65,10 +91,30 @@ This document outlines planned features, improvements, and future direction for 
 - [x] Update API routes with userId context and permissions
 - [x] Add permission check to ebook serving route
 - [x] Library sharing API endpoints
+- [x] Unified "Add to Library" page (`/library/add`)
+  - Auto-detects file type (ebook vs audiobook)
+  - Metadata extraction from uploaded files
+  - Metadata search from online databases
+  - Public library requires file attachment
+  - Personal library allows tracking-only entries
+- [x] Public library support for audiobooks
+  - `libraryType` column on audiobooks table
+  - `userAudiobooks` junction table for personal library entries
 - [ ] Library sharing UI in user settings
 - [ ] Permission levels: read, read_write, full
 
-**Goal:** Each user has their own private book collection. Users can optionally share their library with other users (e.g., family members in the same household). New users start with 0 books.
+**Goal:** Each user has their own private book collection.
+
+### Security Hardening (see [security-recommendations.md](security-recommendations.md))
+- [ ] Rate limiting on password reset
+- [ ] Path traversal hardening (proper path resolution)
+- [ ] SSRF protection for cover downloads
+- [ ] Remove debug logging of sensitive data
+- [ ] Add security headers (CSP, HSTS, X-Frame-Options)
+- [ ] File content validation (magic numbers)
+- [ ] Encrypt database backups
+
+Users can optionally share their library with other users (e.g., family members in the same household). New users start with 0 books.
 
 ---
 
@@ -77,7 +123,7 @@ This document outlines planned features, improvements, and future direction for 
 ### Short Term
 - [ ] Barcode/ISBN scanner (mobile camera)
 - [ ] Public landing page (optional)
-- [ ] "What's New" changelog modal
+- [x] "What's New" changelog modal - Shows latest changes after updates (admin only)
 
 ### Medium Term
 - [ ] Reading analytics (time tracking, pace)
@@ -87,7 +133,7 @@ This document outlines planned features, improvements, and future direction for 
 - [ ] Custom fields for books
 
 ### Long Term
-- [ ] Mobile app (PWA or native)
+- [x] Progressive Web App (PWA) - Installable, offline support, app-like experience
 - [ ] Social features (follow users, public profiles)
 - [ ] Plugin/extension system
 
@@ -165,6 +211,14 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
   - Shows both ebook and linked audiobooks
   - Quick access to Read (ebook) and Listen (audiobook)
   - Progress tracking for audiobooks
+- [x] **Embedded Listen tab on book detail page**
+  - Full audio player embedded directly in book page
+  - No separate audiobook detail page needed
+  - Track list with file metadata (format, size, duration)
+  - Progress bar with remaining time display
+  - Mark Finished and Reset progress buttons
+  - Bookmarks display
+  - `/audiobooks/[id]` redirects to `/books/[bookId]?listen=true`
 - [x] Redirect standalone audiobook upload to book edit page
   - `/audiobooks/upload` guides users to create/find a book first
   - `/audiobooks/upload?bookId=X` redirects to `/books/X/edit?tab=media`
@@ -177,27 +231,35 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
 - [x] Support single-file M4B audiobooks
   - Direct play without track management
 
-### Phase 2: Enhanced Player Features
+### Phase 2: Enhanced Player Features ✅ COMPLETE
 **Goal:** Add advanced playback features for a better listening experience.
 
-- [ ] Chapter support
-  - Parse chapter markers from M4B metadata
-  - Manual chapter entry for multi-file audiobooks
-  - Chapter navigation in player UI
-  - Display current chapter name
-- [ ] Sleep timer
+- [x] Sleep timer
   - Set timer (15min, 30min, 45min, 1hr, end of chapter)
   - Gradual volume fade before stop
   - Visual countdown in player
-- [ ] Bookmarks
+- [x] Bookmarks
   - Save position with optional note
   - List and navigate to bookmarks
   - Quick bookmark button in player
-- [ ] Keyboard shortcuts
+- [x] Keyboard shortcuts
   - Space: play/pause
   - Left/Right arrows: skip 10s/30s
   - Up/Down arrows: volume
   - [ / ]: playback speed
+- [x] Audiobook completion tracking
+  - Auto-mark as finished at 95% progress
+  - Syncs status to linked book (marks as READ)
+  - Syncs to userAudiobooks library entry
+- [x] "Has Audiobook" smart collection filter
+  - Filter books by whether they have linked audiobooks
+- [x] Chapter support
+  - Parse chapter markers from M4B metadata
+  - Automatic chapter creation from multi-file audiobooks (track titles)
+  - Chapter navigation in player UI (prev/next buttons, chapter list)
+  - Display current chapter name in player
+  - Keyboard shortcuts: C to toggle chapters, comma/period for prev/next
+  - API endpoint for chapter management
 - [ ] Skip silence (optional)
   - Detect and skip silent portions
   - Configurable threshold
@@ -209,6 +271,11 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
   - Associate audiobook with book record
   - Show audiobook availability on book page
   - Unified reading/listening progress
+- [x] Duplicate detection on upload
+  - Fuzzy title matching when adding new books
+  - Detects when audiobook file matches existing book (e.g., "Edge World: Undying Mercenaries, Book 14" → "Edge World")
+  - Option to link file to existing book instead of creating duplicate
+  - Visual warning with match percentage
 - [ ] Metadata lookup
   - Audible metadata search
   - Audnexus API for chapters
@@ -236,9 +303,11 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
   - Remote control from browser
 - [ ] CarPlay/Android Auto metadata
   - Proper metadata for car displays
-- [ ] Offline PWA support
-  - Download audiobooks for offline
-  - Background sync of progress
+- [x] Offline PWA support
+  - Service worker caching for static assets
+  - Installable as home screen app
+  - [ ] Download audiobooks for offline (future)
+  - [ ] Background sync of progress (future)
 - [ ] Podcast support
   - RSS feed subscription
   - Auto-download new episodes

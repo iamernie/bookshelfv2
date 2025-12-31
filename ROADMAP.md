@@ -68,6 +68,13 @@ This document outlines planned features, improvements, and future direction for 
 - [x] **Dynamic Date Filters** - Use "Today" as a relative date value in smart collection rules
 - [x] **Inline Rating & Status** - Edit book rating and status directly on detail page without entering edit mode
 - [x] **Enhanced Narrator System** - Narrators match author experience with tags, Wikipedia search, detail pages, and extended metadata fields
+- [x] **Inline Entity Creation** - Create authors, series, narrators, and genres directly from book add/edit forms without leaving the page
+- [x] **Bulk Edit Fixes** - Fixed bulk edit operations for series and authors in the action bar
+
+### Security (v2.3.3)
+- [x] Secure session cookies (`secure: true` in production)
+- [x] Admin-only settings API access
+- [x] Updated vulnerable dependencies (multer)
 
 ---
 
@@ -96,7 +103,18 @@ This document outlines planned features, improvements, and future direction for 
 - [ ] Library sharing UI in user settings
 - [ ] Permission levels: read, read_write, full
 
-**Goal:** Each user has their own private book collection. Users can optionally share their library with other users (e.g., family members in the same household). New users start with 0 books.
+**Goal:** Each user has their own private book collection.
+
+### Security Hardening (see [security-recommendations.md](security-recommendations.md))
+- [ ] Rate limiting on password reset
+- [ ] Path traversal hardening (proper path resolution)
+- [ ] SSRF protection for cover downloads
+- [ ] Remove debug logging of sensitive data
+- [ ] Add security headers (CSP, HSTS, X-Frame-Options)
+- [ ] File content validation (magic numbers)
+- [ ] Encrypt database backups
+
+Users can optionally share their library with other users (e.g., family members in the same household). New users start with 0 books.
 
 ---
 

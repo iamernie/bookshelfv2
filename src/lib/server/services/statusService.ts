@@ -86,3 +86,13 @@ export async function getAllStatuses(): Promise<{ id: number; name: string; colo
 		.from(statuses)
 		.orderBy(asc(statuses.sortOrder), asc(statuses.name));
 }
+
+// Get status by key (READ, CURRENT, NEXT, DNF, WISHLIST, PARKED)
+export async function getStatusByKey(key: string): Promise<StatusType | null> {
+	const [status] = await db
+		.select()
+		.from(statuses)
+		.where(eq(statuses.key, key))
+		.limit(1);
+	return status || null;
+}

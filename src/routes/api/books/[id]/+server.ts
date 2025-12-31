@@ -4,6 +4,7 @@ import { getBookById, updateBook, deleteBook } from '$lib/server/services/bookSe
 import { removeBookFromUserLibrary, getUserBook } from '$lib/server/services/userBookService';
 import { canManagePublicLibrary } from '$lib/server/services/permissionService';
 import { canAccessBook, canModifyBook, canDeleteBook } from '$lib/server/services/libraryShareService';
+import { getStatusByKey } from '$lib/server/services/statusService';
 import { db, books } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 
@@ -41,7 +42,14 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
 	// Check the book's library type to determine permission model
 	const [existingBook] = await db
-		.select({ id: books.id, libraryType: books.libraryType, ownerId: books.ownerId })
+		.select({
+			id: books.id,
+			libraryType: books.libraryType,
+			ownerId: books.ownerId,
+			statusId: books.statusId,
+			startReadingDate: books.startReadingDate,
+			completedDate: books.completedDate
+		})
 		.from(books)
 		.where(eq(books.id, id))
 		.limit(1);
@@ -107,6 +115,37 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	if (data.releaseDate !== undefined) updateData.releaseDate = data.releaseDate || null;
 	if (data.startReadingDate !== undefined) updateData.startReadingDate = data.startReadingDate || null;
 	if (data.completedDate !== undefined) updateData.completedDate = data.completedDate || null;
+
+	// Auto-set dates when status changes (only if date not already set and not explicitly provided)
+	if (data.statusId !== undefined && data.statusId !== existingBook.statusId) {
+		const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+		// Get the status keys for CURRENT and READ
+		const [currentStatus, readStatus] = await Promise.all([
+			getStatusByKey('CURRENT'),
+			getStatusByKey('READ')
+		]);
+
+		// If changing to CURRENT and no startReadingDate is set
+		if (currentStatus && data.statusId === currentStatus.id) {
+			const existingStartDate = data.startReadingDate !== undefined
+				? data.startReadingDate
+				: existingBook.startReadingDate;
+			if (!existingStartDate) {
+				updateData.startReadingDate = today;
+			}
+		}
+
+		// If changing to READ and no completedDate is set
+		if (readStatus && data.statusId === readStatus.id) {
+			const existingCompletedDate = data.completedDate !== undefined
+				? data.completedDate
+				: existingBook.completedDate;
+			if (!existingCompletedDate) {
+				updateData.completedDate = today;
+			}
+		}
+	}
 
 	// Relation arrays (only include if explicitly provided)
 	if (data.authors !== undefined) updateData.authors = data.authors;
