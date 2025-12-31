@@ -862,6 +862,7 @@
 												placeholder="Search authors..."
 												bind:value={authorSearch}
 												onfocus={() => showAuthorDropdown = true}
+												oninput={() => showAuthorDropdown = true}
 												class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
 											/>
 											{#if showAuthorDropdown && (filteredAuthors.length > 0 || canCreateAuthor)}
@@ -939,6 +940,7 @@
 												placeholder="Search series..."
 												bind:value={seriesSearch}
 												onfocus={() => showSeriesDropdown = true}
+												oninput={() => showSeriesDropdown = true}
 												class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
 											/>
 											{#if showSeriesDropdown && (filteredSeries.length > 0 || canCreateSeries)}
@@ -998,6 +1000,7 @@
 													placeholder="Search genres..."
 													bind:value={genreSearch}
 													onfocus={() => showGenreDropdown = true}
+													oninput={() => showGenreDropdown = true}
 													class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
 												/>
 												{#if showGenreDropdown && (filteredGenres.length > 0 || canCreateGenre)}
@@ -1058,6 +1061,7 @@
 													placeholder="Search narrators..."
 													bind:value={narratorSearch}
 													onfocus={() => showNarratorDropdown = true}
+													oninput={() => showNarratorDropdown = true}
 													class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
 												/>
 												{#if showNarratorDropdown && (filteredNarrators.length > 0 || canCreateNarrator)}
@@ -1468,13 +1472,13 @@
 </Modal>
 
 <!-- Click outside handlers for dropdowns -->
-{#if showAuthorDropdown || showSeriesDropdown}
-	<button
-		type="button"
+{#if showAuthorDropdown || showSeriesDropdown || showNarratorDropdown || showGenreDropdown}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
 		class="fixed inset-0 z-10"
-		onclick={() => { showAuthorDropdown = false; showSeriesDropdown = false; }}
-		aria-label="Close dropdown"
-	></button>
+		onclick={() => { showAuthorDropdown = false; showSeriesDropdown = false; showNarratorDropdown = false; showGenreDropdown = false; }}
+		onkeydown={(e) => { if (e.key === 'Escape') { showAuthorDropdown = false; showSeriesDropdown = false; showNarratorDropdown = false; showGenreDropdown = false; } }}
+	></div>
 {/if}
 
 <!-- Metadata Search Modal -->
