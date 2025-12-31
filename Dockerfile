@@ -54,6 +54,9 @@ COPY --from=builder /app/build ./build
 # Copy static assets
 COPY --from=builder /app/static ./static
 
+# Copy CHANGELOG.md for What's New modal
+COPY --from=builder /app/CHANGELOG.md ./CHANGELOG.md
+
 # Keep a backup of placeholder.png (volumes will overwrite static/covers)
 RUN cp /app/static/placeholder.png /app/placeholder.png.default
 
