@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.25] - 2025-12-31
+
+### Security
+- **Secure Session Cookies** - Session cookies now set `secure: true` in production
+  - Prevents session hijacking over unencrypted connections
+  - Development mode (HTTP) still works for local testing
+- **Settings API Restricted** - Settings endpoint now requires admin role
+  - Prevents non-admin users from reading sensitive configuration (SMTP credentials, etc.)
+
 ## [2.2.24] - 2025-12-31
 
 ### Fixed

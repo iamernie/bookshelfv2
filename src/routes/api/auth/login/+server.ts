@@ -1,5 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { dev } from '$app/environment';
 import { login, isEmailVerified, getUserByEmail, getUserApprovalStatus } from '$lib/server/services/authService';
 import { getSetting } from '$lib/server/services/settingsService';
 
@@ -65,7 +66,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
-		secure: false, // Set to true in production with HTTPS
+		secure: !dev, // Secure in production (HTTPS), allow HTTP in development
 		maxAge: 60 * 60 * 24 * 7 // 7 days
 	});
 

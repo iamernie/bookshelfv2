@@ -7,10 +7,15 @@ import {
 	type SettingKey
 } from '$lib/server/services/settingsService';
 
-// GET: Get all settings or by category
+// GET: Get all settings or by category (admin only)
 export const GET: RequestHandler = async ({ url, locals }) => {
 	if (!locals.user) {
 		throw error(401, 'Unauthorized');
+	}
+
+	// Only admins can read settings (contains sensitive data like SMTP credentials)
+	if (locals.user.role !== 'admin') {
+		throw error(403, 'Admin access required');
 	}
 
 	const category = url.searchParams.get('category');
