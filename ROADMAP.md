@@ -37,6 +37,11 @@ This document outlines planned features, improvements, and future direction for 
 - [x] CBZ comic reader
 - [x] Metadata extraction from EPUB files
 - [x] File naming patterns for organization
+- [ ] **MOBI format support** - Convert MOBI → EPUB on upload using Calibre
+  - Add Calibre to Docker image
+  - Auto-convert MOBI files on upload
+  - Extract metadata during conversion
+  - Store as EPUB internally for reading
 
 ### Other
 - [x] OPDS catalog feed

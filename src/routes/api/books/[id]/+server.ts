@@ -39,10 +39,29 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 		throw error(400, { message: 'Invalid book ID' });
 	}
 
-	// Check if user has permission to modify this book
-	const canModify = await canModifyBook(locals.user.id, id);
-	if (!canModify) {
-		throw error(403, { message: 'You do not have permission to modify this book' });
+	// Check the book's library type to determine permission model
+	const [book] = await db
+		.select({ id: books.id, libraryType: books.libraryType, ownerId: books.ownerId })
+		.from(books)
+		.where(eq(books.id, id))
+		.limit(1);
+
+	if (!book) {
+		throw error(404, { message: 'Book not found' });
+	}
+
+	// Permission check depends on library type
+	if (book.libraryType === 'public') {
+		// Public library books: only admins and librarians can edit
+		if (!canManagePublicLibrary(locals.user)) {
+			throw error(403, { message: 'Only librarians and admins can edit public library books' });
+		}
+	} else {
+		// Personal library books: check ownership/sharing permissions
+		const canModify = await canModifyBook(locals.user.id, id);
+		if (!canModify) {
+			throw error(403, { message: 'You do not have permission to modify this book' });
+		}
 	}
 
 	const data = await request.json();

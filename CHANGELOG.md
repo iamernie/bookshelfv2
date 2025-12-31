@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.22] - 2025-12-31
+
+### Fixed
+- **Public Library Book Editing** - Fixed permission error when editing public library books
+  - Admins and librarians can now edit public library book metadata
+  - The PUT endpoint was using personal library permission checks for all books
+  - Now correctly checks `canManagePublicLibrary` permission for public books
+
 ## [2.2.21] - 2025-12-31
 
 ### Added
