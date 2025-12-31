@@ -34,6 +34,7 @@
 		Wand2,
 		Loader2,
 		BookPlus,
+		AlertTriangle,
 		ExternalLink as LinkIcon
 	} from 'lucide-svelte';
 	import { toasts } from '$lib/stores/toast';
@@ -453,24 +454,47 @@
 
 			<div class="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end">
 				{#if data.book.ebookPath}
-					<a
-						href="/reader/{data.book.id}"
-						class="btn-accent flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm"
-					>
-						<BookOpen class="w-4 h-4" />
-						<span class="hidden xs:inline">Read</span>
-					</a>
+					{#if data.ebookMissing}
+						<span
+							class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm rounded-lg"
+							style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"
+							title="Ebook file not found on server"
+						>
+							<AlertTriangle class="w-4 h-4" />
+							<span class="hidden xs:inline">Ebook Missing</span>
+						</span>
+					{:else}
+						<a
+							href="/reader/{data.book.id}"
+							class="btn-accent flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm"
+						>
+							<BookOpen class="w-4 h-4" />
+							<span class="hidden xs:inline">Read</span>
+						</a>
+					{/if}
 				{/if}
 				{#if data.linkedAudiobooks.length > 0}
-					<button
-						type="button"
-						onclick={startListening}
-						class="btn-ghost flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm"
-						style="background: var(--bg-tertiary);"
-					>
-						<Headphones class="w-4 h-4" />
-						<span class="hidden xs:inline">Listen</span>
-					</button>
+					{@const anyAudioMissing = data.audiobookData.some(a => a.filesMissing)}
+					{#if anyAudioMissing}
+						<span
+							class="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm rounded-lg"
+							style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"
+							title="Audio files not found on server"
+						>
+							<AlertTriangle class="w-4 h-4" />
+							<span class="hidden xs:inline">Audio Missing</span>
+						</span>
+					{:else}
+						<button
+							type="button"
+							onclick={startListening}
+							class="btn-ghost flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm"
+							style="background: var(--bg-tertiary);"
+						>
+							<Headphones class="w-4 h-4" />
+							<span class="hidden xs:inline">Listen</span>
+						</button>
+					{/if}
 				{/if}
 				<a
 					href="/books/{data.book.id}/edit"
@@ -493,6 +517,28 @@
 
 	<!-- Content -->
 	<div class="max-w-6xl mx-auto px-4 py-4">
+		<!-- Missing Files Warning Banner -->
+		{#if data.ebookMissing || data.audiobookData.some(a => a.filesMissing)}
+			<div
+				class="mb-4 p-4 rounded-lg flex items-start gap-3"
+				style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3);"
+			>
+				<AlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: #ef4444;" />
+				<div>
+					<p class="font-medium" style="color: #ef4444;">Missing Media Files</p>
+					<p class="text-sm mt-1" style="color: var(--text-muted);">
+						{#if data.ebookMissing && data.audiobookData.some(a => a.filesMissing)}
+							The ebook and audiobook files for this book could not be found on the server. They may need to be re-uploaded.
+						{:else if data.ebookMissing}
+							The ebook file for this book could not be found on the server. It may need to be re-uploaded.
+						{:else}
+							The audiobook files for this book could not be found on the server. They may need to be re-uploaded.
+						{/if}
+					</p>
+				</div>
+			</div>
+		{/if}
+
 		<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 			<!-- Left Column: Cover + Quick Info -->
 			<div class="lg:col-span-1">

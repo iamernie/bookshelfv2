@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { error } from '@sveltejs/kit';
+import { existsSync } from 'fs';
 import { getBookById } from '$lib/server/services/bookService';
 import { canManagePublicLibrary } from '$lib/server/services/permissionService';
 import { getSimilarBooks } from '$lib/server/services/recommendationService';
@@ -25,23 +26,49 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		getAllStatuses()
 	]);
 
+	// Check if ebook file exists
+	let ebookMissing = false;
+	if (book.ebookPath) {
+		ebookMissing = !existsSync(book.ebookPath);
+	}
+
 	// Get linked audiobooks with full file info
 	const linkedAudiobooks = locals.user
 		? await getAudiobooksByBookId(id, locals.user.id)
 		: [];
 
 	// Get progress and bookmarks for each audiobook (for embedded player)
+	// Also check if audio files exist
 	const audiobookData: {
 		audiobook: typeof linkedAudiobooks[0];
 		progress: Awaited<ReturnType<typeof getOrCreateProgress>> | null;
 		bookmarks: Awaited<ReturnType<typeof getBookmarks>>;
+		filesMissing: boolean;
+		missingFiles: string[];
 	}[] = [];
 
 	if (locals.user && linkedAudiobooks.length > 0) {
 		for (const audiobook of linkedAudiobooks) {
 			const progress = await getOrCreateProgress(audiobook.id, locals.user.id);
 			const bookmarks = await getBookmarks(audiobook.id, locals.user.id);
-			audiobookData.push({ audiobook, progress, bookmarks });
+
+			// Check if audio files exist
+			const missingFiles: string[] = [];
+			if (audiobook.files && audiobook.files.length > 0) {
+				for (const file of audiobook.files) {
+					if (!existsSync(file.filePath)) {
+						missingFiles.push(file.filename);
+					}
+				}
+			}
+
+			audiobookData.push({
+				audiobook,
+				progress,
+				bookmarks,
+				filesMissing: missingFiles.length > 0,
+				missingFiles
+			});
 		}
 	}
 
@@ -56,6 +83,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		autoPlayAudiobook,
 		canManagePublicLibrary: canManagePublicLibrary(locals.user),
 		allTags,
-		allStatuses
+		allStatuses,
+		ebookMissing
 	};
 };
