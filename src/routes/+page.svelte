@@ -719,10 +719,12 @@
 								{#if data.highestRatedBook.authorName}
 									<p class="text-xs mb-1" style="color: var(--text-secondary);">{data.highestRatedBook.authorName}</p>
 								{/if}
+								{#if data.highestRatedBook.rating}
 								<div class="flex items-center gap-1">
 									<Star class="w-3 h-3 fill-yellow-400 text-yellow-400" />
 									<span class="text-xs font-medium" style="color: var(--text-primary);">{data.highestRatedBook.rating.toFixed(1)}</span>
 								</div>
+							{/if}
 							</div>
 						</div>
 					</a>

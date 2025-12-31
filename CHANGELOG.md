@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.28] - 2025-12-31
+
+### Fixed
+- **Dashboard Null Rating** - Fixed crash when highest rated book has null rating
+  - Added null check before calling toFixed() on rating
+
 ## [2.2.27] - 2025-12-31
 
 ### Fixed
