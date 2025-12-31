@@ -511,16 +511,22 @@
 					<BarChart3 class="w-4 h-4" style="color: var(--accent);" />
 					Books Read This Year
 				</h3>
-				<div class="flex items-end gap-1 h-24">
+				<div class="flex items-end gap-1" style="height: 96px;">
 					{#each data.monthlyReading as month, i}
 						{@const height = maxMonthlyCount > 0 ? (month.count / maxMonthlyCount) * 100 : 0}
 						{@const isCurrentMonth = i === new Date().getMonth()}
-						<div class="flex-1 flex flex-col items-center gap-1">
+						<div class="flex-1 flex flex-col items-center justify-end" style="height: 100%;">
 							<div
 								class="w-full rounded-t transition-all hover:opacity-80"
-								style="height: {Math.max(height, 2)}%; background-color: {isCurrentMonth ? 'var(--accent)' : 'var(--border-color)'};"
+								style="height: {Math.max(height, 4)}%; min-height: 4px; background-color: {isCurrentMonth ? 'var(--accent)' : 'var(--border-color)'};"
 								title="{month.month}: {month.count} books"
 							></div>
+						</div>
+					{/each}
+				</div>
+				<div class="flex gap-1 mt-1">
+					{#each data.monthlyReading as month, i}
+						<div class="flex-1 text-center">
 							<span class="text-[10px]" style="color: var(--text-muted);">{month.shortMonth}</span>
 						</div>
 					{/each}
