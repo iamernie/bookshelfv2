@@ -239,13 +239,31 @@ export async function getMonthlyReadingData(userId?: number, year?: number): Pro
 	const selectedYear = year || new Date().getFullYear();
 	const yearStart = `${selectedYear}-01-01`;
 	const yearEnd = `${selectedYear + 1}-01-01`;
-	const libCond = getUserLibraryCondition(userId);
 
 	const readStatusId = await getStatusId(STATUS_KEYS.READ);
 	if (!readStatusId) {
 		return getEmptyMonthlyData();
 	}
 
+	// For per-user data, query user_books table which has user-specific completedDate and statusId
+	if (userId) {
+		const result = await db.select({
+			month: sql<string>`strftime('%m', ${userBooks.completedDate})`,
+			count: sql<number>`count(*)`
+		})
+			.from(userBooks)
+			.where(and(
+				eq(userBooks.userId, userId),
+				eq(userBooks.statusId, readStatusId),
+				gte(userBooks.completedDate, yearStart),
+				lt(userBooks.completedDate, yearEnd)
+			))
+			.groupBy(sql`strftime('%m', ${userBooks.completedDate})`);
+
+		return buildMonthlyData(result);
+	}
+
+	// Fallback for no user context (shouldn't happen in practice)
 	const result = await db.select({
 		month: sql<string>`strftime('%m', completedDate)`,
 		count: sql<number>`count(*)`
@@ -254,11 +272,14 @@ export async function getMonthlyReadingData(userId?: number, year?: number): Pro
 		.where(and(
 			eq(books.statusId, readStatusId),
 			gte(books.completedDate, yearStart),
-			lt(books.completedDate, yearEnd),
-			libCond
+			lt(books.completedDate, yearEnd)
 		))
 		.groupBy(sql`strftime('%m', completedDate)`);
 
+	return buildMonthlyData(result);
+}
+
+function buildMonthlyData(result: { month: string; count: number }[]): MonthlyReadingData[] {
 	const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
 		'July', 'August', 'September', 'October', 'November', 'December'];
 	const shortNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
