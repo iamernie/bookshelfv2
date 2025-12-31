@@ -122,14 +122,15 @@
 			// Different field names for different endpoints
 			switch (activeDropdown) {
 				case 'author':
-					body.authorIds = [option.id];
-					body.mode = 'set';
+					body.authorId = option.id;
+					body.action = 'add';
 					break;
 				case 'narrator':
 					body.narratorId = option.id;
 					break;
 				case 'series':
 					body.seriesId = option.id;
+					body.action = 'add';
 					break;
 				case 'format':
 					body.formatId = option.id;
