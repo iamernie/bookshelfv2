@@ -40,18 +40,18 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	}
 
 	// Check the book's library type to determine permission model
-	const [book] = await db
+	const [existingBook] = await db
 		.select({ id: books.id, libraryType: books.libraryType, ownerId: books.ownerId })
 		.from(books)
 		.where(eq(books.id, id))
 		.limit(1);
 
-	if (!book) {
+	if (!existingBook) {
 		throw error(404, { message: 'Book not found' });
 	}
 
 	// Permission check depends on library type
-	if (book.libraryType === 'public') {
+	if (existingBook.libraryType === 'public') {
 		// Public library books: only admins and librarians can edit
 		if (!canManagePublicLibrary(locals.user)) {
 			throw error(403, { message: 'Only librarians and admins can edit public library books' });

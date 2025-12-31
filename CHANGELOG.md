@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.24] - 2025-12-31
+
+### Fixed
+- **Build Error** - Fixed duplicate variable declaration in book API endpoint
+- **Security Recommendations** - Added security audit document with prioritized recommendations
+
 ## [2.2.23] - 2025-12-31
 
 ### Fixed
