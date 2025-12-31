@@ -89,6 +89,12 @@ export interface StatsOverview {
 	avgRating: number | null;
 	totalPages: number;
 	pagesThisYear: number;
+	// New stats
+	avgPagesPerBook: number;
+	dnfCount: number;
+	dnfRate: number; // Percentage
+	totalNarrators: number;
+	totalListeningHours: number;
 }
 
 export async function getStatsOverview(userId?: number): Promise<StatsOverview> {
@@ -96,12 +102,16 @@ export async function getStatsOverview(userId?: number): Promise<StatsOverview> 
 	const yearPattern = `${currentYear}%`;
 	const libCond = getUserLibraryCondition(userId);
 
-	const [readStatusId, currentStatusId, nextStatusId, wishlistStatusId] = await Promise.all([
+	const [readStatusId, currentStatusId, nextStatusId, wishlistStatusId, dnfStatusId] = await Promise.all([
 		getStatusId(STATUS_KEYS.READ),
 		getStatusId(STATUS_KEYS.CURRENT),
 		getStatusId(STATUS_KEYS.NEXT),
-		getStatusId(STATUS_KEYS.WISHLIST)
+		getStatusId(STATUS_KEYS.WISHLIST),
+		getStatusId(STATUS_KEYS.DNF)
 	]);
+
+	// Import narrators and audiobookProgress tables
+	const { narrators, audiobookProgress } = await import('$lib/server/db');
 
 	const [
 		totalBooksRes,
@@ -112,7 +122,12 @@ export async function getStatsOverview(userId?: number): Promise<StatsOverview> 
 		totalSeriesRes,
 		avgRatingRes,
 		totalPagesRes,
-		pagesThisYearRes
+		pagesThisYearRes,
+		// New stats
+		dnfCountRes,
+		totalNarratorsRes,
+		totalListeningHoursRes,
+		readBooksCountRes
 	] = await Promise.all([
 		db.select({ count: sql<number>`count(*)` }).from(books).where(libCond),
 		readStatusId ? db.select({ count: sql<number>`count(*)` }).from(books)
@@ -136,19 +151,47 @@ export async function getStatsOverview(userId?: number): Promise<StatsOverview> 
 			.where(and(readStatusId ? eq(books.statusId, readStatusId) : sql`1=1`, libCond)),
 		readStatusId ? db.select({ total: sql<number>`coalesce(sum(pageCount), 0)` }).from(books)
 			.where(and(eq(books.statusId, readStatusId), sql`${books.completedDate} LIKE ${yearPattern}`, libCond))
-			: Promise.resolve([{ total: 0 }])
+			: Promise.resolve([{ total: 0 }]),
+		// DNF count
+		dnfStatusId ? db.select({ count: sql<number>`count(*)` }).from(books)
+			.where(and(eq(books.statusId, dnfStatusId), libCond))
+			: Promise.resolve([{ count: 0 }]),
+		// Total narrators (system-wide)
+		db.select({ count: sql<number>`count(*)` }).from(narrators),
+		// Total listening hours (user's audiobooks)
+		userId ? db.select({ total: sql<number>`coalesce(sum(ap.duration * ap.progress / 100), 0)` })
+			.from(audiobookProgress)
+			.where(eq(audiobookProgress.userId, userId))
+			: Promise.resolve([{ total: 0 }]),
+		// Count of completed books (for DNF rate calculation)
+		readStatusId ? db.select({ count: sql<number>`count(*)` }).from(books)
+			.where(and(eq(books.statusId, readStatusId), libCond))
+			: Promise.resolve([{ count: 0 }])
 	]);
 
+	const totalBooks = totalBooksRes[0]?.count ?? 0;
+	const dnfCount = dnfCountRes[0]?.count ?? 0;
+	const readBooksCount = readBooksCountRes[0]?.count ?? 0;
+	const completedAndDnf = readBooksCount + dnfCount;
+	const totalPages = totalPagesRes[0]?.total ?? 0;
+	const listeningSeconds = totalListeningHoursRes[0]?.total ?? 0;
+
 	return {
-		totalBooks: totalBooksRes[0]?.count ?? 0,
+		totalBooks,
 		readThisYear: readThisYearRes[0]?.count ?? 0,
 		currentlyReading: currentlyReadingRes[0]?.count ?? 0,
 		toBeRead: tbrRes[0]?.count ?? 0,
 		totalAuthors: totalAuthorsRes[0]?.count ?? 0,
 		totalSeries: totalSeriesRes[0]?.count ?? 0,
 		avgRating: avgRatingRes[0]?.avg ? parseFloat(avgRatingRes[0].avg.toFixed(1)) : null,
-		totalPages: totalPagesRes[0]?.total ?? 0,
-		pagesThisYear: pagesThisYearRes[0]?.total ?? 0
+		totalPages,
+		pagesThisYear: pagesThisYearRes[0]?.total ?? 0,
+		// New stats
+		avgPagesPerBook: readBooksCount > 0 ? Math.round(totalPages / readBooksCount) : 0,
+		dnfCount,
+		dnfRate: completedAndDnf > 0 ? Math.round((dnfCount / completedAndDnf) * 100) : 0,
+		totalNarrators: totalNarratorsRes[0]?.count ?? 0,
+		totalListeningHours: Math.round(listeningSeconds / 3600)
 	};
 }
 
@@ -348,6 +391,98 @@ export async function getTopAuthors(userId?: number, limit = 5): Promise<TopAuth
 	);
 
 	return authorsWithReadCounts;
+}
+
+// ============================================
+// Top Narrators
+// ============================================
+export interface TopNarrator {
+	id: number;
+	name: string;
+	photoUrl: string | null;
+	audiobookCount: number;
+	listenedCount: number;
+}
+
+export async function getTopNarrators(userId?: number, limit = 5): Promise<TopNarrator[]> {
+	const { narrators } = await import('$lib/server/db');
+	const libCond = getUserLibraryCondition(userId);
+	const readStatusId = await getStatusId(STATUS_KEYS.READ);
+
+	// Get narrators with most books in user's library (using books.narratorId)
+	const result = await db.select({
+		id: narrators.id,
+		name: narrators.name,
+		photoUrl: narrators.photoUrl,
+		audiobookCount: sql<number>`count(distinct ${books.id})`
+	})
+		.from(narrators)
+		.innerJoin(books, eq(narrators.id, books.narratorId))
+		.where(and(isNotNull(books.narratorId), libCond))
+		.groupBy(narrators.id)
+		.orderBy(desc(sql`count(distinct ${books.id})`))
+		.limit(limit);
+
+	// Get listened (completed audiobooks) counts for each narrator
+	const narratorsWithListenedCounts = await Promise.all(
+		result.map(async (n) => {
+			let listenedCount = 0;
+			if (readStatusId) {
+				const listenedRes = await db.select({ count: sql<number>`count(distinct ${books.id})` })
+					.from(books)
+					.where(and(eq(books.narratorId, n.id), eq(books.statusId, readStatusId), libCond));
+				listenedCount = listenedRes[0]?.count ?? 0;
+			}
+			return { ...n, listenedCount };
+		})
+	);
+
+	return narratorsWithListenedCounts;
+}
+
+// ============================================
+// Highest Rated Book
+// ============================================
+export interface HighestRatedBook {
+	id: number;
+	title: string;
+	coverImageUrl: string | null;
+	rating: number;
+	authorName: string | null;
+}
+
+export async function getHighestRatedBook(userId?: number): Promise<HighestRatedBook | null> {
+	const libCond = getUserLibraryCondition(userId);
+
+	const result = await db.select({
+		id: books.id,
+		title: books.title,
+		coverImageUrl: books.coverImageUrl,
+		rating: books.rating
+	})
+		.from(books)
+		.where(and(isNotNull(books.rating), sql`${books.rating} > 0`, libCond))
+		.orderBy(desc(books.rating), desc(books.updatedAt))
+		.limit(1);
+
+	if (result.length === 0) return null;
+
+	const book = result[0];
+
+	// Get author name
+	const authorResult = await db.select({
+		name: authors.name
+	})
+		.from(bookAuthors)
+		.innerJoin(authors, eq(bookAuthors.authorId, authors.id))
+		.where(eq(bookAuthors.bookId, book.id))
+		.limit(1);
+
+	return {
+		...book,
+		rating: book.rating ?? 0,
+		authorName: authorResult[0]?.name ?? null
+	};
 }
 
 // ============================================
@@ -668,6 +803,8 @@ export interface DashboardData {
 	genreDistribution: GenreDistribution[];
 	monthlyReading: MonthlyReadingData[];
 	topAuthors: TopAuthor[];
+	topNarrators: TopNarrator[];
+	highestRatedBook: HighestRatedBook | null;
 	widgetConfig: DashboardWidgetConfig[];
 	statuses: { id: number; name: string; color: string | null; icon: string | null; key: string | null }[];
 	// New dashboard config
@@ -707,6 +844,8 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 		genreDistribution,
 		monthlyReading,
 		topAuthors,
+		topNarrators,
+		highestRatedBook,
 		widgetConfig,
 		allStatuses,
 		allMagicShelves,
@@ -724,6 +863,8 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 		getGenreDistribution(userId, 8),
 		getMonthlyReadingData(userId),
 		getTopAuthors(userId, 5),
+		getTopNarrators(userId, 5),
+		getHighestRatedBook(userId),
 		getDashboardWidgetSettings(userId),
 		db.select().from(statuses).orderBy(statuses.sortOrder),
 		// Get magic shelves for the settings modal
@@ -760,6 +901,8 @@ export async function getFullDashboardData(userId?: number): Promise<DashboardDa
 		genreDistribution,
 		monthlyReading,
 		topAuthors,
+		topNarrators,
+		highestRatedBook,
 		widgetConfig,
 		statuses: allStatuses,
 		dashboardConfig,

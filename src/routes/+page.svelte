@@ -21,7 +21,11 @@
 		ChevronRight,
 		CheckCircle2,
 		Hash,
-		Sparkles
+		Sparkles,
+		Headphones,
+		BookX,
+		FileText,
+		Mic2
 	} from 'lucide-svelte';
 	import BookCard from '$lib/components/book/BookCard.svelte';
 	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
@@ -168,7 +172,7 @@
 	</div>
 
 	<!-- Secondary Stats (smaller row) -->
-	<div class="grid grid-cols-4 gap-3 mb-6">
+	<div class="grid grid-cols-4 md:grid-cols-8 gap-3 mb-6">
 		<div class="stat-card-sm">
 			<Users class="w-4 h-4" style="color: #ec4899;" />
 			<span class="stat-value-sm">{data.stats.totalAuthors}</span>
@@ -192,6 +196,34 @@
 			<span class="stat-value-sm">{(data.stats.pagesThisYear / 1000).toFixed(1)}k</span>
 			<span class="stat-label-sm">Pages Read</span>
 		</div>
+
+		<div class="stat-card-sm">
+			<FileText class="w-4 h-4" style="color: #14b8a6;" />
+			<span class="stat-value-sm">{data.stats.avgPagesPerBook}</span>
+			<span class="stat-label-sm">Avg Pages</span>
+		</div>
+
+		<div class="stat-card-sm">
+			<Mic2 class="w-4 h-4" style="color: #8b5cf6;" />
+			<span class="stat-value-sm">{data.stats.totalNarrators}</span>
+			<span class="stat-label-sm">Narrators</span>
+		</div>
+
+		{#if data.stats.totalListeningHours > 0}
+		<div class="stat-card-sm">
+			<Headphones class="w-4 h-4" style="color: #f59e0b;" />
+			<span class="stat-value-sm">{data.stats.totalListeningHours}h</span>
+			<span class="stat-label-sm">Listened</span>
+		</div>
+		{/if}
+
+		{#if data.stats.dnfCount > 0}
+		<div class="stat-card-sm">
+			<BookX class="w-4 h-4" style="color: #ef4444;" />
+			<span class="stat-value-sm">{data.stats.dnfRate}%</span>
+			<span class="stat-label-sm">DNF Rate</span>
+		</div>
+		{/if}
 	</div>
 
 	<!-- Main Grid -->
@@ -625,6 +657,75 @@
 							</a>
 						{/each}
 					</div>
+				</section>
+			{/if}
+
+			<!-- Top Narrators -->
+			{#if data.topNarrators && data.topNarrators.length > 0}
+				<section class="card p-4">
+					<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+						<Mic2 class="w-4 h-4" style="color: var(--accent);" />
+						Top Narrators
+					</h3>
+					<div class="space-y-2">
+						{#each data.topNarrators as narrator}
+							<a
+								href="/narrators/{narrator.id}"
+								class="flex items-center gap-2 p-2 rounded hover:bg-opacity-50 transition-colors"
+								style="background-color: var(--bg-tertiary);"
+							>
+								{#if narrator.photoUrl}
+									<img src={narrator.photoUrl} alt={narrator.name} class="w-8 h-8 rounded-full object-cover" />
+								{:else}
+									<div class="w-8 h-8 rounded-full flex items-center justify-center" style="background-color: var(--border-color);">
+										<Mic2 class="w-4 h-4" style="color: var(--text-muted);" />
+									</div>
+								{/if}
+								<div class="flex-1 min-w-0">
+									<p class="text-sm truncate" style="color: var(--text-primary);">{narrator.name}</p>
+									<p class="text-xs" style="color: var(--text-muted);">
+										{narrator.audiobookCount} audiobooks · {narrator.listenedCount} listened
+									</p>
+								</div>
+							</a>
+						{/each}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Highest Rated Book -->
+			{#if data.highestRatedBook}
+				<section class="card p-4">
+					<h3 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color: var(--text-primary);">
+						<Trophy class="w-4 h-4" style="color: #eab308;" />
+						Highest Rated
+					</h3>
+					<a
+						href="/books/{data.highestRatedBook.id}"
+						class="block group"
+					>
+						<div class="flex gap-3">
+							<div class="w-12 h-16 flex-shrink-0 rounded overflow-hidden" style="background-color: var(--bg-tertiary);">
+								<img
+									src={data.highestRatedBook.coverImageUrl || '/placeholder.png'}
+									alt={data.highestRatedBook.title}
+									class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+								/>
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium line-clamp-2 mb-1 group-hover:underline" style="color: var(--text-primary);">
+									{data.highestRatedBook.title}
+								</p>
+								{#if data.highestRatedBook.authorName}
+									<p class="text-xs mb-1" style="color: var(--text-secondary);">{data.highestRatedBook.authorName}</p>
+								{/if}
+								<div class="flex items-center gap-1">
+									<Star class="w-3 h-3 fill-yellow-400 text-yellow-400" />
+									<span class="text-xs font-medium" style="color: var(--text-primary);">{data.highestRatedBook.rating.toFixed(1)}</span>
+								</div>
+							</div>
+						</div>
+					</a>
 				</section>
 			{/if}
 

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.21] - 2025-12-31
+
+### Added
+- **Enhanced Dashboard Statistics** - More stats on the dashboard
+  - Average pages per book (Avg Pages)
+  - Total narrators count
+  - Listening hours (for audiobook users)
+  - DNF rate percentage (for users with DNF books)
+  - Top Narrators section (like Top Authors, for audiobook listeners)
+  - Highest Rated Book highlight with cover, title, author, and rating
+
+### Fixed
+- **Dashboard Chart Bars** - Fixed "Books Read This Year" chart bars not displaying
+  - CSS percentage heights weren't propagating through Tailwind classes
+  - Changed to explicit inline height styles for reliable rendering
+
 ## [2.2.20] - 2025-12-31
 
 ### Fixed
