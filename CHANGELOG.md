@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.19] - 2025-12-30
+
+### Fixed
+- **Dashboard Charts** - Fixed "Books Read This Year" chart not displaying data
+  - Date comparisons were failing due to timezone-formatted date strings in SQLite
+  - Also fixes "Read This Year" count and "Pages This Year" stats
+
 ## [2.2.18] - 2025-12-30
 
 ### Added
