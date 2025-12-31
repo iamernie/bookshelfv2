@@ -159,7 +159,7 @@ export async function getStatsOverview(userId?: number): Promise<StatsOverview> 
 		// Total narrators (system-wide)
 		db.select({ count: sql<number>`count(*)` }).from(narrators),
 		// Total listening hours (user's audiobooks)
-		userId ? db.select({ total: sql<number>`coalesce(sum(ap.duration * ap.progress / 100), 0)` })
+		userId ? db.select({ total: sql<number>`coalesce(sum(${audiobookProgress.duration} * ${audiobookProgress.progress} / 100), 0)` })
 			.from(audiobookProgress)
 			.where(eq(audiobookProgress.userId, userId))
 			: Promise.resolve([{ total: 0 }]),
