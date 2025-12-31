@@ -3,7 +3,7 @@
 	import MetadataSearchModal from '$lib/components/book/MetadataSearchModal.svelte';
 	import {
 		BookOpen, Star, Calendar, Edit2, Trash2, BookMarked, User, Library, Tag, X,
-		Info, AlignLeft, Fingerprint, Image, CalendarDays, Tablet, Download, Search, Loader2, Database
+		Info, AlignLeft, Fingerprint, Image, CalendarDays, Tablet, Download, Search, Loader2, Database, Plus
 	} from 'lucide-svelte';
 	import type { BookWithRelations } from '$lib/server/services/bookService';
 	import { toasts } from '$lib/stores/toast';
@@ -48,9 +48,7 @@
 	let coverImageUrl = $state(book?.coverImageUrl || '');
 	let originalCoverUrl = $state(book?.originalCoverUrl || '');
 	let statusId = $state(book?.statusId?.toString() || '');
-	let genreId = $state(book?.genreId?.toString() || '');
 	let formatId = $state(book?.formatId?.toString() || '');
-	let narratorId = $state(book?.narratorId?.toString() || '');
 	let releaseDate = $state(toInputDate(book?.releaseDate));
 	let startReadingDate = $state(toInputDate(book?.startReadingDate));
 	let completedDate = $state(toInputDate(book?.completedDate));
@@ -96,22 +94,70 @@
 	let authorSearch = $state('');
 	let authorRole = $state('Author');
 	let showAuthorDropdown = $state(false);
+	let creatingAuthor = $state(false);
+	let availableAuthors = $state(options.authors);
 	let filteredAuthors = $derived(
-		options.authors.filter(a =>
+		availableAuthors.filter(a =>
 			a.name.toLowerCase().includes(authorSearch.toLowerCase()) &&
 			!selectedAuthors.some(sa => sa.id === a.id)
 		).slice(0, 10)
+	);
+	let canCreateAuthor = $derived(
+		authorSearch.trim().length > 0 &&
+		!availableAuthors.some(a => a.name.toLowerCase() === authorSearch.trim().toLowerCase())
 	);
 
 	// Series picker state
 	let seriesSearch = $state('');
 	let seriesBookNum = $state('');
 	let showSeriesDropdown = $state(false);
+	let creatingSeries = $state(false);
+	let availableSeries = $state(options.series);
 	let filteredSeries = $derived(
-		options.series.filter(s =>
+		availableSeries.filter(s =>
 			s.title.toLowerCase().includes(seriesSearch.toLowerCase()) &&
 			!selectedSeries.some(ss => ss.id === s.id)
 		).slice(0, 10)
+	);
+	let canCreateSeries = $derived(
+		seriesSearch.trim().length > 0 &&
+		!availableSeries.some(s => s.title.toLowerCase() === seriesSearch.trim().toLowerCase())
+	);
+
+	// Narrator picker state
+	let narratorSearch = $state('');
+	let showNarratorDropdown = $state(false);
+	let creatingNarrator = $state(false);
+	let availableNarrators = $state(options.narrators);
+	let filteredNarrators = $derived(
+		availableNarrators.filter(n =>
+			n.name.toLowerCase().includes(narratorSearch.toLowerCase())
+		).slice(0, 10)
+	);
+	let canCreateNarrator = $derived(
+		narratorSearch.trim().length > 0 &&
+		!availableNarrators.some(n => n.name.toLowerCase() === narratorSearch.trim().toLowerCase())
+	);
+	let selectedNarrator = $state<{ id: number; name: string } | null>(
+		book?.narratorId ? options.narrators.find(n => n.id === book.narratorId) ?? null : null
+	);
+
+	// Genre picker state
+	let genreSearch = $state('');
+	let showGenreDropdown = $state(false);
+	let creatingGenre = $state(false);
+	let availableGenres = $state(options.genres);
+	let filteredGenres = $derived(
+		availableGenres.filter(g =>
+			g.name.toLowerCase().includes(genreSearch.toLowerCase())
+		).slice(0, 10)
+	);
+	let canCreateGenre = $derived(
+		genreSearch.trim().length > 0 &&
+		!availableGenres.some(g => g.name.toLowerCase() === genreSearch.trim().toLowerCase())
+	);
+	let selectedGenre = $state<{ id: number; name: string } | null>(
+		book?.genreId ? options.genres.find(g => g.id === book.genreId) ?? null : null
 	);
 
 	// Tab definitions
@@ -144,6 +190,130 @@
 
 	function removeSeries(id: number) {
 		selectedSeries = selectedSeries.filter(s => s.id !== id);
+	}
+
+	async function createNewAuthor() {
+		const name = authorSearch.trim();
+		if (!name) return;
+
+		creatingAuthor = true;
+		try {
+			const res = await fetch('/api/authors', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name })
+			});
+
+			if (res.ok) {
+				const newAuthor = await res.json();
+				// Add to available authors list
+				availableAuthors = [...availableAuthors, { id: newAuthor.id, name: newAuthor.name }];
+				// Add to selected authors
+				addAuthor({ id: newAuthor.id, name: newAuthor.name });
+			}
+		} catch (e) {
+			console.error('Failed to create author:', e);
+		} finally {
+			creatingAuthor = false;
+		}
+	}
+
+	async function createNewSeries() {
+		const title = seriesSearch.trim();
+		if (!title) return;
+
+		creatingSeries = true;
+		try {
+			const res = await fetch('/api/series', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ title })
+			});
+
+			if (res.ok) {
+				const newSeries = await res.json();
+				// Add to available series list
+				availableSeries = [...availableSeries, { id: newSeries.id, title: newSeries.title }];
+				// Add to selected series
+				addSeries({ id: newSeries.id, title: newSeries.title });
+			}
+		} catch (e) {
+			console.error('Failed to create series:', e);
+		} finally {
+			creatingSeries = false;
+		}
+	}
+
+	async function createNewNarrator() {
+		const name = narratorSearch.trim();
+		if (!name) return;
+
+		creatingNarrator = true;
+		try {
+			const res = await fetch('/api/narrators', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name })
+			});
+
+			if (res.ok) {
+				const newNarrator = await res.json();
+				availableNarrators = [...availableNarrators, { id: newNarrator.id, name: newNarrator.name }];
+				selectedNarrator = { id: newNarrator.id, name: newNarrator.name };
+				narratorSearch = '';
+				showNarratorDropdown = false;
+			}
+		} catch (e) {
+			console.error('Failed to create narrator:', e);
+		} finally {
+			creatingNarrator = false;
+		}
+	}
+
+	async function createNewGenre() {
+		const name = genreSearch.trim();
+		if (!name) return;
+
+		creatingGenre = true;
+		try {
+			const res = await fetch('/api/genres', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ name })
+			});
+
+			if (res.ok) {
+				const newGenre = await res.json();
+				availableGenres = [...availableGenres, { id: newGenre.id, name: newGenre.name }];
+				selectedGenre = { id: newGenre.id, name: newGenre.name };
+				genreSearch = '';
+				showGenreDropdown = false;
+			}
+		} catch (e) {
+			console.error('Failed to create genre:', e);
+		} finally {
+			creatingGenre = false;
+		}
+	}
+
+	function selectNarrator(n: { id: number; name: string }) {
+		selectedNarrator = n;
+		narratorSearch = '';
+		showNarratorDropdown = false;
+	}
+
+	function clearNarrator() {
+		selectedNarrator = null;
+	}
+
+	function selectGenre(g: { id: number; name: string }) {
+		selectedGenre = g;
+		genreSearch = '';
+		showGenreDropdown = false;
+	}
+
+	function clearGenre() {
+		selectedGenre = null;
 	}
 
 	function toggleTag(tagId: number) {
@@ -371,9 +541,9 @@
 				coverImageUrl: coverImageUrl.trim() || null,
 				originalCoverUrl: originalCoverUrl.trim() || null,
 				statusId: statusId ? parseInt(statusId) : null,
-				genreId: genreId ? parseInt(genreId) : null,
+				genreId: selectedGenre?.id ?? null,
 				formatId: formatId ? parseInt(formatId) : null,
-				narratorId: narratorId ? parseInt(narratorId) : null,
+				narratorId: selectedNarrator?.id ?? null,
 				releaseDate: releaseDate || null,
 				startReadingDate: startReadingDate || null,
 				completedDate: completedDate || null,
@@ -694,8 +864,8 @@
 												onfocus={() => showAuthorDropdown = true}
 												class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
 											/>
-											{#if showAuthorDropdown && filteredAuthors.length > 0}
-												<div class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+											{#if showAuthorDropdown && (filteredAuthors.length > 0 || canCreateAuthor)}
+												<div class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
 													{#each filteredAuthors as author}
 														<button
 															type="button"
@@ -705,6 +875,20 @@
 															{author.name}
 														</button>
 													{/each}
+													{#if canCreateAuthor}
+														<button
+															type="button"
+															class="w-full px-3 py-2 text-left hover:bg-green-50 text-sm border-t border-gray-100 text-green-700 font-medium flex items-center gap-2"
+															onclick={createNewAuthor}
+															disabled={creatingAuthor}
+														>
+															{#if creatingAuthor}
+																<span class="animate-spin">⏳</span> Creating...
+															{:else}
+																<Plus class="w-4 h-4" /> Create "{authorSearch.trim()}"
+															{/if}
+														</button>
+													{/if}
 												</div>
 											{/if}
 										</div>
@@ -757,8 +941,8 @@
 												onfocus={() => showSeriesDropdown = true}
 												class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
 											/>
-											{#if showSeriesDropdown && filteredSeries.length > 0}
-												<div class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
+											{#if showSeriesDropdown && (filteredSeries.length > 0 || canCreateSeries)}
+												<div class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
 													{#each filteredSeries as s}
 														<button
 															type="button"
@@ -768,6 +952,20 @@
 															{s.title}
 														</button>
 													{/each}
+													{#if canCreateSeries}
+														<button
+															type="button"
+															class="w-full px-3 py-2 text-left hover:bg-green-50 text-sm border-t border-gray-100 text-green-700 font-medium flex items-center gap-2"
+															onclick={createNewSeries}
+															disabled={creatingSeries}
+														>
+															{#if creatingSeries}
+																<span class="animate-spin">⏳</span> Creating...
+															{:else}
+																<Plus class="w-4 h-4" /> Create "{seriesSearch.trim()}"
+															{/if}
+														</button>
+													{/if}
 												</div>
 											{/if}
 										</div>
@@ -783,14 +981,54 @@
 
 								<!-- Main Details -->
 								<div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+									<!-- Genre with create new option -->
 									<div>
-										<label for="genreId" class="block text-sm font-medium text-gray-700 mb-1">Genre</label>
-										<select id="genreId" bind:value={genreId} class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-											<option value="">Select...</option>
-											{#each options.genres as genre}
-												<option value={genre.id.toString()}>{genre.name}</option>
-											{/each}
-										</select>
+										<label class="block text-sm font-medium text-gray-700 mb-1">Genre</label>
+										{#if selectedGenre}
+											<div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+												<span class="flex-1 text-sm">{selectedGenre.name}</span>
+												<button type="button" onclick={clearGenre} class="p-1 text-red-500 hover:bg-red-50 rounded">
+													<X class="w-4 h-4" />
+												</button>
+											</div>
+										{:else}
+											<div class="relative">
+												<input
+													type="text"
+													placeholder="Search genres..."
+													bind:value={genreSearch}
+													onfocus={() => showGenreDropdown = true}
+													class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+												/>
+												{#if showGenreDropdown && (filteredGenres.length > 0 || canCreateGenre)}
+													<div class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+														{#each filteredGenres as g}
+															<button
+																type="button"
+																class="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm"
+																onclick={() => selectGenre(g)}
+															>
+																{g.name}
+															</button>
+														{/each}
+														{#if canCreateGenre}
+															<button
+																type="button"
+																class="w-full px-3 py-2 text-left hover:bg-green-50 text-sm border-t border-gray-100 text-green-700 font-medium flex items-center gap-2"
+																onclick={createNewGenre}
+																disabled={creatingGenre}
+															>
+																{#if creatingGenre}
+																	<span class="animate-spin">⏳</span> Creating...
+																{:else}
+																	<Plus class="w-4 h-4" /> Create "{genreSearch.trim()}"
+																{/if}
+															</button>
+														{/if}
+													</div>
+												{/if}
+											</div>
+										{/if}
 									</div>
 
 									<div>
@@ -803,14 +1041,54 @@
 										</select>
 									</div>
 
+									<!-- Narrator with create new option -->
 									<div>
-										<label for="narratorId" class="block text-sm font-medium text-gray-700 mb-1">Narrator</label>
-										<select id="narratorId" bind:value={narratorId} class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-											<option value="">Select...</option>
-											{#each options.narrators as narrator}
-												<option value={narrator.id.toString()}>{narrator.name}</option>
-											{/each}
-										</select>
+										<label class="block text-sm font-medium text-gray-700 mb-1">Narrator</label>
+										{#if selectedNarrator}
+											<div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+												<span class="flex-1 text-sm">{selectedNarrator.name}</span>
+												<button type="button" onclick={clearNarrator} class="p-1 text-red-500 hover:bg-red-50 rounded">
+													<X class="w-4 h-4" />
+												</button>
+											</div>
+										{:else}
+											<div class="relative">
+												<input
+													type="text"
+													placeholder="Search narrators..."
+													bind:value={narratorSearch}
+													onfocus={() => showNarratorDropdown = true}
+													class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+												/>
+												{#if showNarratorDropdown && (filteredNarrators.length > 0 || canCreateNarrator)}
+													<div class="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+														{#each filteredNarrators as n}
+															<button
+																type="button"
+																class="w-full px-3 py-2 text-left hover:bg-gray-50 text-sm"
+																onclick={() => selectNarrator(n)}
+															>
+																{n.name}
+															</button>
+														{/each}
+														{#if canCreateNarrator}
+															<button
+																type="button"
+																class="w-full px-3 py-2 text-left hover:bg-green-50 text-sm border-t border-gray-100 text-green-700 font-medium flex items-center gap-2"
+																onclick={createNewNarrator}
+																disabled={creatingNarrator}
+															>
+																{#if creatingNarrator}
+																	<span class="animate-spin">⏳</span> Creating...
+																{:else}
+																	<Plus class="w-4 h-4" /> Create "{narratorSearch.trim()}"
+																{/if}
+															</button>
+														{/if}
+													</div>
+												{/if}
+											</div>
+										{/if}
 									</div>
 								</div>
 

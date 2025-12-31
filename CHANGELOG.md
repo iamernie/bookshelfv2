@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] - 2025-12-31
+
+### Added
+- **Create New Entities Inline** - When adding/editing a book, you can now create new authors, series, narrators, and genres directly from the dropdown
+  - Type a name that doesn't exist and click "Create [name]" to add it
+  - The new entity is immediately selected and available for use
+  - Searchable dropdowns for Genre and Narrator (previously simple selects)
+
 ## [2.2.28] - 2025-12-31
 
 ### Fixed
