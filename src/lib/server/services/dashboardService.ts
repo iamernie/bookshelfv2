@@ -4,7 +4,7 @@
  */
 
 import { db, books, authors, series, statuses, bookAuthors, bookSeries, genres, formats, tags, bookTags, settings, userBooks, magicShelves } from '$lib/server/db';
-import { eq, sql, desc, asc, and, isNotNull, ne, gte, lt, or, count, inArray } from 'drizzle-orm';
+import { eq, sql, desc, asc, and, isNotNull, ne, or, count, inArray } from 'drizzle-orm';
 import { getBooksCardData } from './bookService';
 import { getGoalForDashboard } from './goalsService';
 import { getDashboardConfig, getEnabledSections, type DashboardConfig, type DashboardSection, type FilterConfig } from './userPreferencesService';
@@ -93,8 +93,7 @@ export interface StatsOverview {
 
 export async function getStatsOverview(userId?: number): Promise<StatsOverview> {
 	const currentYear = new Date().getFullYear();
-	const yearStart = `${currentYear}-01-01`;
-	const yearEnd = `${currentYear + 1}-01-01`;
+	const yearPattern = `${currentYear}%`;
 	const libCond = getUserLibraryCondition(userId);
 
 	const [readStatusId, currentStatusId, nextStatusId, wishlistStatusId] = await Promise.all([
@@ -117,7 +116,7 @@ export async function getStatsOverview(userId?: number): Promise<StatsOverview> 
 	] = await Promise.all([
 		db.select({ count: sql<number>`count(*)` }).from(books).where(libCond),
 		readStatusId ? db.select({ count: sql<number>`count(*)` }).from(books)
-			.where(and(eq(books.statusId, readStatusId), gte(books.completedDate, yearStart), lt(books.completedDate, yearEnd), libCond))
+			.where(and(eq(books.statusId, readStatusId), sql`${books.completedDate} LIKE ${yearPattern}`, libCond))
 			: Promise.resolve([{ count: 0 }]),
 		currentStatusId ? db.select({ count: sql<number>`count(*)` }).from(books)
 			.where(and(eq(books.statusId, currentStatusId), libCond))
@@ -136,7 +135,7 @@ export async function getStatsOverview(userId?: number): Promise<StatsOverview> 
 		db.select({ total: sql<number>`coalesce(sum(pageCount), 0)` }).from(books)
 			.where(and(readStatusId ? eq(books.statusId, readStatusId) : sql`1=1`, libCond)),
 		readStatusId ? db.select({ total: sql<number>`coalesce(sum(pageCount), 0)` }).from(books)
-			.where(and(eq(books.statusId, readStatusId), gte(books.completedDate, yearStart), lt(books.completedDate, yearEnd), libCond))
+			.where(and(eq(books.statusId, readStatusId), sql`${books.completedDate} LIKE ${yearPattern}`, libCond))
 			: Promise.resolve([{ total: 0 }])
 	]);
 
@@ -237,8 +236,7 @@ export interface MonthlyReadingData {
 
 export async function getMonthlyReadingData(userId?: number, year?: number): Promise<MonthlyReadingData[]> {
 	const selectedYear = year || new Date().getFullYear();
-	const yearStart = `${selectedYear}-01-01`;
-	const yearEnd = `${selectedYear + 1}-01-01`;
+	const yearPattern = `${selectedYear}%`;
 
 	const readStatusId = await getStatusId(STATUS_KEYS.READ);
 	if (!readStatusId) {
@@ -255,8 +253,7 @@ export async function getMonthlyReadingData(userId?: number, year?: number): Pro
 			.where(and(
 				eq(userBooks.userId, userId),
 				eq(userBooks.statusId, readStatusId),
-				gte(userBooks.completedDate, yearStart),
-				lt(userBooks.completedDate, yearEnd)
+				sql`${userBooks.completedDate} LIKE ${yearPattern}`
 			))
 			.groupBy(sql`strftime('%m', ${userBooks.completedDate})`);
 
@@ -271,8 +268,7 @@ export async function getMonthlyReadingData(userId?: number, year?: number): Pro
 		.from(books)
 		.where(and(
 			eq(books.statusId, readStatusId),
-			gte(books.completedDate, yearStart),
-			lt(books.completedDate, yearEnd)
+			sql`${books.completedDate} LIKE ${yearPattern}`
 		))
 		.groupBy(sql`strftime('%m', completedDate)`);
 
