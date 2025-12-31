@@ -59,9 +59,12 @@ fi
 # Ensure uploads temp directory exists
 mkdir -p /app/static/uploads/temp
 
+# Ensure audiobooks directory exists
+mkdir -p /app/data/audiobooks
+
 # Set ownership on data directories
 echo "Setting ownership on data directories..."
-chown -R "$PUID:$PGID" /data /logs /app/static/covers /app/static/ebooks /app/static/uploads 2>/dev/null || true
+chown -R "$PUID:$PGID" /data /logs /app/static/covers /app/static/ebooks /app/static/uploads /app/data/audiobooks 2>/dev/null || true
 
 # Also ensure the app directory is accessible
 chown "$PUID:$PGID" /app 2>/dev/null || true

@@ -39,7 +39,7 @@ WORKDIR /app
 
 # Create data directories for persistent storage
 # These should be mounted as volumes
-RUN mkdir -p /data /logs /app/static/covers /app/static/ebooks
+RUN mkdir -p /data /logs /app/static/covers /app/static/ebooks /app/data/audiobooks
 
 # Copy package files
 COPY package*.json ./
