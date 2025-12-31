@@ -17,7 +17,8 @@
 		Globe,
 		FileText,
 		BookOpen,
-		User
+		User,
+		ShoppingBag
 	} from 'lucide-svelte';
 
 	let { data } = $props();
@@ -249,22 +250,26 @@
 	<!-- Data Counts -->
 	<div class="card p-4 mb-6">
 		<h3 class="font-semibold mb-4" style="color: var(--text-primary);">Database Tables</h3>
-		<div class="grid grid-cols-2 md:grid-cols-6 gap-4">
+		<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.books}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Books</div>
 			</div>
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.authors}</div>
-				<div class="text-sm" style="color: var(--text-muted);">Authors (all)</div>
+				<div class="text-sm" style="color: var(--text-muted);">Authors</div>
 			</div>
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.series}</div>
-				<div class="text-sm" style="color: var(--text-muted);">Series (all)</div>
+				<div class="text-sm" style="color: var(--text-muted);">Series</div>
 			</div>
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.genres}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Genres</div>
+			</div>
+			<div class="text-center">
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.mediaSources}</div>
+				<div class="text-sm" style="color: var(--text-muted);">Media Sources</div>
 			</div>
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.users}</div>
@@ -273,6 +278,33 @@
 			<div class="text-center">
 				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.sessions}</div>
 				<div class="text-sm" style="color: var(--text-muted);">Sessions</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Media Sources -->
+	<div class="card p-4 mb-6">
+		<div class="flex items-center gap-3 mb-4">
+			<div class="w-10 h-10 rounded-lg flex items-center justify-center bg-orange-500">
+				<ShoppingBag class="w-5 h-5 text-white" />
+			</div>
+			<div>
+				<h3 class="font-semibold" style="color: var(--text-primary);">Media Sources</h3>
+				<p class="text-sm" style="color: var(--text-secondary);">Where books are purchased or owned</p>
+			</div>
+		</div>
+		<div class="grid grid-cols-3 gap-4">
+			<div class="p-3 rounded-lg text-center" style="background-color: var(--bg-tertiary);">
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.mediaSources}</div>
+				<div class="text-sm" style="color: var(--text-muted);">Total Sources</div>
+			</div>
+			<div class="p-3 rounded-lg text-center" style="background-color: var(--bg-tertiary);">
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.systemMediaSources}</div>
+				<div class="text-sm" style="color: var(--text-muted);">System Sources</div>
+			</div>
+			<div class="p-3 rounded-lg text-center" style="background-color: var(--bg-tertiary);">
+				<div class="text-2xl font-bold" style="color: var(--accent);">{health.counts.userMediaSources}</div>
+				<div class="text-sm" style="color: var(--text-muted);">User Sources</div>
 			</div>
 		</div>
 	</div>

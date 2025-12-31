@@ -724,6 +724,25 @@
 						</div>
 					{/if}
 				</div>
+
+				<!-- Media Sources (where purchased) -->
+				{#if data.bookMediaSources && data.bookMediaSources.length > 0}
+					<div class="card p-3 mt-3">
+						<h4 class="text-xs font-semibold mb-2" style="color: var(--text-muted);">Owned On</h4>
+						<div class="flex flex-wrap gap-1.5">
+							{#each data.bookMediaSources as bms}
+								<span
+									class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium text-white"
+									style="background-color: {bms.mediaSource.color || '#6c757d'}"
+									title={bms.notes || bms.mediaSource.name}
+								>
+									<LucideIcon name={bms.mediaSource.icon || 'shopping-bag'} size={12} />
+									{bms.mediaSource.name}
+								</span>
+							{/each}
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Right Column: Details -->

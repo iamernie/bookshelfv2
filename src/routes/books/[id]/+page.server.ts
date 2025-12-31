@@ -7,6 +7,8 @@ import { getSimilarBooks } from '$lib/server/services/recommendationService';
 import { getAudiobooksByBookId, getOrCreateProgress, getBookmarks } from '$lib/server/services/audiobookService';
 import { getAllTags } from '$lib/server/services/tagService';
 import { getAllStatuses } from '$lib/server/services/statusService';
+import { getAllMediaSources, getBookMediaSources } from '$lib/server/services/mediaSourceService';
+import { ebookExists } from '$lib/server/services/ebookService';
 
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const id = parseInt(params.id);
@@ -19,17 +21,19 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		throw error(404, 'Book not found');
 	}
 
-	// Get similar books for the Similar Books tab
-	const [similarBooks, allTags, allStatuses] = await Promise.all([
+	// Get similar books, tags, statuses, and media sources
+	const [similarBooks, allTags, allStatuses, allMediaSources, bookMediaSources] = await Promise.all([
 		getSimilarBooks(id, 8),
 		getAllTags(),
-		getAllStatuses()
+		getAllStatuses(),
+		getAllMediaSources(locals.user?.id),
+		getBookMediaSources(id)
 	]);
 
-	// Check if ebook file exists
+	// Check if ebook file exists (using proper path resolution)
 	let ebookMissing = false;
 	if (book.ebookPath) {
-		ebookMissing = !existsSync(book.ebookPath);
+		ebookMissing = !ebookExists(book.ebookPath);
 	}
 
 	// Get linked audiobooks with full file info
@@ -84,6 +88,8 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		canManagePublicLibrary: canManagePublicLibrary(locals.user),
 		allTags,
 		allStatuses,
+		allMediaSources,
+		bookMediaSources,
 		ebookMissing
 	};
 };

@@ -7,7 +7,8 @@ import {
 	fixInvalidBookReferences,
 	removeOrphanedAuthors,
 	removeOrphanedSeries,
-	removeOrphanedTags
+	removeOrphanedTags,
+	removeUnusedMediaSources
 } from '$lib/server/services/diagnosticService';
 
 export const POST: RequestHandler = async ({ locals, request }) => {
@@ -60,6 +61,18 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 
 			case 'tags': {
 				const result = await removeOrphanedTags();
+				return json(result);
+			}
+
+			case 'mediasources':
+			case 'bookmediasources': {
+				// For bookmediasources orphans, run repairOrphanedRelationships which now includes them
+				// For unused mediasources, run the dedicated function
+				if (type === 'bookmediasources') {
+					const result = await repairOrphanedRelationships();
+					return json(result);
+				}
+				const result = await removeUnusedMediaSources();
 				return json(result);
 			}
 

@@ -618,6 +618,38 @@ export const audiobookBookmarks = sqliteTable('audiobook_bookmarks', {
 });
 
 // ============================================
+// Media Sources (where books were purchased)
+// ============================================
+
+export const mediaSources = sqliteTable('media_sources', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	name: text('name').notNull(), // "Audible", "Kindle", "Physical", "Kobo", etc.
+	icon: text('icon').default('shopping-bag'), // Lucide icon name
+	color: text('color').default('#6c757d'),
+	url: text('url'), // Base URL for the service (e.g., https://audible.com)
+	isSystem: integer('isSystem', { mode: 'boolean' }).default(false), // System-defined sources
+	userId: integer('userId').references(() => users.id, { onDelete: 'cascade' }), // null = system-wide, value = private to user
+	displayOrder: integer('displayOrder').default(0),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+// Junction table linking books to their media sources
+export const bookMediaSources = sqliteTable('book_media_sources', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	bookId: integer('bookId').notNull().references(() => books.id, { onDelete: 'cascade' }),
+	mediaSourceId: integer('mediaSourceId').notNull().references(() => mediaSources.id, { onDelete: 'cascade' }),
+	// Optional metadata about the purchase
+	purchaseDate: text('purchaseDate'),
+	purchasePrice: real('purchasePrice'),
+	externalUrl: text('externalUrl'), // Direct link to the book on this service
+	externalId: text('externalId'), // ID on the external service (e.g., ASIN)
+	notes: text('notes'),
+	createdAt: text('createdAt').default('CURRENT_TIMESTAMP'),
+	updatedAt: text('updatedAt').default('CURRENT_TIMESTAMP')
+});
+
+// ============================================
 // Relations
 // ============================================
 
@@ -630,6 +662,7 @@ export const booksRelations = relations(books, ({ one, many }) => ({
 	bookAuthors: many(bookAuthors),
 	bookSeries: many(bookSeries),
 	bookTags: many(bookTags),
+	bookMediaSources: many(bookMediaSources),
 	userBooks: many(userBooks),
 	userBookTags: many(userBookTags),
 	metadataSuggestions: many(metadataSuggestions),
@@ -776,6 +809,16 @@ export const audiobookBookmarksRelations = relations(audiobookBookmarks, ({ one 
 	user: one(users, { fields: [audiobookBookmarks.userId], references: [users.id] })
 }));
 
+// Media Sources relations
+export const mediaSourcesRelations = relations(mediaSources, ({ many }) => ({
+	bookMediaSources: many(bookMediaSources)
+}));
+
+export const bookMediaSourcesRelations = relations(bookMediaSources, ({ one }) => ({
+	book: one(books, { fields: [bookMediaSources.bookId], references: [books.id] }),
+	mediaSource: one(mediaSources, { fields: [bookMediaSources.mediaSourceId], references: [mediaSources.id] })
+}));
+
 // ============================================
 // Type exports
 // ============================================
@@ -837,6 +880,12 @@ export type AudiobookBookmark = typeof audiobookBookmarks.$inferSelect;
 export type NewAudiobookBookmark = typeof audiobookBookmarks.$inferInsert;
 export type UserAudiobook = typeof userAudiobooks.$inferSelect;
 export type NewUserAudiobook = typeof userAudiobooks.$inferInsert;
+
+// Media source types
+export type MediaSource = typeof mediaSources.$inferSelect;
+export type NewMediaSource = typeof mediaSources.$inferInsert;
+export type BookMediaSource = typeof bookMediaSources.$inferSelect;
+export type NewBookMediaSource = typeof bookMediaSources.$inferInsert;
 
 // Library type values
 export type LibraryType = 'personal' | 'public';

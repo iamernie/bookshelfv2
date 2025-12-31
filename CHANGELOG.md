@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.18] - 2025-12-30
+
+### Added
+- **Media Sources** - Track where your books are purchased or owned
+  - Add sources like Audible, Kindle, Physical, Kobo, Apple Books, etc.
+  - Books can have multiple sources (bought both Kindle and audiobook)
+  - "Owned On" badges display on book detail page with icons and colors
+  - Manage sources in the new Media tab on book edit page
+- **Per-User Private Sources** - Regular users can create their own custom sources
+  - Add private sources like local bookstores, Storytel, or any custom source
+  - Private sources only visible to the user who created them
+  - System-wide sources managed by admins in Admin → Media Sources
+- **Media Sources Admin Page** - New admin page to manage system-wide sources
+  - Default sources seeded: Audible, Kindle, Physical, Kobo, Apple Books, Google Play Books
+  - Customize icons, colors, URLs, and display order
+- **Diagnostics Updates** - Media sources now included in database health checks
+  - Shows total, system, and user-created source counts
+  - Detects orphaned book-media source relationships
+  - Detects unused user-created sources
+  - Repair functions to clean up orphaned data
+
+### Fixed
+- **Ebook Missing Files** - Fixed false "missing" status for uploaded ebooks
+  - Ebook existence check now properly resolves storage paths
+
 ## [2.2.9] - 2025-12-30
 
 ### Added
