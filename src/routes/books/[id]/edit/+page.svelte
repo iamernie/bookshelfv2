@@ -30,6 +30,7 @@
 	import { toasts } from '$lib/stores/toast';
 	import { toInputDate } from '$lib/utils/date';
 	import MetadataSearchModal from '$lib/components/book/MetadataSearchModal.svelte';
+	import LucideIcon from '$lib/components/ui/LucideIcon.svelte';
 
 	let { data } = $props();
 	const book = data.book;
@@ -107,6 +108,17 @@
 		})) || []
 	);
 	let selectedTagIds = $state<number[]>(book.tags?.map((t: any) => t.id) || []);
+	let selectedMediaSourceIds = $state<number[]>(data.bookMediaSources?.map((bms: any) => bms.mediaSourceId) || []);
+	let availableMediaSources = $state(options.mediaSources || []);
+
+	// Custom media source creation state
+	let showAddSourceModal = $state(false);
+	let newSourceName = $state('');
+	let newSourceIcon = $state('shopping-bag');
+	let newSourceColor = $state('#6c757d');
+	let creatingSource = $state(false);
+	const sourceIcons = ['shopping-bag', 'headphones', 'tablet', 'book', 'book-open', 'smartphone', 'library', 'play', 'music'];
+	const sourceColors = ['#f7971e', '#ff9900', '#8b4513', '#bf0811', '#000000', '#4285f4', '#2e7d32', '#f5a623', '#6c757d', '#e91e63', '#9c27b0', '#3f51b5'];
 
 	// Author picker state
 	let authorSearch = $state('');
@@ -176,6 +188,52 @@
 			selectedTagIds = selectedTagIds.filter(id => id !== tagId);
 		} else {
 			selectedTagIds = [...selectedTagIds, tagId];
+		}
+	}
+
+	function toggleMediaSource(sourceId: number) {
+		if (selectedMediaSourceIds.includes(sourceId)) {
+			selectedMediaSourceIds = selectedMediaSourceIds.filter(id => id !== sourceId);
+		} else {
+			selectedMediaSourceIds = [...selectedMediaSourceIds, sourceId];
+		}
+	}
+
+	async function createCustomSource() {
+		if (!newSourceName.trim()) {
+			toasts.error('Source name is required');
+			return;
+		}
+		creatingSource = true;
+		try {
+			const res = await fetch('/api/media-sources', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: newSourceName.trim(),
+					icon: newSourceIcon,
+					color: newSourceColor
+				})
+			});
+			if (res.ok) {
+				const newSource = await res.json();
+				// Add to available sources and auto-select it
+				availableMediaSources = [...availableMediaSources, newSource];
+				selectedMediaSourceIds = [...selectedMediaSourceIds, newSource.id];
+				toasts.success(`Added "${newSource.name}"`);
+				// Reset modal
+				showAddSourceModal = false;
+				newSourceName = '';
+				newSourceIcon = 'shopping-bag';
+				newSourceColor = '#6c757d';
+			} else {
+				const err = await res.json();
+				toasts.error(err.message || 'Failed to create source');
+			}
+		} catch {
+			toasts.error('Failed to create source');
+		} finally {
+			creatingSource = false;
 		}
 	}
 
@@ -569,6 +627,19 @@
 				})
 			});
 			if (res.ok) {
+				// Also save media sources
+				try {
+					await fetch(`/api/books/${book.id}/media-sources`, {
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							sources: selectedMediaSourceIds.map(id => ({ mediaSourceId: id }))
+						})
+					});
+				} catch (e) {
+					console.error('Failed to save media sources:', e);
+				}
+
 				toasts.success('Book saved');
 				await tick(); // Ensure toast is added before navigation
 				goto(`/books/${book.id}`);
@@ -1487,6 +1558,67 @@
 										</button>
 									{/if}
 								</div>
+
+								<!-- Media Sources Section (where purchased) -->
+								<div class="rounded-lg p-4" style="background-color: var(--bg-secondary); border: 1px solid var(--border-color);">
+									<h3 class="text-xs font-medium mb-3 flex items-center gap-2" style="color: var(--text-muted);">
+										<Library class="w-3.5 h-3.5" />
+										Owned On
+									</h3>
+									<p class="text-xs mb-3" style="color: var(--text-muted);">
+										Track where you purchased or own this book
+									</p>
+
+									<!-- Selected media sources -->
+									{#if selectedMediaSourceIds.length > 0}
+										<div class="flex flex-wrap gap-2 mb-3">
+											{#each selectedMediaSourceIds as sourceId}
+												{@const source = availableMediaSources.find((s: any) => s.id === sourceId)}
+												{#if source}
+													<button
+														type="button"
+														class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium text-white transition-opacity hover:opacity-80"
+														style="background-color: {source.color || '#6c757d'}"
+														onclick={() => toggleMediaSource(sourceId)}
+														title="Click to remove"
+													>
+														<LucideIcon name={source.icon || 'shopping-bag'} size={12} />
+														{source.name}
+														<X class="w-3 h-3 ml-0.5" />
+													</button>
+												{/if}
+											{/each}
+										</div>
+									{/if}
+
+									<!-- Available media sources -->
+									<div class="flex flex-wrap gap-2">
+										{#each availableMediaSources as source}
+											{#if !selectedMediaSourceIds.includes(source.id)}
+												<button
+													type="button"
+													class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all"
+													style="background-color: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border-color);"
+													onclick={() => toggleMediaSource(source.id)}
+												>
+													<LucideIcon name={source.icon || 'shopping-bag'} size={12} />
+													{source.name}
+													<Plus class="w-3 h-3 ml-0.5" />
+												</button>
+											{/if}
+										{/each}
+										<!-- Add Custom Source button -->
+										<button
+											type="button"
+											class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all"
+											style="background-color: var(--accent); color: white;"
+											onclick={() => showAddSourceModal = true}
+										>
+											<Plus class="w-3 h-3" />
+											Add Custom
+										</button>
+									</div>
+								</div>
 							</div>
 						{/if}
 					</div>
@@ -1505,3 +1637,123 @@
 	onClose={() => showMetadataModal = false}
 	onApply={applyMetadataResult}
 />
+
+<!-- Add Custom Media Source Modal -->
+{#if showAddSourceModal}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center p-4"
+		style="background: rgba(0, 0, 0, 0.6);"
+		onclick={(e) => { if (e.target === e.currentTarget) showAddSourceModal = false; }}
+		onkeydown={(e) => { if (e.key === 'Escape') showAddSourceModal = false; }}
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
+	>
+		<div
+			class="w-full max-w-sm rounded-xl shadow-xl"
+			style="background: var(--bg-secondary);"
+			onclick={(e) => e.stopPropagation()}
+		>
+			<!-- Header -->
+			<div class="flex items-center justify-between p-4 border-b" style="border-color: var(--border-color);">
+				<h2 class="text-lg font-semibold" style="color: var(--text-primary);">Add Custom Source</h2>
+				<button
+					type="button"
+					onclick={() => showAddSourceModal = false}
+					class="p-1 rounded-lg transition-colors hover:bg-opacity-80"
+					style="background: var(--bg-tertiary); color: var(--text-muted);"
+				>
+					<X class="w-5 h-5" />
+				</button>
+			</div>
+
+			<!-- Form -->
+			<div class="p-4 space-y-4">
+				<!-- Name -->
+				<div>
+					<label class="block text-sm font-medium mb-1" style="color: var(--text-secondary);">
+						Name <span style="color: #ef4444;">*</span>
+					</label>
+					<input
+						type="text"
+						bind:value={newSourceName}
+						placeholder="e.g., Storytel, Scribd..."
+						class="w-full px-3 py-2 rounded-lg text-sm"
+						style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+					/>
+				</div>
+
+				<!-- Icon -->
+				<div>
+					<label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">Icon</label>
+					<div class="flex flex-wrap gap-2">
+						{#each sourceIcons as iconName}
+							<button
+								type="button"
+								onclick={() => newSourceIcon = iconName}
+								class="w-9 h-9 rounded-lg flex items-center justify-center transition-all"
+								style="background: {newSourceIcon === iconName ? newSourceColor : 'var(--bg-tertiary)'}; color: {newSourceIcon === iconName ? 'white' : 'var(--text-secondary)'}; border: 2px solid {newSourceIcon === iconName ? newSourceColor : 'transparent'};"
+							>
+								<LucideIcon name={iconName} size={16} />
+							</button>
+						{/each}
+					</div>
+				</div>
+
+				<!-- Color -->
+				<div>
+					<label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">Color</label>
+					<div class="flex flex-wrap gap-2">
+						{#each sourceColors as colorOption}
+							<button
+								type="button"
+								onclick={() => newSourceColor = colorOption}
+								class="w-7 h-7 rounded-full transition-all"
+								style="background-color: {colorOption}; border: 3px solid {newSourceColor === colorOption ? 'white' : 'transparent'}; box-shadow: {newSourceColor === colorOption ? '0 0 0 2px ' + colorOption : 'none'};"
+							></button>
+						{/each}
+					</div>
+				</div>
+
+				<!-- Preview -->
+				<div class="pt-2">
+					<label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">Preview</label>
+					<div class="flex items-center gap-3 p-3 rounded-lg" style="background: var(--bg-tertiary);">
+						<span
+							class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium text-white"
+							style="background-color: {newSourceColor};"
+						>
+							<LucideIcon name={newSourceIcon} size={14} />
+							{newSourceName || 'Source Name'}
+						</span>
+					</div>
+				</div>
+			</div>
+
+			<!-- Footer -->
+			<div class="flex justify-end gap-2 p-4 border-t" style="border-color: var(--border-color);">
+				<button
+					type="button"
+					onclick={() => showAddSourceModal = false}
+					class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+					style="background: var(--bg-tertiary); color: var(--text-secondary);"
+				>
+					Cancel
+				</button>
+				<button
+					type="button"
+					onclick={createCustomSource}
+					disabled={creatingSource || !newSourceName.trim()}
+					class="btn-accent px-4 py-2 flex items-center gap-2"
+				>
+					{#if creatingSource}
+						<Loader2 class="w-4 h-4 animate-spin" />
+					{:else}
+						<Plus class="w-4 h-4" />
+					{/if}
+					Create
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}

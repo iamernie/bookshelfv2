@@ -18,7 +18,9 @@ import {
 	tags,
 	bookTags,
 	settings,
-	userBooks
+	userBooks,
+	mediaSources,
+	bookMediaSources
 } from '$lib/server/db/schema';
 import { count, eq, isNull, sql, notInArray, inArray, ne, and } from 'drizzle-orm';
 import * as fs from 'fs';
@@ -60,6 +62,9 @@ export interface SystemHealth {
 		genres: number;
 		users: number;
 		sessions: number;
+		mediaSources: number;
+		systemMediaSources: number;
+		userMediaSources: number;
 	};
 	// New library statistics
 	libraryStats: {
@@ -166,6 +171,9 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 	const [genreCount] = await db.select({ count: count() }).from(genres);
 	const [userCount] = await db.select({ count: count() }).from(users);
 	const [sessionCount] = await db.select({ count: count() }).from(sessions);
+	const [mediaSourceCount] = await db.select({ count: count() }).from(mediaSources);
+	const [systemMediaSourceCount] = await db.select({ count: count() }).from(mediaSources).where(eq(mediaSources.isSystem, true));
+	const [userMediaSourceCount] = await db.select({ count: count() }).from(mediaSources).where(sql`${mediaSources.userId} IS NOT NULL`);
 
 	// Get storage info
 	const coversInfo = getFolderSize(coversPath);
@@ -229,6 +237,46 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 			canRepair: true
 		});
 		overallStatus = 'warning';
+	}
+
+	// Check for orphaned book-media source relationships
+	const orphanedBookMediaSources = await db
+		.select({ count: count() })
+		.from(bookMediaSources)
+		.where(
+			sql`${bookMediaSources.bookId} NOT IN (SELECT id FROM books) OR ${bookMediaSources.mediaSourceId} NOT IN (SELECT id FROM media_sources)`
+		);
+
+	if (orphanedBookMediaSources[0].count > 0) {
+		issues.push({
+			type: 'orphan',
+			severity: 'warning',
+			entity: 'bookmediasources',
+			count: orphanedBookMediaSources[0].count,
+			description: 'Book-media source relationships referencing deleted books or sources',
+			canRepair: true
+		});
+		overallStatus = 'warning';
+	}
+
+	// Check for media sources with no books (excluding system sources)
+	const unusedUserMediaSources = await db
+		.select({ count: count() })
+		.from(mediaSources)
+		.where(
+			sql`${mediaSources.userId} IS NOT NULL
+			AND ${mediaSources.id} NOT IN (SELECT DISTINCT mediaSourceId FROM book_media_sources)`
+		);
+
+	if (unusedUserMediaSources[0].count > 0) {
+		issues.push({
+			type: 'orphan',
+			severity: 'info',
+			entity: 'mediasources',
+			count: unusedUserMediaSources[0].count,
+			description: 'User-created media sources not used by any books',
+			canRepair: true
+		});
 	}
 
 	// Check for authors with no books
@@ -425,7 +473,10 @@ export async function runDiagnostics(): Promise<SystemHealth> {
 			series: seriesCount.count,
 			genres: genreCount.count,
 			users: userCount.count,
-			sessions: sessionCount.count
+			sessions: sessionCount.count,
+			mediaSources: mediaSourceCount.count,
+			systemMediaSources: systemMediaSourceCount.count,
+			userMediaSources: userMediaSourceCount.count
 		},
 		libraryStats: {
 			total: {
@@ -482,6 +533,14 @@ export async function repairOrphanedRelationships(): Promise<RepairResult> {
 			   OR tagId NOT IN (SELECT id FROM tags)
 		`);
 		repaired += btResult.changes;
+
+		// Clean orphaned book_media_sources
+		const bmsResult = await db.run(sql`
+			DELETE FROM book_media_sources
+			WHERE bookId NOT IN (SELECT id FROM books)
+			   OR mediaSourceId NOT IN (SELECT id FROM media_sources)
+		`);
+		repaired += bmsResult.changes;
 
 		return { success: true, repaired, errors };
 	} catch (error) {
@@ -604,6 +663,26 @@ export async function removeOrphanedTags(): Promise<RepairResult> {
 		const result = await db.run(sql`
 			DELETE FROM tags
 			WHERE id NOT IN (SELECT DISTINCT tagId FROM booktags WHERE tagId IS NOT NULL)
+		`);
+		return { success: true, repaired: result.changes, errors: [] };
+	} catch (error) {
+		return {
+			success: false,
+			repaired: 0,
+			errors: [error instanceof Error ? error.message : 'Unknown error']
+		};
+	}
+}
+
+/**
+ * Remove unused user-created media sources (not used by any books)
+ */
+export async function removeUnusedMediaSources(): Promise<RepairResult> {
+	try {
+		const result = await db.run(sql`
+			DELETE FROM media_sources
+			WHERE userId IS NOT NULL
+			  AND id NOT IN (SELECT DISTINCT mediaSourceId FROM book_media_sources)
 		`);
 		return { success: true, repaired: result.changes, errors: [] };
 	} catch (error) {

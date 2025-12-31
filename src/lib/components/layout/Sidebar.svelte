@@ -35,7 +35,8 @@
 		Ticket,
 		Activity,
 		Inbox,
-		LayoutDashboard
+		LayoutDashboard,
+		ShoppingBag
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { APP_CONFIG } from '$lib/config/app';
@@ -356,6 +357,10 @@
 					<a href="/admin/bookdrop" class="sidebar-item text-sm" class:active={isActive('/admin/bookdrop')}>
 						<Inbox class="w-4 h-4" />
 						<span>BookDrop</span>
+					</a>
+					<a href="/admin/media-sources" class="sidebar-item text-sm" class:active={isActive('/admin/media-sources')}>
+						<ShoppingBag class="w-4 h-4" />
+						<span>Media Sources</span>
 					</a>
 					<a href="/admin/diagnostics" class="sidebar-item text-sm" class:active={isActive('/admin/diagnostics')}>
 						<Activity class="w-4 h-4" />

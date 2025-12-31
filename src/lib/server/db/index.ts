@@ -279,6 +279,7 @@ function runMigrations() {
 		'Creating indexes',
 		'Setting up per-user libraries',
 		'Creating audiobook tables',
+		'Creating media sources tables',
 		'Finalizing'
 	];
 
@@ -603,6 +604,23 @@ function runMigrations() {
 	// ========== Books table columns ==========
 	updateStatus('Adding new columns...');
 	if (tableExists('books')) {
+		// Handle description -> summary rename (V1 used description, V2 uses summary)
+		if (columnExists('books', 'description') && !columnExists('books', 'summary')) {
+			try {
+				ensureBackup();
+				// Add summary column
+				sqlite.exec('ALTER TABLE books ADD COLUMN summary TEXT');
+				// Copy data from description to summary
+				sqlite.exec('UPDATE books SET summary = description WHERE description IS NOT NULL');
+				console.log('[db] Migrated books.description to books.summary');
+				migrationsMade = true;
+			} catch (e) {
+				console.error('[db] Failed to migrate description to summary:', e);
+			}
+		} else if (!columnExists('books', 'summary')) {
+			safeAddColumn('books', 'summary', 'TEXT');
+		}
+
 		// V2 additions - format and narrator references
 		safeAddColumn('books', 'formatId', 'INTEGER REFERENCES formats(id)');
 		safeAddColumn('books', 'narratorId', 'INTEGER REFERENCES narrators(id)');
@@ -628,6 +646,8 @@ function runMigrations() {
 		safeAddColumn('books', 'edition', 'VARCHAR(100)');
 		safeAddColumn('books', 'purchasePrice', 'DECIMAL(10,2)');
 		safeAddColumn('books', 'bookNumEnd', 'INTEGER');
+		safeAddColumn('books', 'releaseDate', 'TEXT');
+		safeAddColumn('books', 'subtitle', 'TEXT');
 
 		// DNF tracking columns
 		safeAddColumn('books', 'dnfPage', 'INTEGER');
@@ -1335,6 +1355,84 @@ function runMigrations() {
 		// Indexes may already exist
 	}
 	completeStep('Creating audiobook tables');
+
+	// ========== Media Sources Tables ==========
+	updateStatus('Creating media sources tables...');
+
+	// Media sources table (Audible, Kindle, Physical, etc.)
+	safeCreateTable('media_sources', `
+		CREATE TABLE media_sources (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL UNIQUE,
+			icon TEXT DEFAULT 'shopping-bag',
+			color TEXT DEFAULT '#6c757d',
+			url TEXT,
+			isSystem INTEGER DEFAULT 0,
+			displayOrder INTEGER DEFAULT 0,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Book-media source junction table
+	safeCreateTable('book_media_sources', `
+		CREATE TABLE book_media_sources (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			bookId INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+			mediaSourceId INTEGER NOT NULL REFERENCES media_sources(id) ON DELETE CASCADE,
+			purchaseDate TEXT,
+			purchasePrice REAL,
+			externalUrl TEXT,
+			externalId TEXT,
+			notes TEXT,
+			createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+			updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`);
+
+	// Create indexes for media sources tables
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_book_media_sources_book ON book_media_sources(bookId)');
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_book_media_sources_source ON book_media_sources(mediaSourceId)');
+	} catch {
+		// Indexes may already exist
+	}
+
+	// Add userId column for per-user private sources (null = system-wide, userId = private to that user)
+	safeAddColumn('media_sources', 'userId', 'INTEGER REFERENCES users(id) ON DELETE CASCADE');
+
+	// Seed default media sources if table is empty
+	try {
+		const sourceCount = sqlite.prepare('SELECT COUNT(*) as count FROM media_sources').get() as { count: number };
+		if (sourceCount.count === 0) {
+			ensureBackup();
+			const defaultSources = [
+				{ name: 'Audible', icon: 'headphones', color: '#f7971e', url: 'https://audible.com', displayOrder: 1 },
+				{ name: 'Kindle', icon: 'tablet', color: '#ff9900', url: 'https://amazon.com/kindle-dbs', displayOrder: 2 },
+				{ name: 'Physical', icon: 'book', color: '#8b4513', url: null, displayOrder: 3 },
+				{ name: 'Kobo', icon: 'book-open', color: '#bf0811', url: 'https://kobo.com', displayOrder: 4 },
+				{ name: 'Apple Books', icon: 'apple', color: '#000000', url: 'https://books.apple.com', displayOrder: 5 },
+				{ name: 'Google Play Books', icon: 'play', color: '#4285f4', url: 'https://play.google.com/books', displayOrder: 6 },
+				{ name: 'Library', icon: 'library', color: '#2e7d32', url: null, displayOrder: 7 },
+				{ name: 'Libby', icon: 'smartphone', color: '#f5a623', url: 'https://libbyapp.com', displayOrder: 8 }
+			];
+
+			const insertStmt = sqlite.prepare(`
+				INSERT INTO media_sources (name, icon, color, url, isSystem, displayOrder, createdAt, updatedAt)
+				VALUES (?, ?, ?, ?, 1, ?, datetime('now'), datetime('now'))
+			`);
+
+			for (const source of defaultSources) {
+				insertStmt.run(source.name, source.icon, source.color, source.url, source.displayOrder);
+			}
+			console.log('[db] Seeded default media sources');
+			migrationsMade = true;
+		}
+	} catch (e) {
+		console.error('[db] Failed to seed media sources:', e);
+	}
+
+	completeStep('Creating media sources tables');
 
 	// ========== Migrate owned books to user_books table ==========
 	// For users who own books (via ownerId), ensure those books appear in their personal library (user_books)
