@@ -51,12 +51,16 @@
 
 			const response = await fetch(`/api/admin/logs?${params}`);
 			if (!response.ok) {
-				throw new Error('Failed to fetch logs');
+				if (response.status === 403) {
+					throw new Error('Admin access required to view logs');
+				}
+				const errorData = await response.json().catch(() => ({}));
+				throw new Error(errorData.message || `Failed to fetch logs (${response.status})`);
 			}
 
 			const data = await response.json();
-			logs = data.logs;
-			stats = data.stats;
+			logs = data.logs || [];
+			stats = data.stats || { total: 0, byLevel: {} };
 			error = '';
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Failed to fetch logs';

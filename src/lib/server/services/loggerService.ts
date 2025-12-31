@@ -1,6 +1,7 @@
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import path from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 // Log levels following standard conventions
 const levels = {
@@ -141,6 +142,17 @@ const level = process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 
 
 // Log directory (can be configured via environment)
 const logDir = process.env.LOG_DIR || './logs';
+
+// Ensure log directory exists in production
+if (process.env.NODE_ENV === 'production' || process.env.LOG_TO_FILE === 'true') {
+	try {
+		if (!existsSync(logDir)) {
+			mkdirSync(logDir, { recursive: true });
+		}
+	} catch (e) {
+		console.error('Failed to create log directory:', logDir, e);
+	}
+}
 
 // Format for memory transport (includes timestamp)
 const memoryFormat = winston.format.combine(
