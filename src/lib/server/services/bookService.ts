@@ -582,6 +582,10 @@ export async function getBooksCardData(bookIds: number[]): Promise<{
 export async function findDuplicateBooks(): Promise<
 	Array<{ title: string; books: { id: number; title: string; authorName: string | null; coverImageUrl: string | null }[] }>
 > {
+	// Get ignored pairs
+	const { getIgnoredPairs } = await import('./ignoredDuplicatesService');
+	const ignoredPairs = await getIgnoredPairs('book');
+
 	// Get all books with their primary author
 	const allBooks = await db
 		.select({
@@ -636,15 +640,40 @@ export async function findDuplicateBooks(): Promise<
 		});
 	}
 
-	// Filter to only groups with multiple books (potential duplicates)
+	// Filter to only groups with multiple books (potential duplicates), excluding ignored pairs
 	const duplicates: Array<{ title: string; books: { id: number; title: string; authorName: string | null; coverImageUrl: string | null }[] }> = [];
 	groups.forEach((bookList, normalizedTitle) => {
 		if (bookList.length > 1) {
-			duplicates.push({ title: normalizedTitle, books: bookList });
+			// Filter out books where all pairs are ignored
+			const nonIgnored = filterIgnoredBookPairs(bookList, ignoredPairs);
+			if (nonIgnored.length > 1) {
+				duplicates.push({ title: normalizedTitle, books: nonIgnored });
+			}
 		}
 	});
 
 	return duplicates;
+}
+
+function filterIgnoredBookPairs<T extends { id: number }>(items: T[], ignoredPairs: Set<string>): T[] {
+	if (items.length <= 1) return items;
+
+	let hasNonIgnoredPair = false;
+	for (let i = 0; i < items.length && !hasNonIgnoredPair; i++) {
+		for (let j = i + 1; j < items.length; j++) {
+			const pairKey = `${items[i].id}-${items[j].id}`;
+			if (!ignoredPairs.has(pairKey)) {
+				hasNonIgnoredPair = true;
+				break;
+			}
+		}
+	}
+
+	if (!hasNonIgnoredPair) {
+		return [];
+	}
+
+	return items;
 }
 
 /**

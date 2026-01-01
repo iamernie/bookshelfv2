@@ -618,6 +618,19 @@ export const audiobookBookmarks = sqliteTable('audiobook_bookmarks', {
 });
 
 // ============================================
+// Ignored Duplicates (pairs marked as not duplicates)
+// ============================================
+
+export const ignoredDuplicates = sqliteTable('ignored_duplicates', {
+	id: integer('id').primaryKey({ autoIncrement: true }),
+	entityType: text('entityType').notNull(), // 'author', 'series', 'book'
+	entityId1: integer('entityId1').notNull(), // First entity ID (always the smaller ID)
+	entityId2: integer('entityId2').notNull(), // Second entity ID (always the larger ID)
+	createdAt: text('createdAt').notNull(),
+	createdBy: integer('createdBy').references(() => users.id, { onDelete: 'set null' })
+});
+
+// ============================================
 // Media Sources (where books were purchased)
 // ============================================
 

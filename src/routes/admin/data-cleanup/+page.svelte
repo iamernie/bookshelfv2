@@ -11,7 +11,8 @@
 		XCircle,
 		ChevronDown,
 		ChevronRight,
-		Trash2
+		X,
+		ArrowRight
 	} from 'lucide-svelte';
 
 	interface AuthorDuplicate {
@@ -47,7 +48,15 @@
 		books: new Set<string>()
 	});
 
+	// Track selected "keep" item for each group
+	let selectedKeep = $state({
+		authors: new Map<string, number>(), // groupName -> authorId to keep
+		series: new Map<string, number>(),
+		books: new Map<string, number>()
+	});
+
 	let merging = $state<string | null>(null);
+	let ignoring = $state<string | null>(null);
 	let message = $state<{ type: 'success' | 'error'; text: string } | null>(null);
 
 	async function loadAuthorDuplicates() {
@@ -58,6 +67,11 @@
 			const data = await res.json();
 			if (data.success) {
 				duplicates.authors = data.duplicates;
+				// Initialize selected keep to first item in each group
+				selectedKeep.authors = new Map();
+				for (const group of data.duplicates) {
+					selectedKeep.authors.set(group.name, group.authors[0].id);
+				}
 			}
 		} catch {
 			message = { type: 'error', text: 'Failed to load author duplicates' };
@@ -74,6 +88,10 @@
 			const data = await res.json();
 			if (data.success) {
 				duplicates.series = data.duplicates;
+				selectedKeep.series = new Map();
+				for (const group of data.duplicates) {
+					selectedKeep.series.set(group.title, group.series[0].id);
+				}
 			}
 		} catch {
 			message = { type: 'error', text: 'Failed to load series duplicates' };
@@ -90,6 +108,10 @@
 			const data = await res.json();
 			if (data.success) {
 				duplicates.books = data.duplicates;
+				selectedKeep.books = new Map();
+				for (const group of data.duplicates) {
+					selectedKeep.books.set(group.title, group.books[0].id);
+				}
 			}
 		} catch {
 			message = { type: 'error', text: 'Failed to load book duplicates' };
@@ -112,11 +134,15 @@
 		} else {
 			expanded[type].add(key);
 		}
-		// Trigger reactivity
 		expanded = { ...expanded };
 	}
 
-	async function mergeAuthors(targetId: number, sourceId: number, groupName: string) {
+	function selectKeep(type: 'authors' | 'series' | 'books', groupKey: string, id: number) {
+		selectedKeep[type].set(groupKey, id);
+		selectedKeep = { ...selectedKeep };
+	}
+
+	async function mergeAuthors(targetId: number, sourceId: number) {
 		merging = `author-${sourceId}`;
 		message = null;
 		try {
@@ -128,7 +154,6 @@
 			const data = await res.json();
 			if (data.success) {
 				message = { type: 'success', text: `Author merged successfully` };
-				// Reload author duplicates
 				await loadAuthorDuplicates();
 			} else {
 				message = { type: 'error', text: data.error || 'Merge failed' };
@@ -140,7 +165,7 @@
 		}
 	}
 
-	async function mergeSeries(targetId: number, sourceId: number, groupName: string) {
+	async function mergeSeries(targetId: number, sourceId: number) {
 		merging = `series-${sourceId}`;
 		message = null;
 		try {
@@ -163,7 +188,7 @@
 		}
 	}
 
-	async function mergeBooks(targetId: number, sourceId: number, groupName: string) {
+	async function mergeBooks(targetId: number, sourceId: number) {
 		merging = `book-${sourceId}`;
 		message = null;
 		try {
@@ -183,6 +208,36 @@
 			message = { type: 'error', text: 'Failed to merge books' };
 		} finally {
 			merging = null;
+		}
+	}
+
+	async function ignoreGroup(entityType: 'author' | 'series' | 'book', items: { id: number }[], groupKey: string) {
+		ignoring = `${entityType}-${groupKey}`;
+		message = null;
+		try {
+			// Ignore all pairs in the group
+			for (let i = 0; i < items.length; i++) {
+				for (let j = i + 1; j < items.length; j++) {
+					await fetch('/api/duplicates/ignore', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							entityType,
+							id1: items[i].id,
+							id2: items[j].id
+						})
+					});
+				}
+			}
+			message = { type: 'success', text: 'Marked as not duplicates' };
+			// Reload the appropriate list
+			if (entityType === 'author') await loadAuthorDuplicates();
+			else if (entityType === 'series') await loadSeriesDuplicates();
+			else await loadBookDuplicates();
+		} catch {
+			message = { type: 'error', text: 'Failed to ignore duplicates' };
+		} finally {
+			ignoring = null;
 		}
 	}
 
@@ -322,12 +377,13 @@
 		{:else}
 			<div class="space-y-2">
 				{#each duplicates.authors as group}
+					{@const keepId = selectedKeep.authors.get(group.name) || group.authors[0].id}
 					<div class="rounded-lg" style="background-color: var(--bg-tertiary);">
-						<button
-							class="w-full p-3 flex items-center justify-between text-left"
-							onclick={() => toggleExpand('authors', group.name)}
-						>
-							<div class="flex items-center gap-2">
+						<div class="p-3 flex items-center justify-between">
+							<button
+								class="flex items-center gap-2 flex-1 text-left"
+								onclick={() => toggleExpand('authors', group.name)}
+							>
 								{#if expanded.authors.has(group.name)}
 									<ChevronDown class="w-4 h-4" style="color: var(--text-muted);" />
 								{:else}
@@ -337,35 +393,59 @@
 								<span class="text-sm px-2 py-0.5 rounded-full" style="background-color: var(--accent); color: white;">
 									{group.authors.length}
 								</span>
-							</div>
-						</button>
+							</button>
+							<button
+								class="text-sm px-3 py-1 rounded flex items-center gap-1 hover:bg-red-500/20 transition-colors"
+								style="color: var(--text-muted);"
+								onclick={() => ignoreGroup('author', group.authors, group.name)}
+								disabled={ignoring !== null}
+								title="Mark as not duplicates"
+							>
+								{#if ignoring === `author-${group.name}`}
+									<Loader2 class="w-4 h-4 animate-spin" />
+								{:else}
+									<X class="w-4 h-4" />
+								{/if}
+								Not duplicates
+							</button>
+						</div>
 
 						{#if expanded.authors.has(group.name)}
 							<div class="px-3 pb-3">
 								<div class="space-y-2">
-									{#each group.authors as author, i}
-										<div class="flex items-center justify-between p-2 rounded" style="background-color: var(--bg-secondary);">
-											<div>
-												<span style="color: var(--text-primary);">{author.name}</span>
-												<span class="text-sm ml-2" style="color: var(--text-muted);">
-													({author.bookCount} book{author.bookCount !== 1 ? 's' : ''})
-												</span>
-												{#if i === 0}
-													<span class="text-xs ml-2 px-2 py-0.5 rounded bg-green-500/20 text-green-400">Keep</span>
-												{/if}
+									{#each group.authors as author}
+										{@const isSelected = author.id === keepId}
+										<div class="flex items-center justify-between p-2 rounded {isSelected ? 'ring-2 ring-green-500/50' : ''}" style="background-color: var(--bg-secondary);">
+											<div class="flex items-center gap-3">
+												<input
+													type="radio"
+													name="keep-author-{group.name}"
+													checked={isSelected}
+													onchange={() => selectKeep('authors', group.name, author.id)}
+													class="w-4 h-4 accent-green-500"
+												/>
+												<div>
+													<span style="color: var(--text-primary);">{author.name}</span>
+													<span class="text-sm ml-2" style="color: var(--text-muted);">
+														({author.bookCount} book{author.bookCount !== 1 ? 's' : ''})
+													</span>
+													{#if isSelected}
+														<span class="text-xs ml-2 px-2 py-0.5 rounded bg-green-500/20 text-green-400">Keep</span>
+													{/if}
+												</div>
 											</div>
-											{#if i > 0}
+											{#if !isSelected}
 												<button
 													class="btn-accent text-sm flex items-center gap-1"
-													onclick={() => mergeAuthors(group.authors[0].id, author.id, group.name)}
+													onclick={() => mergeAuthors(keepId, author.id)}
 													disabled={merging !== null}
 												>
 													{#if merging === `author-${author.id}`}
 														<Loader2 class="w-4 h-4 animate-spin" />
 													{:else}
-														<Merge class="w-4 h-4" />
+														<ArrowRight class="w-4 h-4" />
 													{/if}
-													Merge into first
+													Merge
 												</button>
 											{/if}
 										</div>
@@ -411,12 +491,13 @@
 		{:else}
 			<div class="space-y-2">
 				{#each duplicates.series as group}
+					{@const keepId = selectedKeep.series.get(group.title) || group.series[0].id}
 					<div class="rounded-lg" style="background-color: var(--bg-tertiary);">
-						<button
-							class="w-full p-3 flex items-center justify-between text-left"
-							onclick={() => toggleExpand('series', group.title)}
-						>
-							<div class="flex items-center gap-2">
+						<div class="p-3 flex items-center justify-between">
+							<button
+								class="flex items-center gap-2 flex-1 text-left"
+								onclick={() => toggleExpand('series', group.title)}
+							>
 								{#if expanded.series.has(group.title)}
 									<ChevronDown class="w-4 h-4" style="color: var(--text-muted);" />
 								{:else}
@@ -426,35 +507,59 @@
 								<span class="text-sm px-2 py-0.5 rounded-full" style="background-color: var(--accent); color: white;">
 									{group.series.length}
 								</span>
-							</div>
-						</button>
+							</button>
+							<button
+								class="text-sm px-3 py-1 rounded flex items-center gap-1 hover:bg-red-500/20 transition-colors"
+								style="color: var(--text-muted);"
+								onclick={() => ignoreGroup('series', group.series, group.title)}
+								disabled={ignoring !== null}
+								title="Mark as not duplicates"
+							>
+								{#if ignoring === `series-${group.title}`}
+									<Loader2 class="w-4 h-4 animate-spin" />
+								{:else}
+									<X class="w-4 h-4" />
+								{/if}
+								Not duplicates
+							</button>
+						</div>
 
 						{#if expanded.series.has(group.title)}
 							<div class="px-3 pb-3">
 								<div class="space-y-2">
-									{#each group.series as s, i}
-										<div class="flex items-center justify-between p-2 rounded" style="background-color: var(--bg-secondary);">
-											<div>
-												<span style="color: var(--text-primary);">{s.title}</span>
-												<span class="text-sm ml-2" style="color: var(--text-muted);">
-													({s.bookCount} book{s.bookCount !== 1 ? 's' : ''})
-												</span>
-												{#if i === 0}
-													<span class="text-xs ml-2 px-2 py-0.5 rounded bg-green-500/20 text-green-400">Keep</span>
-												{/if}
+									{#each group.series as s}
+										{@const isSelected = s.id === keepId}
+										<div class="flex items-center justify-between p-2 rounded {isSelected ? 'ring-2 ring-green-500/50' : ''}" style="background-color: var(--bg-secondary);">
+											<div class="flex items-center gap-3">
+												<input
+													type="radio"
+													name="keep-series-{group.title}"
+													checked={isSelected}
+													onchange={() => selectKeep('series', group.title, s.id)}
+													class="w-4 h-4 accent-green-500"
+												/>
+												<div>
+													<span style="color: var(--text-primary);">{s.title}</span>
+													<span class="text-sm ml-2" style="color: var(--text-muted);">
+														({s.bookCount} book{s.bookCount !== 1 ? 's' : ''})
+													</span>
+													{#if isSelected}
+														<span class="text-xs ml-2 px-2 py-0.5 rounded bg-green-500/20 text-green-400">Keep</span>
+													{/if}
+												</div>
 											</div>
-											{#if i > 0}
+											{#if !isSelected}
 												<button
 													class="btn-accent text-sm flex items-center gap-1"
-													onclick={() => mergeSeries(group.series[0].id, s.id, group.title)}
+													onclick={() => mergeSeries(keepId, s.id)}
 													disabled={merging !== null}
 												>
 													{#if merging === `series-${s.id}`}
 														<Loader2 class="w-4 h-4 animate-spin" />
 													{:else}
-														<Merge class="w-4 h-4" />
+														<ArrowRight class="w-4 h-4" />
 													{/if}
-													Merge into first
+													Merge
 												</button>
 											{/if}
 										</div>
@@ -500,12 +605,13 @@
 		{:else}
 			<div class="space-y-2">
 				{#each duplicates.books as group}
+					{@const keepId = selectedKeep.books.get(group.title) || group.books[0].id}
 					<div class="rounded-lg" style="background-color: var(--bg-tertiary);">
-						<button
-							class="w-full p-3 flex items-center justify-between text-left"
-							onclick={() => toggleExpand('books', group.title)}
-						>
-							<div class="flex items-center gap-2">
+						<div class="p-3 flex items-center justify-between">
+							<button
+								class="flex items-center gap-2 flex-1 text-left"
+								onclick={() => toggleExpand('books', group.title)}
+							>
 								{#if expanded.books.has(group.title)}
 									<ChevronDown class="w-4 h-4" style="color: var(--text-muted);" />
 								{:else}
@@ -515,15 +621,37 @@
 								<span class="text-sm px-2 py-0.5 rounded-full" style="background-color: var(--accent); color: white;">
 									{group.books.length}
 								</span>
-							</div>
-						</button>
+							</button>
+							<button
+								class="text-sm px-3 py-1 rounded flex items-center gap-1 hover:bg-red-500/20 transition-colors"
+								style="color: var(--text-muted);"
+								onclick={() => ignoreGroup('book', group.books, group.title)}
+								disabled={ignoring !== null}
+								title="Mark as not duplicates"
+							>
+								{#if ignoring === `book-${group.title}`}
+									<Loader2 class="w-4 h-4 animate-spin" />
+								{:else}
+									<X class="w-4 h-4" />
+								{/if}
+								Not duplicates
+							</button>
+						</div>
 
 						{#if expanded.books.has(group.title)}
 							<div class="px-3 pb-3">
 								<div class="space-y-2">
-									{#each group.books as book, i}
-										<div class="flex items-center justify-between p-2 rounded" style="background-color: var(--bg-secondary);">
+									{#each group.books as book}
+										{@const isSelected = book.id === keepId}
+										<div class="flex items-center justify-between p-2 rounded {isSelected ? 'ring-2 ring-green-500/50' : ''}" style="background-color: var(--bg-secondary);">
 											<div class="flex items-center gap-3">
+												<input
+													type="radio"
+													name="keep-book-{group.title}"
+													checked={isSelected}
+													onchange={() => selectKeep('books', group.title, book.id)}
+													class="w-4 h-4 accent-green-500"
+												/>
 												{#if book.coverImageUrl}
 													<img
 														src={book.coverImageUrl}
@@ -540,23 +668,23 @@
 													{#if book.authorName}
 														<div class="text-sm" style="color: var(--text-muted);">by {book.authorName}</div>
 													{/if}
-													{#if i === 0}
+													{#if isSelected}
 														<span class="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400">Keep</span>
 													{/if}
 												</div>
 											</div>
-											{#if i > 0}
+											{#if !isSelected}
 												<button
 													class="btn-accent text-sm flex items-center gap-1"
-													onclick={() => mergeBooks(group.books[0].id, book.id, group.title)}
+													onclick={() => mergeBooks(keepId, book.id)}
 													disabled={merging !== null}
 												>
 													{#if merging === `book-${book.id}`}
 														<Loader2 class="w-4 h-4 animate-spin" />
 													{:else}
-														<Merge class="w-4 h-4" />
+														<ArrowRight class="w-4 h-4" />
 													{/if}
-													Merge into first
+													Merge
 												</button>
 											{/if}
 										</div>
@@ -575,12 +703,12 @@
 		<div class="flex items-start gap-3">
 			<AlertTriangle class="w-5 h-5 text-yellow-500 mt-0.5" />
 			<div>
-				<h4 class="font-medium" style="color: var(--text-primary);">How Merging Works</h4>
-				<p class="text-sm mt-1" style="color: var(--text-muted);">
-					When you merge items, the first item in each group (marked "Keep") will be preserved.
-					All books, relationships, and data from the merged item will be transferred to the kept item,
-					then the merged item will be deleted. This action cannot be undone.
-				</p>
+				<h4 class="font-medium" style="color: var(--text-primary);">How It Works</h4>
+				<ul class="text-sm mt-1 space-y-1" style="color: var(--text-muted);">
+					<li><strong>Select which to keep:</strong> Use the radio buttons to choose which item should be preserved.</li>
+					<li><strong>Merge:</strong> Click "Merge" on any other item to transfer its data to the selected item, then delete it.</li>
+					<li><strong>Not duplicates:</strong> Click "Not duplicates" to hide a group if the items aren't actually duplicates.</li>
+				</ul>
 			</div>
 		</div>
 	</div>

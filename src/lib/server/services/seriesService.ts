@@ -523,6 +523,10 @@ export async function getSeriesStatuses() {
 export async function findDuplicateSeries(): Promise<
 	Array<{ title: string; series: { id: number; title: string; bookCount: number }[] }>
 > {
+	// Get ignored pairs
+	const { getIgnoredPairs } = await import('./ignoredDuplicatesService');
+	const ignoredPairs = await getIgnoredPairs('series');
+
 	// Get all series with book count
 	const allSeries = await db
 		.select({
@@ -552,7 +556,7 @@ export async function findDuplicateSeries(): Promise<
 		groups.get(normalized)!.push(s);
 	}
 
-	// Return only groups with duplicates
+	// Return only groups with duplicates, filtering out ignored pairs
 	const duplicates: Array<{
 		title: string;
 		series: { id: number; title: string; bookCount: number }[];
@@ -560,9 +564,34 @@ export async function findDuplicateSeries(): Promise<
 
 	groups.forEach((seriesList, title) => {
 		if (seriesList.length > 1) {
-			duplicates.push({ title, series: seriesList });
+			// Filter out series where all pairs are ignored
+			const nonIgnored = filterIgnoredPairs(seriesList, ignoredPairs);
+			if (nonIgnored.length > 1) {
+				duplicates.push({ title, series: nonIgnored });
+			}
 		}
 	});
 
 	return duplicates;
+}
+
+function filterIgnoredPairs<T extends { id: number }>(items: T[], ignoredPairs: Set<string>): T[] {
+	if (items.length <= 1) return items;
+
+	let hasNonIgnoredPair = false;
+	for (let i = 0; i < items.length && !hasNonIgnoredPair; i++) {
+		for (let j = i + 1; j < items.length; j++) {
+			const pairKey = `${items[i].id}-${items[j].id}`;
+			if (!ignoredPairs.has(pairKey)) {
+				hasNonIgnoredPair = true;
+				break;
+			}
+		}
+	}
+
+	if (!hasNonIgnoredPair) {
+		return [];
+	}
+
+	return items;
 }

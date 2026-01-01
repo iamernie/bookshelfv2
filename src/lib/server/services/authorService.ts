@@ -523,6 +523,10 @@ export async function mergeAuthors(
 export async function findDuplicateAuthors(): Promise<
 	Array<{ name: string; authors: { id: number; name: string; bookCount: number }[] }>
 > {
+	// Get ignored pairs
+	const { getIgnoredPairs } = await import('./ignoredDuplicatesService');
+	const ignoredPairs = await getIgnoredPairs('author');
+
 	// Get all authors with similar names (case-insensitive)
 	const allAuthors = await db
 		.select({
@@ -551,7 +555,7 @@ export async function findDuplicateAuthors(): Promise<
 		groups.get(normalized)!.push(author);
 	}
 
-	// Return only groups with duplicates
+	// Return only groups with duplicates, filtering out ignored pairs
 	const duplicates: Array<{
 		name: string;
 		authors: { id: number; name: string; bookCount: number }[];
@@ -559,11 +563,41 @@ export async function findDuplicateAuthors(): Promise<
 
 	groups.forEach((authorList, name) => {
 		if (authorList.length > 1) {
-			duplicates.push({ name, authors: authorList });
+			// Filter out authors where all pairs are ignored
+			const nonIgnoredAuthors = filterIgnoredPairs(authorList, ignoredPairs);
+			if (nonIgnoredAuthors.length > 1) {
+				duplicates.push({ name, authors: nonIgnoredAuthors });
+			}
 		}
 	});
 
 	return duplicates;
+}
+
+/**
+ * Filter out items where all pairs in the group are ignored
+ */
+function filterIgnoredPairs<T extends { id: number }>(items: T[], ignoredPairs: Set<string>): T[] {
+	if (items.length <= 1) return items;
+
+	// Check if ALL pairs in this group are ignored
+	let hasNonIgnoredPair = false;
+	for (let i = 0; i < items.length && !hasNonIgnoredPair; i++) {
+		for (let j = i + 1; j < items.length; j++) {
+			const pairKey = `${items[i].id}-${items[j].id}`;
+			if (!ignoredPairs.has(pairKey)) {
+				hasNonIgnoredPair = true;
+				break;
+			}
+		}
+	}
+
+	// If all pairs are ignored, return empty (don't show this group)
+	if (!hasNonIgnoredPair) {
+		return [];
+	}
+
+	return items;
 }
 
 /**

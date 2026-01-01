@@ -344,6 +344,38 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
 
 ---
 
+## Planned
+
+### Notifications System (Apprise-style)
+- [ ] Notification infrastructure
+  - Support multiple notification providers (Email, Discord, Telegram, Slack, Pushover, etc.)
+  - Apprise-compatible configuration format
+  - Per-user notification preferences
+- [ ] Notification triggers
+  - New book added to library
+  - Series completion (all books read)
+  - Reading goal milestones
+  - New books in followed series
+  - Backup completion
+  - System events (updates available, etc.)
+- [ ] UI for managing notification settings
+  - Add/remove notification channels
+  - Configure which events trigger notifications
+  - Test notification button
+
+### API Documentation Enhancements
+- [x] Basic Swagger UI at `/docs`
+- [ ] Expand API documentation coverage
+  - Document all endpoints with request/response schemas
+  - Add authentication documentation
+  - Include example requests and responses
+  - Group endpoints by category (books, authors, series, audiobooks, etc.)
+- [ ] Interactive API testing
+  - "Try it out" functionality with authentication
+  - Download OpenAPI spec
+
+---
+
 ## Ideas / Under Consideration
 
 - LibraryThing import

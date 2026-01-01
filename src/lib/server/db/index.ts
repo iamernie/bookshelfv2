@@ -1439,6 +1439,27 @@ function runMigrations() {
 
 	completeStep('Creating media sources tables');
 
+	// ========== Ignored Duplicates table ==========
+	updateStatus('Creating ignored duplicates table...');
+	safeCreateTable('ignored_duplicates', `
+		CREATE TABLE ignored_duplicates (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			entityType TEXT NOT NULL,
+			entityId1 INTEGER NOT NULL,
+			entityId2 INTEGER NOT NULL,
+			createdAt TEXT NOT NULL,
+			createdBy INTEGER REFERENCES users(id) ON DELETE SET NULL
+		)
+	`);
+
+	// Create index for ignored_duplicates queries
+	try {
+		sqlite.exec('CREATE INDEX IF NOT EXISTS idx_ignored_duplicates_type ON ignored_duplicates(entityType)');
+		sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_ignored_duplicates_pair ON ignored_duplicates(entityType, entityId1, entityId2)');
+	} catch {
+		// Indexes may already exist
+	}
+
 	// ========== Migrate owned books to user_books table ==========
 	// For users who own books (via ownerId), ensure those books appear in their personal library (user_books)
 	if (tableExists('user_books') && tableExists('books') && columnExists('books', 'ownerId')) {
