@@ -364,7 +364,7 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
   - Test notification button
 
 ### API Documentation Enhancements
-- [x] Basic Swagger UI at `/docs`
+- [x] Basic Swagger UI at `/api-explorer`
 - [ ] Expand API documentation coverage
   - Document all endpoints with request/response schemas
   - Add authentication documentation
