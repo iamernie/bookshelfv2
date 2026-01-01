@@ -4,8 +4,122 @@ import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { randomBytes } from 'crypto';
+import dns from 'dns/promises';
 
 const COVERS_DIR = 'static/covers';
+
+/**
+ * Check if an IP address is private/internal
+ * Prevents SSRF attacks by blocking requests to internal networks
+ */
+function isPrivateIP(ip: string): boolean {
+	// IPv4 private ranges
+	const privateIPv4Ranges = [
+		/^127\./,                          // Loopback
+		/^10\./,                           // Class A private
+		/^172\.(1[6-9]|2[0-9]|3[0-1])\./,  // Class B private
+		/^192\.168\./,                     // Class C private
+		/^169\.254\./,                     // Link-local
+		/^0\./,                            // Current network
+		/^100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\./, // Carrier-grade NAT
+		/^192\.0\.0\./,                    // IETF Protocol Assignments
+		/^192\.0\.2\./,                    // TEST-NET-1
+		/^198\.51\.100\./,                 // TEST-NET-2
+		/^203\.0\.113\./,                  // TEST-NET-3
+		/^224\./,                          // Multicast
+		/^240\./,                          // Reserved
+		/^255\.255\.255\.255$/             // Broadcast
+	];
+
+	// IPv6 private ranges
+	const privateIPv6Ranges = [
+		/^::1$/,                           // Loopback
+		/^fe80:/i,                         // Link-local
+		/^fc00:/i,                         // Unique local
+		/^fd00:/i,                         // Unique local
+		/^ff00:/i                          // Multicast
+	];
+
+	// Check IPv4
+	for (const range of privateIPv4Ranges) {
+		if (range.test(ip)) {
+			return true;
+		}
+	}
+
+	// Check IPv6
+	for (const range of privateIPv6Ranges) {
+		if (range.test(ip)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Check if a hostname is blocked (localhost variants, internal names)
+ */
+function isBlockedHostname(hostname: string): boolean {
+	const blockedPatterns = [
+		/^localhost$/i,
+		/^.*\.local$/i,
+		/^.*\.internal$/i,
+		/^.*\.localdomain$/i,
+		/^host\.docker\.internal$/i,
+		/^kubernetes\.default/i,
+		/^metadata\.google\.internal$/i,  // GCP metadata
+		/^169\.254\.169\.254$/             // AWS/GCP/Azure metadata
+	];
+
+	return blockedPatterns.some(pattern => pattern.test(hostname));
+}
+
+/**
+ * Validate URL and resolve DNS to check for SSRF
+ */
+async function validateUrlSafety(url: URL): Promise<void> {
+	const hostname = url.hostname;
+
+	// Check for blocked hostnames
+	if (isBlockedHostname(hostname)) {
+		throw error(400, 'Invalid URL: blocked hostname');
+	}
+
+	// Check if hostname is already an IP address
+	const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+	const ipv6Regex = /^\[?([a-fA-F0-9:]+)\]?$/;
+
+	if (ipv4Regex.test(hostname) || ipv6Regex.test(hostname)) {
+		const ip = hostname.replace(/^\[|\]$/g, '');
+		if (isPrivateIP(ip)) {
+			throw error(400, 'Invalid URL: private IP addresses are not allowed');
+		}
+		return;
+	}
+
+	// Resolve DNS to get IP addresses and check each one
+	try {
+		const addresses = await dns.resolve4(hostname).catch(() => []);
+		const addresses6 = await dns.resolve6(hostname).catch(() => []);
+		const allAddresses = [...addresses, ...addresses6];
+
+		if (allAddresses.length === 0) {
+			throw error(400, 'Invalid URL: could not resolve hostname');
+		}
+
+		for (const ip of allAddresses) {
+			if (isPrivateIP(ip)) {
+				throw error(400, 'Invalid URL: hostname resolves to private IP address');
+			}
+		}
+	} catch (err) {
+		if (err && typeof err === 'object' && 'status' in err) {
+			throw err; // Re-throw SvelteKit errors
+		}
+		throw error(400, 'Invalid URL: DNS resolution failed');
+	}
+}
 
 // Ensure covers directory exists
 async function ensureCoversDir() {
@@ -62,6 +176,9 @@ export const POST: RequestHandler = async ({ request }) => {
 	} catch {
 		throw error(400, 'Invalid URL format');
 	}
+
+	// Validate URL safety to prevent SSRF attacks
+	await validateUrlSafety(parsedUrl);
 
 	try {
 		// Fetch the image

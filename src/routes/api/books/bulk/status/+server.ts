@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { db, books } from '$lib/server/db';
 import { eq, inArray, and, isNull } from 'drizzle-orm';
 import { getStatusByKey } from '$lib/server/services/statusService';
+import { notifyBookCompleted, checkAndNotifySeriesCompletion } from '$lib/server/services/notificationService';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
 	if (!locals.user) {
@@ -58,6 +59,22 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				inArray(books.id, bookIds),
 				isNull(books.completedDate)
 			));
+
+		// Send book completed notifications (fire and forget)
+		// Fetch book titles for notifications
+		const completedBooks = await db
+			.select({ id: books.id, title: books.title })
+			.from(books)
+			.where(inArray(books.id, bookIds));
+
+		for (const book of completedBooks) {
+			notifyBookCompleted(locals.user.id, { id: book.id, title: book.title })
+				.catch(err => console.error('[notifications] Failed to send book completed notification:', err));
+
+			// Check if this completes any series
+			checkAndNotifySeriesCompletion(locals.user.id, book.id)
+				.catch(err => console.error('[notifications] Failed to check series completion:', err));
+		}
 	}
 
 	return json({

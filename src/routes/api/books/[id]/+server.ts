@@ -7,6 +7,7 @@ import { canAccessBook, canModifyBook, canDeleteBook } from '$lib/server/service
 import { getStatusByKey } from '$lib/server/services/statusService';
 import { db, books } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
+import { notifyBookCompleted, checkAndNotifySeriesCompletion } from '$lib/server/services/notificationService';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const id = parseInt(params.id);
@@ -116,6 +117,9 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	if (data.startReadingDate !== undefined) updateData.startReadingDate = data.startReadingDate || null;
 	if (data.completedDate !== undefined) updateData.completedDate = data.completedDate || null;
 
+	// Track if this is a book completion (for notification)
+	let isBookCompletion = false;
+
 	// Auto-set dates when status changes (only if date not already set and not explicitly provided)
 	if (data.statusId !== undefined && data.statusId !== existingBook.statusId) {
 		const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -144,6 +148,8 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 			if (!existingCompletedDate) {
 				updateData.completedDate = today;
 			}
+			// Mark this as a completion for notification
+			isBookCompletion = true;
 		}
 	}
 
@@ -161,6 +167,18 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
 	if (!book) {
 		throw error(404, { message: 'Book not found' });
+	}
+
+	// Send book completed notification if applicable (fire and forget)
+	if (isBookCompletion && locals.user) {
+		notifyBookCompleted(locals.user.id, {
+			id: book.id,
+			title: book.title
+		}).catch(err => console.error('[notifications] Failed to send book completed notification:', err));
+
+		// Check if this completes any series
+		checkAndNotifySeriesCompletion(locals.user.id, book.id)
+			.catch(err => console.error('[notifications] Failed to check series completion:', err));
 	}
 
 	return json(book);

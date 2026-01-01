@@ -125,6 +125,8 @@
 	let saved = $state(false);
 	let resetting = $state(false);
 	let unlinkingProvider = $state<number | null>(null);
+	let testingNotification = $state(false);
+	let notificationTestResult = $state<{ success: boolean; error?: string } | null>(null);
 
 	// Theme options
 	const themeOptions = [
@@ -258,6 +260,36 @@
 			toasts.error('An error occurred');
 		} finally {
 			unlinkingProvider = null;
+		}
+	}
+
+	async function sendTestNotification() {
+		// First save preferences to ensure topic is stored
+		await savePreferences();
+
+		testingNotification = true;
+		notificationTestResult = null;
+
+		try {
+			const res = await fetch('/api/notifications/test', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ type: 'user' })
+			});
+
+			const result = await res.json();
+			notificationTestResult = result;
+
+			if (result.success) {
+				toasts.success('Test notification sent!');
+			} else {
+				toasts.error(result.error || 'Failed to send test notification');
+			}
+		} catch {
+			notificationTestResult = { success: false, error: 'Failed to send test notification' };
+			toasts.error('An error occurred');
+		} finally {
+			testingNotification = false;
 		}
 	}
 </script>
@@ -525,6 +557,124 @@
 					/>
 				</label>
 			</div>
+
+			<!-- ntfy Push Notifications -->
+			{#if data.ntfyEnabled}
+				<div class="mt-6 pt-6 border-t" style="border-color: var(--border-color);">
+					<h3 class="text-md font-semibold mb-4" style="color: var(--text-primary);">Push Notifications (ntfy)</h3>
+					<p class="text-sm mb-4" style="color: var(--text-muted);">
+						Receive push notifications on your devices via <a href="https://ntfy.sh" target="_blank" rel="noopener noreferrer" class="underline" style="color: var(--accent);">ntfy</a>.
+					</p>
+
+					<div class="space-y-4">
+						<!-- ntfy Topic -->
+						<div>
+							<label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">Your ntfy Topic</label>
+							<input
+								type="text"
+								class="form-input w-full"
+								placeholder="my-bookshelf-alerts"
+								bind:value={preferences.ntfyTopic}
+							/>
+							<p class="text-xs mt-1" style="color: var(--text-muted);">
+								Subscribe to this topic in your ntfy app to receive notifications
+							</p>
+						</div>
+
+						<!-- Enable/Disable Toggle -->
+						<label class="flex items-center justify-between p-3 rounded-lg cursor-pointer" style="background-color: var(--bg-tertiary);">
+							<div>
+								<p class="font-medium" style="color: var(--text-primary);">Enable Push Notifications</p>
+								<p class="text-sm" style="color: var(--text-muted);">Master toggle for ntfy notifications</p>
+							</div>
+							<input
+								type="checkbox"
+								class="toggle"
+								bind:checked={preferences.ntfyEnabled}
+								disabled={!preferences.ntfyTopic}
+							/>
+						</label>
+
+						{#if preferences.ntfyEnabled && preferences.ntfyTopic}
+							<!-- Notification Types -->
+							<div class="space-y-2">
+								<p class="text-sm font-medium" style="color: var(--text-secondary);">Notify me when...</p>
+
+								<label class="flex items-center justify-between p-3 rounded-lg cursor-pointer" style="background-color: var(--bg-tertiary);">
+									<div>
+										<p class="font-medium" style="color: var(--text-primary);">Book Added</p>
+										<p class="text-sm" style="color: var(--text-muted);">A new book is added to your library</p>
+									</div>
+									<input
+										type="checkbox"
+										class="toggle"
+										bind:checked={preferences.notifyBookAdded}
+									/>
+								</label>
+
+								<label class="flex items-center justify-between p-3 rounded-lg cursor-pointer" style="background-color: var(--bg-tertiary);">
+									<div>
+										<p class="font-medium" style="color: var(--text-primary);">Book Completed</p>
+										<p class="text-sm" style="color: var(--text-muted);">You mark a book as finished</p>
+									</div>
+									<input
+										type="checkbox"
+										class="toggle"
+										bind:checked={preferences.notifyBookCompleted}
+									/>
+								</label>
+
+								<label class="flex items-center justify-between p-3 rounded-lg cursor-pointer" style="background-color: var(--bg-tertiary);">
+									<div>
+										<p class="font-medium" style="color: var(--text-primary);">Reading Goal Reached</p>
+										<p class="text-sm" style="color: var(--text-muted);">You achieve a reading goal</p>
+									</div>
+									<input
+										type="checkbox"
+										class="toggle"
+										bind:checked={preferences.notifyGoalReached}
+									/>
+								</label>
+
+								<label class="flex items-center justify-between p-3 rounded-lg cursor-pointer" style="background-color: var(--bg-tertiary);">
+									<div>
+										<p class="font-medium" style="color: var(--text-primary);">Series Completed</p>
+										<p class="text-sm" style="color: var(--text-muted);">You finish all books in a series</p>
+									</div>
+									<input
+										type="checkbox"
+										class="toggle"
+										bind:checked={preferences.notifySeriesCompleted}
+									/>
+								</label>
+							</div>
+
+							<!-- Test Notification Button -->
+							<div class="pt-4">
+								<button
+									type="button"
+									class="btn-ghost flex items-center gap-2"
+									onclick={sendTestNotification}
+									disabled={testingNotification}
+								>
+									{#if testingNotification}
+										<Loader2 class="w-4 h-4 animate-spin" />
+										Sending...
+									{:else}
+										<Bell class="w-4 h-4" />
+										Send Test Notification
+									{/if}
+								</button>
+								{#if notificationTestResult}
+									<p class="text-sm mt-2" style="color: {notificationTestResult.success ? '#22c55e' : '#ef4444'};">
+										{notificationTestResult.success ? 'Test notification sent!' : notificationTestResult.error}
+									</p>
+								{/if}
+							</div>
+						{/if}
+					</div>
+				</div>
+			{/if}
 		</section>
 
 		<!-- Connected Accounts Section -->

@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { existsSync, readFileSync, statSync } from 'fs';
-import { join, extname } from 'path';
+import { join, extname, resolve, normalize, relative } from 'path';
 import { db, books } from '$lib/server/db';
 import { like } from 'drizzle-orm';
 import { canAccessBook } from '$lib/server/services/libraryShareService';
@@ -34,15 +34,19 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		throw error(400, 'No path specified');
 	}
 
-	// Sanitize path to prevent directory traversal
-	const sanitizedPath = requestedPath.replace(/\.\./g, '').replace(/\/+/g, '/');
+	// Sanitize and resolve path to prevent directory traversal
+	// First, URL-decode the path, normalize it, then resolve against base directory
+	const decodedPath = decodeURIComponent(requestedPath);
+	const normalizedPath = normalize(decodedPath).replace(/^(\.\.(\/|\\|$))+/, '');
 
-	// Build the full file path
-	const ebooksDir = join(process.cwd(), 'static', 'ebooks');
-	const filePath = join(ebooksDir, sanitizedPath);
+	// Build the full file path using resolve for proper path canonicalization
+	const ebooksDir = resolve(process.cwd(), 'static', 'ebooks');
+	const filePath = resolve(ebooksDir, normalizedPath);
 
 	// Security check: ensure the resolved path is within ebooks directory
-	if (!filePath.startsWith(ebooksDir)) {
+	// Use relative path check to catch all traversal attempts
+	const relativePath = relative(ebooksDir, filePath);
+	if (relativePath.startsWith('..') || resolve(ebooksDir, relativePath) !== filePath) {
 		throw error(403, 'Access denied');
 	}
 
@@ -52,11 +56,11 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	}
 
 	// Find the book that owns this ebook file and check access permissions
-	const ebookPath = `/ebooks/${sanitizedPath}`;
+	const ebookPath = `/ebooks/${normalizedPath}`;
 	const book = await db
 		.select({ id: books.id })
 		.from(books)
-		.where(like(books.ebookPath, `%${sanitizedPath}`))
+		.where(like(books.ebookPath, `%${normalizedPath}`))
 		.limit(1);
 
 	if (book.length > 0) {

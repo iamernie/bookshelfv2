@@ -3,6 +3,7 @@ import { redirect } from '@sveltejs/kit';
 import { getUserPreferences } from '$lib/server/services/userPreferencesService';
 import { getUserOidcLinks, getEnabledProviders } from '$lib/server/services/oidcService';
 import { getLibraryShares, getSharedLibraries, getShareableUsers } from '$lib/server/services/libraryShareService';
+import { isNtfyEnabled } from '$lib/server/services/notificationService';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -31,11 +32,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		error: errorParam === 'already_linked' ? 'This identity is already linked to another account' : null
 	};
 
-	// Get library sharing data
-	const [myShares, sharedWithMe, shareableUsers] = await Promise.all([
+	// Get library sharing data and ntfy status
+	const [myShares, sharedWithMe, shareableUsers, ntfyEnabled] = await Promise.all([
 		getLibraryShares(locals.user.id),
 		getSharedLibraries(locals.user.id),
-		getShareableUsers(locals.user.id)
+		getShareableUsers(locals.user.id),
+		isNtfyEnabled()
 	]);
 
 	return {
@@ -65,6 +67,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			myShares,
 			sharedWithMe,
 			shareableUsers
-		}
+		},
+		ntfyEnabled
 	};
 };

@@ -91,6 +91,13 @@ export interface UserPreferencesData {
 	// Notifications
 	emailNotifications: boolean;
 	goalReminders: boolean;
+	// ntfy Notifications
+	ntfyTopic: string | null;
+	ntfyEnabled: boolean;
+	notifyBookAdded: boolean;
+	notifyBookCompleted: boolean;
+	notifyGoalReached: boolean;
+	notifySeriesCompleted: boolean;
 	// UI state
 	sidebarCollapsed: boolean;
 }
@@ -116,6 +123,12 @@ const DEFAULT_PREFERENCES: UserPreferencesData = {
 	readerTheme: 'auto',
 	emailNotifications: false,
 	goalReminders: true,
+	ntfyTopic: null,
+	ntfyEnabled: false,
+	notifyBookAdded: true,
+	notifyBookCompleted: true,
+	notifyGoalReached: true,
+	notifySeriesCompleted: true,
 	sidebarCollapsed: false
 };
 
@@ -162,6 +175,12 @@ export async function getUserPreferences(userId: number): Promise<UserPreference
 		readerTheme: (prefs.readerTheme as 'auto' | 'light' | 'dark' | 'sepia') || 'auto',
 		emailNotifications: prefs.emailNotifications || false,
 		goalReminders: prefs.goalReminders ?? true,
+		ntfyTopic: prefs.ntfyTopic || null,
+		ntfyEnabled: prefs.ntfyEnabled || false,
+		notifyBookAdded: prefs.notifyBookAdded ?? true,
+		notifyBookCompleted: prefs.notifyBookCompleted ?? true,
+		notifyGoalReached: prefs.notifyGoalReached ?? true,
+		notifySeriesCompleted: prefs.notifySeriesCompleted ?? true,
 		sidebarCollapsed: prefs.sidebarCollapsed || false
 	};
 }
@@ -231,6 +250,13 @@ export async function updateUserPreferences(
 	if (updates.emailNotifications !== undefined) updateData.emailNotifications = updates.emailNotifications;
 	if (updates.goalReminders !== undefined) updateData.goalReminders = updates.goalReminders;
 	if (updates.sidebarCollapsed !== undefined) updateData.sidebarCollapsed = updates.sidebarCollapsed;
+	// ntfy notification preferences
+	if (updates.ntfyTopic !== undefined) updateData.ntfyTopic = updates.ntfyTopic;
+	if (updates.ntfyEnabled !== undefined) updateData.ntfyEnabled = updates.ntfyEnabled;
+	if (updates.notifyBookAdded !== undefined) updateData.notifyBookAdded = updates.notifyBookAdded;
+	if (updates.notifyBookCompleted !== undefined) updateData.notifyBookCompleted = updates.notifyBookCompleted;
+	if (updates.notifyGoalReached !== undefined) updateData.notifyGoalReached = updates.notifyGoalReached;
+	if (updates.notifySeriesCompleted !== undefined) updateData.notifySeriesCompleted = updates.notifySeriesCompleted;
 
 	if (existing.length === 0) {
 		// Insert

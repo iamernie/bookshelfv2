@@ -446,6 +446,13 @@ export const userPreferences = sqliteTable('user_preferences', {
 	// Notification preferences
 	emailNotifications: integer('emailNotifications', { mode: 'boolean' }).default(false),
 	goalReminders: integer('goalReminders', { mode: 'boolean' }).default(true),
+	// ntfy notification preferences
+	ntfyTopic: text('ntfyTopic'), // User's personal ntfy topic
+	ntfyEnabled: integer('ntfyEnabled', { mode: 'boolean' }).default(false), // Master toggle
+	notifyBookAdded: integer('notifyBookAdded', { mode: 'boolean' }).default(true),
+	notifyBookCompleted: integer('notifyBookCompleted', { mode: 'boolean' }).default(true),
+	notifyGoalReached: integer('notifyGoalReached', { mode: 'boolean' }).default(true),
+	notifySeriesCompleted: integer('notifySeriesCompleted', { mode: 'boolean' }).default(true),
 	// Sidebar state
 	sidebarCollapsed: integer('sidebarCollapsed', { mode: 'boolean' }).default(false),
 	// Timestamps

@@ -314,6 +314,28 @@ export const DEFAULT_SETTINGS = {
 		category: 'ui',
 		label: 'Show What\'s New Modal',
 		description: 'Display the What\'s New popup when the app is updated to a new version (admin users only)'
+	},
+	// Notification settings (ntfy)
+	'notifications.ntfy_enabled': {
+		value: 'false',
+		type: 'boolean',
+		category: 'notifications',
+		label: 'Enable ntfy Notifications',
+		description: 'Enable push notifications via ntfy server'
+	},
+	'notifications.ntfy_url': {
+		value: 'https://ntfy.sh',
+		type: 'string',
+		category: 'notifications',
+		label: 'ntfy Server URL',
+		description: 'URL of your ntfy server (e.g., https://ntfy.sh or https://ntfy.yourdomain.com)'
+	},
+	'notifications.ntfy_admin_topic': {
+		value: '',
+		type: 'string',
+		category: 'notifications',
+		label: 'Admin Topic',
+		description: 'Topic for system notifications (backups, updates). Leave empty to disable admin notifications.'
 	}
 } as const;
 

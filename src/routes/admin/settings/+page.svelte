@@ -2,7 +2,7 @@
 	import {
 		Settings, FolderOpen, BookOpen, Monitor, Rss, Upload, Save, Check,
 		AlertCircle, Loader2, Database, Sparkles, Eye, EyeOff, FileText,
-		HelpCircle, UserPlus, KeyRound, Users, Shield, Mail, Send
+		HelpCircle, UserPlus, KeyRound, Users, Shield, Mail, Send, Bell
 	} from 'lucide-svelte';
 
 	interface Placeholder {
@@ -29,7 +29,7 @@
 	let { data } = $props();
 
 	// Tab state
-	type TabId = 'general' | 'storage' | 'metadata' | 'opds' | 'import' | 'registration' | 'email' | 'oidc' | 'ai' | 'ui';
+	type TabId = 'general' | 'storage' | 'metadata' | 'opds' | 'import' | 'registration' | 'email' | 'oidc' | 'ai' | 'ui' | 'notifications';
 	let activeTab = $state<TabId>('general');
 
 	// Tab definitions
@@ -43,6 +43,7 @@
 		{ id: 'email', label: 'Email', icon: Mail, description: 'SMTP email settings' },
 		{ id: 'oidc', label: 'SSO', icon: KeyRound, description: 'OIDC/SSO providers' },
 		{ id: 'ai', label: 'AI', icon: Sparkles, description: 'AI recommendations' },
+		{ id: 'notifications', label: 'Notifications', icon: Bell, description: 'ntfy push notifications' },
 		{ id: 'ui', label: 'UI', icon: Monitor, description: 'User interface settings' }
 	];
 
@@ -85,8 +86,13 @@
 		import: 'import',
 		registration: 'registration',
 		email: 'email',
+		notifications: 'notifications',
 		ui: 'ui'
 	};
+
+	// ntfy test state
+	let testingNtfy = $state(false);
+	let ntfyTestResult = $state<{ success: boolean; message: string } | null>(null);
 
 	// Fetch placeholders on mount
 	$effect(() => {
@@ -334,6 +340,29 @@
 			emailTestResult = { success: false, message: 'Failed to send test email' };
 		} finally {
 			testingEmail = false;
+		}
+	}
+
+	async function sendTestNtfyNotification() {
+		testingNtfy = true;
+		ntfyTestResult = null;
+
+		try {
+			const res = await fetch('/api/notifications/test', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ type: 'admin' })
+			});
+
+			const result = await res.json();
+			ntfyTestResult = {
+				success: result.success,
+				message: result.success ? 'Test notification sent!' : result.error || 'Failed to send notification'
+			};
+		} catch {
+			ntfyTestResult = { success: false, message: 'Failed to send test notification' };
+		} finally {
+			testingNtfy = false;
 		}
 	}
 </script>
@@ -647,6 +676,123 @@
 					Email is used for password resets, email verification, and notifications.
 					You can configure SMTP using environment variables (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM, SMTP_SECURE)
 					or through the settings above. Environment variables take precedence.
+				</p>
+			</div>
+
+		{:else if activeTab === 'notifications'}
+			<!-- ntfy Notifications Tab -->
+			<div class="rounded-xl overflow-hidden" style="background: var(--bg-secondary);">
+				<div class="p-4 border-b flex items-center gap-3" style="border-color: var(--border-color);">
+					<div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
+						<Bell class="w-5 h-5 text-white" />
+					</div>
+					<div>
+						<h2 class="text-lg font-semibold" style="color: var(--text-primary);">Push Notifications (ntfy)</h2>
+						<p class="text-sm" style="color: var(--text-muted);">Send push notifications via ntfy server</p>
+					</div>
+				</div>
+
+				<div class="divide-y" style="border-color: var(--border-color);">
+					<!-- Enable Toggle -->
+					<div class="p-4 flex items-start gap-4">
+						<div class="flex-1">
+							<label class="font-medium" style="color: var(--text-primary);">Enable ntfy Notifications</label>
+							<p class="text-sm mt-0.5" style="color: var(--text-muted);">Allow users to receive push notifications via ntfy</p>
+						</div>
+						<div class="w-72">
+							<button
+								type="button"
+								class="toggle-switch {editedSettings['notifications.ntfy_enabled'] === 'true' ? 'active' : ''}"
+								onclick={() => updateSetting('notifications.ntfy_enabled', editedSettings['notifications.ntfy_enabled'] === 'true' ? 'false' : 'true')}
+								disabled={!data.isAdmin}
+								role="switch"
+								aria-checked={editedSettings['notifications.ntfy_enabled'] === 'true'}
+							>
+								<span class="toggle-knob"></span>
+							</button>
+						</div>
+					</div>
+
+					<!-- ntfy Server URL -->
+					<div class="p-4 flex items-start gap-4">
+						<div class="flex-1">
+							<label for="notifications.ntfy_url" class="font-medium" style="color: var(--text-primary);">ntfy Server URL</label>
+							<p class="text-sm mt-0.5" style="color: var(--text-muted);">URL of your ntfy server (use https://ntfy.sh for the public server)</p>
+						</div>
+						<div class="w-72">
+							<input
+								type="url"
+								id="notifications.ntfy_url"
+								value={editedSettings['notifications.ntfy_url'] ?? 'https://ntfy.sh'}
+								oninput={(e) => updateSetting('notifications.ntfy_url', (e.target as HTMLInputElement).value)}
+								disabled={!data.isAdmin}
+								placeholder="https://ntfy.sh"
+								class="w-full px-3 py-2 rounded-lg text-sm"
+								style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+							/>
+						</div>
+					</div>
+
+					<!-- Admin Topic -->
+					<div class="p-4 flex items-start gap-4">
+						<div class="flex-1">
+							<label for="notifications.ntfy_admin_topic" class="font-medium" style="color: var(--text-primary);">Admin Topic</label>
+							<p class="text-sm mt-0.5" style="color: var(--text-muted);">Topic for system notifications (backups, updates). Leave empty to disable.</p>
+						</div>
+						<div class="w-72">
+							<input
+								type="text"
+								id="notifications.ntfy_admin_topic"
+								value={editedSettings['notifications.ntfy_admin_topic'] ?? ''}
+								oninput={(e) => updateSetting('notifications.ntfy_admin_topic', (e.target as HTMLInputElement).value)}
+								disabled={!data.isAdmin}
+								placeholder="bookshelf-admin"
+								class="w-full px-3 py-2 rounded-lg text-sm"
+								style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+							/>
+						</div>
+					</div>
+				</div>
+
+				<!-- Test Notification Section -->
+				<div class="p-4 border-t" style="border-color: var(--border-color);">
+					<h3 class="font-medium mb-3" style="color: var(--text-primary);">Test Admin Notifications</h3>
+					<div class="flex gap-3 items-center">
+						<button
+							type="button"
+							class="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors"
+							style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color);"
+							onclick={sendTestNtfyNotification}
+							disabled={testingNtfy || !data.isAdmin || !editedSettings['notifications.ntfy_admin_topic']}
+						>
+							{#if testingNtfy}
+								<Loader2 class="w-4 h-4 animate-spin" />
+								Sending...
+							{:else}
+								<Send class="w-4 h-4" />
+								Send Test Notification
+							{/if}
+						</button>
+						{#if !editedSettings['notifications.ntfy_admin_topic']}
+							<span class="text-sm" style="color: var(--text-muted);">Configure admin topic first</span>
+						{/if}
+					</div>
+					{#if ntfyTestResult}
+						<p class="mt-2 text-sm" style="color: {ntfyTestResult.success ? '#22c55e' : '#ef4444'};">
+							{ntfyTestResult.message}
+						</p>
+					{/if}
+				</div>
+			</div>
+
+			<!-- ntfy info box -->
+			<div class="p-4 rounded-lg" style="background: var(--bg-secondary);">
+				<h3 class="font-medium mb-2" style="color: var(--text-primary);">About ntfy Notifications</h3>
+				<p class="text-sm" style="color: var(--text-muted);">
+					<a href="https://ntfy.sh" target="_blank" rel="noopener" class="underline" style="color: var(--accent);">ntfy</a>
+					is a simple HTTP-based pub-sub notification service. Users can configure their own topic in their account settings
+					to receive notifications for events like book completions, reading goal milestones, and series completions.
+					The admin topic above is for system-wide notifications only.
 				</p>
 			</div>
 

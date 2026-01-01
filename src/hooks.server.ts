@@ -1,5 +1,6 @@
 import type { Handle, HandleServerError } from '@sveltejs/kit';
 import { redirect, error } from '@sveltejs/kit';
+import { dev } from '$app/environment';
 import { getSession, validateCredentials } from '$lib/server/services/authService';
 import { createLogger, logRequest, logError } from '$lib/server/services/loggerService';
 import { checkSetupNeeded } from '$lib/server/services/setupService';
@@ -7,8 +8,19 @@ import { migrationStatus } from '$lib/server/db';
 
 const log = createLogger('hooks');
 
-// Log BODY_SIZE_LIMIT on startup for debugging
-console.log('[hooks] BODY_SIZE_LIMIT env:', process.env.BODY_SIZE_LIMIT || 'NOT SET (default 512kb)');
+// Security headers to add to all responses
+const securityHeaders: Record<string, string> = {
+	'X-Frame-Options': 'SAMEORIGIN',
+	'X-Content-Type-Options': 'nosniff',
+	'Referrer-Policy': 'strict-origin-when-cross-origin',
+	'Permissions-Policy': 'camera=(), microphone=(), geolocation=()'
+};
+
+// Add HSTS only in production (requires HTTPS)
+if (!dev) {
+	securityHeaders['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains';
+}
+
 const PUBLIC_PATHS = [
 	'/login',
 	'/reset-password',
@@ -59,15 +71,6 @@ async function handleOPDSAuth(event: Parameters<Handle>[0]['event']): Promise<bo
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// Debug logging for upload requests
-	if (event.url.pathname.includes('/api/metadata/extract') || event.url.pathname.includes('/api/audiobooks')) {
-		console.log('[hooks] === INCOMING REQUEST ===');
-		console.log('[hooks] Method:', event.request.method);
-		console.log('[hooks] URL:', event.url.pathname);
-		console.log('[hooks] Content-Type:', event.request.headers.get('content-type'));
-		console.log('[hooks] Content-Length:', event.request.headers.get('content-length'));
-	}
-
 	// Check if database migration is in progress
 	const isUpgradePath = event.url.pathname.startsWith('/upgrade') ||
 		event.url.pathname.startsWith('/api/system/migration-status');
@@ -83,16 +86,27 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const isAuthenticated = await handleOPDSAuth(event);
 
 		if (!isAuthenticated) {
-			return new Response('Unauthorized', {
+			const authResponse = new Response('Unauthorized', {
 				status: 401,
 				headers: {
 					'WWW-Authenticate': 'Basic realm="BookShelf OPDS"',
 					'Content-Type': 'text/plain'
 				}
 			});
+			// Add security headers to auth response
+			for (const [header, value] of Object.entries(securityHeaders)) {
+				authResponse.headers.set(header, value);
+			}
+			return authResponse;
 		}
 
-		return resolve(event);
+		const opdsResponse = await resolve(event);
+		// Add security headers to OPDS response
+		const opdsWithHeaders = new Response(opdsResponse.body, opdsResponse);
+		for (const [header, value] of Object.entries(securityHeaders)) {
+			opdsWithHeaders.headers.set(header, value);
+		}
+		return opdsWithHeaders;
 	}
 
 	const sessionId = event.cookies.get('session');
@@ -144,7 +158,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	logRequest(event.request.method, event.url.pathname, response.status, duration);
 
-	return response;
+	// Add security headers to response
+	const responseWithHeaders = new Response(response.body, response);
+	for (const [header, value] of Object.entries(securityHeaders)) {
+		responseWithHeaders.headers.set(header, value);
+	}
+
+	return responseWithHeaders;
 };
 
 // Global error handler

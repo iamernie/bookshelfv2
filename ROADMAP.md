@@ -70,6 +70,11 @@ This document outlines planned features, improvements, and future direction for 
 - [x] **Enhanced Narrator System** - Narrators match author experience with tags, Wikipedia search, detail pages, and extended metadata fields
 - [x] **Inline Entity Creation** - Create authors, series, narrators, and genres directly from book add/edit forms without leaving the page
 - [x] **Bulk Edit Fixes** - Fixed bulk edit operations for series and authors in the action bar
+- [x] **ntfy Push Notifications** - Real-time push notifications via ntfy
+  - Admin settings for ntfy server URL and admin topic
+  - Per-user notification topics and event preferences
+  - Notifications for: book added, book completed, series completed, goal reached
+  - Test notification button in both admin and user settings
 
 ### Security (v2.3.3)
 - [x] Secure session cookies (`secure: true` in production)
@@ -106,11 +111,11 @@ This document outlines planned features, improvements, and future direction for 
 **Goal:** Each user has their own private book collection.
 
 ### Security Hardening (see [security-recommendations.md](security-recommendations.md))
-- [ ] Rate limiting on password reset
-- [ ] Path traversal hardening (proper path resolution)
-- [ ] SSRF protection for cover downloads
-- [ ] Remove debug logging of sensitive data
-- [ ] Add security headers (CSP, HSTS, X-Frame-Options)
+- [x] Rate limiting on auth endpoints (password reset, login, signup)
+- [x] Path traversal hardening (proper path resolution)
+- [x] SSRF protection for cover downloads
+- [x] Remove debug logging of sensitive data
+- [x] Add security headers (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)
 - [ ] File content validation (magic numbers)
 - [ ] Encrypt database backups
 
@@ -345,23 +350,6 @@ A comprehensive audiobook playback system integrated into BookShelf V2, allowing
 ---
 
 ## Planned
-
-### Notifications System (Apprise-style)
-- [ ] Notification infrastructure
-  - Support multiple notification providers (Email, Discord, Telegram, Slack, Pushover, etc.)
-  - Apprise-compatible configuration format
-  - Per-user notification preferences
-- [ ] Notification triggers
-  - New book added to library
-  - Series completion (all books read)
-  - Reading goal milestones
-  - New books in followed series
-  - Backup completion
-  - System events (updates available, etc.)
-- [ ] UI for managing notification settings
-  - Add/remove notification channels
-  - Configure which events trigger notifications
-  - Test notification button
 
 ### API Documentation Enhancements
 - [x] Basic Swagger UI at `/api-explorer`

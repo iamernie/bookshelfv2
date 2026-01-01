@@ -3,11 +3,28 @@ import type { RequestHandler } from './$types';
 import { createPasswordResetToken } from '$lib/server/services/authService';
 import { sendPasswordResetEmail, isEmailConfigured } from '$lib/server/services/emailService';
 import { createLogger } from '$lib/server/services/loggerService';
+import { passwordResetLimiter } from '$lib/server/middleware/rateLimiter';
 
 const log = createLogger('forgot-password');
 
 export const POST: RequestHandler = async ({ request, url }) => {
 	try {
+		// Check rate limit first
+		const rateLimit = passwordResetLimiter.check(request, 'forgot-password');
+		if (!rateLimit.allowed) {
+			log.warn('Rate limit exceeded for password reset', {
+				remaining: rateLimit.remaining,
+				retryAfter: rateLimit.retryAfter
+			});
+			return json(
+				{ message: 'Too many password reset requests. Please try again later.' },
+				{
+					status: 429,
+					headers: { 'Retry-After': String(rateLimit.retryAfter) }
+				}
+			);
+		}
+
 		const { email } = await request.json();
 
 		if (!email) {

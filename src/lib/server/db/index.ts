@@ -63,6 +63,8 @@ const sqlite = new Database(databasePath);
 
 // Enable WAL mode for better concurrent performance
 sqlite.pragma('journal_mode = WAL');
+// NORMAL is safe with WAL and faster than FULL (default)
+sqlite.pragma('synchronous = NORMAL');
 
 // ============================================================================
 // SCHEMA MIGRATION - Ensures all required tables and columns exist
@@ -1458,6 +1460,28 @@ function runMigrations() {
 		sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_ignored_duplicates_pair ON ignored_duplicates(entityType, entityId1, entityId2)');
 	} catch {
 		// Indexes may already exist
+	}
+
+	// ========== Add ntfy notification columns to user_preferences ==========
+	if (tableExists('user_preferences')) {
+		if (!columnExists('user_preferences', 'ntfyTopic')) {
+			safeAddColumn('user_preferences', 'ntfyTopic', 'TEXT');
+		}
+		if (!columnExists('user_preferences', 'ntfyEnabled')) {
+			safeAddColumn('user_preferences', 'ntfyEnabled', 'INTEGER DEFAULT 0');
+		}
+		if (!columnExists('user_preferences', 'notifyBookAdded')) {
+			safeAddColumn('user_preferences', 'notifyBookAdded', 'INTEGER DEFAULT 1');
+		}
+		if (!columnExists('user_preferences', 'notifyBookCompleted')) {
+			safeAddColumn('user_preferences', 'notifyBookCompleted', 'INTEGER DEFAULT 1');
+		}
+		if (!columnExists('user_preferences', 'notifyGoalReached')) {
+			safeAddColumn('user_preferences', 'notifyGoalReached', 'INTEGER DEFAULT 1');
+		}
+		if (!columnExists('user_preferences', 'notifySeriesCompleted')) {
+			safeAddColumn('user_preferences', 'notifySeriesCompleted', 'INTEGER DEFAULT 1');
+		}
 	}
 
 	// ========== Migrate owned books to user_books table ==========

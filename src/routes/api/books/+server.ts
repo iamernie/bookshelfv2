@@ -1,6 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getBooks, createBook, getStatuses, getGenres, getFormats, getNarrators, getTags, getAllAuthors, getAllSeries } from '$lib/server/services/bookService';
+import { notifyBookAdded } from '$lib/server/services/notificationService';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
 	const page = parseInt(url.searchParams.get('page') || '1');
@@ -59,6 +60,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		tagIds: data.tagIds || [],
 		ownerId: locals.user.id // Set the book owner to the current user
 	});
+
+	// Send notification for new book (fire and forget)
+	notifyBookAdded(locals.user.id, {
+		id: book.id,
+		title: book.title,
+		author: data.authors?.[0]?.name
+	}).catch(err => console.error('[notifications] Failed to send book added notification:', err));
 
 	return json(book, { status: 201 });
 };

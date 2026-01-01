@@ -5,11 +5,25 @@ import { getSetting } from '$lib/server/services/settingsService';
 import { sendVerificationEmail, isEmailConfigured } from '$lib/server/services/emailService';
 import { validateInviteCode, useInviteCode } from '$lib/server/services/inviteCodeService';
 import { createLogger } from '$lib/server/services/loggerService';
+import { signupLimiter } from '$lib/server/middleware/rateLimiter';
 
 const log = createLogger('signup');
 
 export const POST: RequestHandler = async ({ request, url }) => {
 	try {
+		// Check rate limit first
+		const rateLimit = signupLimiter.check(request, 'signup');
+		if (!rateLimit.allowed) {
+			log.warn('Rate limit exceeded for signup');
+			return json(
+				{ message: 'Too many registration attempts. Please try again later.' },
+				{
+					status: 429,
+					headers: { 'Retry-After': String(rateLimit.retryAfter) }
+				}
+			);
+		}
+
 		// Check if signup is enabled
 		const allowSignup = await getSetting('registration.allow_signup');
 		if (allowSignup !== 'true') {

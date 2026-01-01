@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2025-12-31
+
+### Added
+- **ntfy Push Notifications** - Real-time push notifications via ntfy
+  - **Admin Configuration** - New "Notifications" tab in admin settings
+    - Enable/disable ntfy system-wide
+    - Configure ntfy server URL (default: ntfy.sh)
+    - Set admin topic for system notifications (backup completed, etc.)
+    - Test notification button for admin topic
+  - **User Preferences** - Personal notification settings in account settings
+    - Configure your own ntfy topic
+    - Master enable/disable toggle
+    - Per-event preferences: book added, book completed, goal reached, series completed
+    - Test notification button
+  - **Automatic Notifications**
+    - Book added to library
+    - Book marked as completed (READ status)
+    - Series completed (all books in series marked as read)
+    - Backup completed (admin topic)
+  - Works with self-hosted ntfy servers or the public ntfy.sh service
+  - Subscribe to your topic in the ntfy mobile app or web UI to receive notifications
+
 ## [2.3.0] - 2025-12-31
 
 ### Added
