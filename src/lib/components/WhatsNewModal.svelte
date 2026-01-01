@@ -155,7 +155,7 @@
 						<div class="flex items-center gap-2 mb-3">
 							<div
 								class="w-8 h-8 rounded-lg flex items-center justify-center"
-								style="background-color: var(--accent); opacity: 0.15;"
+								style="background-color: color-mix(in srgb, var(--accent) 15%, transparent);"
 							>
 								<svelte:component this={IconComponent} class="w-4 h-4" style="color: var(--accent);" />
 							</div>

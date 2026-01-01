@@ -124,6 +124,10 @@ Users can optionally share their library with other users (e.g., family members 
 - [ ] Barcode/ISBN scanner (mobile camera)
 - [ ] Public landing page (optional)
 - [x] "What's New" changelog modal - Shows latest changes after updates (admin only)
+- [x] **Data Cleanup Tool** - Find and merge duplicate authors, series, and books
+  - Admin page at `/admin/data-cleanup`
+  - Detects duplicates using normalized string matching
+  - Merge functionality preserves all relationships
 
 ### Medium Term
 - [ ] Reading analytics (time tracking, pace)

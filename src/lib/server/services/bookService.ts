@@ -574,3 +574,211 @@ export async function getBooksCardData(bookIds: number[]): Promise<{
 	const bookMap = new Map(results.map(b => [b.id, b]));
 	return bookIds.map(id => bookMap.get(id)!).filter(Boolean);
 }
+
+/**
+ * Find potential duplicate books based on normalized title matching
+ * Returns groups of books that may be duplicates
+ */
+export async function findDuplicateBooks(): Promise<
+	Array<{ title: string; books: { id: number; title: string; authorName: string | null; coverImageUrl: string | null }[] }>
+> {
+	// Get all books with their primary author
+	const allBooks = await db
+		.select({
+			id: books.id,
+			title: books.title,
+			coverImageUrl: books.coverImageUrl
+		})
+		.from(books)
+		.orderBy(books.title);
+
+	// Get primary authors for each book
+	const bookAuthorsData = await db
+		.select({
+			bookId: bookAuthors.bookId,
+			authorName: authors.name,
+			isPrimary: bookAuthors.isPrimary
+		})
+		.from(bookAuthors)
+		.innerJoin(authors, eq(bookAuthors.authorId, authors.id))
+		.orderBy(desc(bookAuthors.isPrimary));
+
+	// Map book ID to primary author name
+	const authorMap = new Map<number, string>();
+	for (const ba of bookAuthorsData) {
+		if (!authorMap.has(ba.bookId)) {
+			authorMap.set(ba.bookId, ba.authorName);
+		}
+	}
+
+	// Group books by normalized title
+	const groups = new Map<string, Array<{ id: number; title: string; authorName: string | null; coverImageUrl: string | null }>>();
+
+	for (const book of allBooks) {
+		// Normalize title for comparison
+		const normalized = book.title
+			.toLowerCase()
+			.replace(/\s+/g, ' ')          // collapse whitespace
+			.replace(/[:.,-]/g, '')         // remove punctuation
+			.replace(/^the\s+/i, '')        // remove leading "the"
+			.replace(/^a\s+/i, '')          // remove leading "a"
+			.replace(/^an\s+/i, '')         // remove leading "an"
+			.trim();
+
+		if (!groups.has(normalized)) {
+			groups.set(normalized, []);
+		}
+		groups.get(normalized)!.push({
+			id: book.id,
+			title: book.title,
+			authorName: authorMap.get(book.id) || null,
+			coverImageUrl: book.coverImageUrl
+		});
+	}
+
+	// Filter to only groups with multiple books (potential duplicates)
+	const duplicates: Array<{ title: string; books: { id: number; title: string; authorName: string | null; coverImageUrl: string | null }[] }> = [];
+	groups.forEach((bookList, normalizedTitle) => {
+		if (bookList.length > 1) {
+			duplicates.push({ title: normalizedTitle, books: bookList });
+		}
+	});
+
+	return duplicates;
+}
+
+/**
+ * Merge one book into another (keeping the target, removing the source)
+ * Transfers authors, series, tags, user library entries, etc. to the target book
+ */
+export async function mergeBooks(targetId: number, sourceId: number): Promise<boolean> {
+	if (targetId === sourceId) {
+		throw new Error('Cannot merge a book into itself');
+	}
+
+	// Check both books exist
+	const [target] = await db.select().from(books).where(eq(books.id, targetId)).limit(1);
+	const [source] = await db.select().from(books).where(eq(books.id, sourceId)).limit(1);
+
+	if (!target || !source) {
+		throw new Error('One or both books not found');
+	}
+
+	// Get existing authors/series/tags on target to avoid duplicates
+	const [existingAuthors, existingSeries, existingTags] = await Promise.all([
+		db.select({ authorId: bookAuthors.authorId }).from(bookAuthors).where(eq(bookAuthors.bookId, targetId)),
+		db.select({ seriesId: bookSeries.seriesId }).from(bookSeries).where(eq(bookSeries.bookId, targetId)),
+		db.select({ tagId: bookTags.tagId }).from(bookTags).where(eq(bookTags.bookId, targetId))
+	]);
+
+	const existingAuthorIds = new Set(existingAuthors.map(a => a.authorId));
+	const existingSeriesIds = new Set(existingSeries.map(s => s.seriesId));
+	const existingTagIds = new Set(existingTags.map(t => t.tagId));
+
+	const now = new Date().toISOString();
+
+	// Transfer unique authors from source to target
+	const sourceAuthors = await db.select().from(bookAuthors).where(eq(bookAuthors.bookId, sourceId));
+	for (const author of sourceAuthors) {
+		if (!existingAuthorIds.has(author.authorId)) {
+			await db.insert(bookAuthors).values({
+				bookId: targetId,
+				authorId: author.authorId,
+				role: author.role,
+				isPrimary: false, // Set as non-primary when merging
+				displayOrder: author.displayOrder,
+				createdAt: now,
+				updatedAt: now
+			});
+		}
+	}
+
+	// Transfer unique series from source to target
+	const sourceSeries = await db.select().from(bookSeries).where(eq(bookSeries.bookId, sourceId));
+	for (const s of sourceSeries) {
+		if (!existingSeriesIds.has(s.seriesId)) {
+			await db.insert(bookSeries).values({
+				bookId: targetId,
+				seriesId: s.seriesId,
+				bookNum: s.bookNum,
+				bookNumEnd: s.bookNumEnd,
+				isPrimary: false,
+				displayOrder: s.displayOrder,
+				createdAt: now,
+				updatedAt: now
+			});
+		}
+	}
+
+	// Transfer unique tags from source to target
+	const sourceTags = await db.select().from(bookTags).where(eq(bookTags.bookId, sourceId));
+	for (const tag of sourceTags) {
+		if (!existingTagIds.has(tag.tagId)) {
+			await db.insert(bookTags).values({
+				bookId: targetId,
+				tagId: tag.tagId,
+				createdAt: now,
+				updatedAt: now
+			});
+		}
+	}
+
+	// Transfer user_books entries (library memberships)
+	const sourceUserBooks = await db.select().from(userBooks).where(eq(userBooks.bookId, sourceId));
+	for (const ub of sourceUserBooks) {
+		// Check if user already has target book
+		const [existing] = await db.select().from(userBooks)
+			.where(and(eq(userBooks.userId, ub.userId), eq(userBooks.bookId, targetId)))
+			.limit(1);
+		if (!existing) {
+			await db.insert(userBooks).values({
+				userId: ub.userId,
+				bookId: targetId,
+				addedAt: ub.addedAt
+			});
+		}
+	}
+
+	// Transfer user_book_tags
+	const sourceUserBookTags = await db.select().from(userBookTags).where(eq(userBookTags.bookId, sourceId));
+	for (const ubt of sourceUserBookTags) {
+		const [existing] = await db.select().from(userBookTags)
+			.where(and(
+				eq(userBookTags.userId, ubt.userId),
+				eq(userBookTags.bookId, targetId),
+				eq(userBookTags.tagId, ubt.tagId)
+			))
+			.limit(1);
+		if (!existing) {
+			await db.insert(userBookTags).values({
+				userId: ubt.userId,
+				bookId: targetId,
+				tagId: ubt.tagId
+			});
+		}
+	}
+
+	// If source has an ebook but target doesn't, transfer it
+	if (source.ebookPath && !target.ebookPath) {
+		await db.update(books).set({ ebookPath: source.ebookPath }).where(eq(books.id, targetId));
+	}
+
+	// If source has a cover but target doesn't, transfer it
+	if (source.coverImageUrl && !target.coverImageUrl) {
+		await db.update(books).set({
+			coverImageUrl: source.coverImageUrl,
+			originalCoverUrl: source.originalCoverUrl
+		}).where(eq(books.id, targetId));
+	}
+
+	// Transfer audiobooks from source to target
+	const sourceAudiobooks = await db.select().from(audiobooks).where(eq(audiobooks.bookId, sourceId));
+	for (const ab of sourceAudiobooks) {
+		await db.update(audiobooks).set({ bookId: targetId }).where(eq(audiobooks.id, ab.id));
+	}
+
+	// Delete the source book (cascading will remove related entries)
+	await deleteBook(sourceId);
+
+	return true;
+}

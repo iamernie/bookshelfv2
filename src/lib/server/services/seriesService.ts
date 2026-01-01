@@ -516,3 +516,53 @@ export async function deleteSeries(id: number): Promise<boolean> {
 export async function getSeriesStatuses() {
 	return db.select().from(seriesStatuses).orderBy(asc(seriesStatuses.name));
 }
+
+/**
+ * Find potential duplicate series based on normalized title matching
+ */
+export async function findDuplicateSeries(): Promise<
+	Array<{ title: string; series: { id: number; title: string; bookCount: number }[] }>
+> {
+	// Get all series with book count
+	const allSeries = await db
+		.select({
+			id: series.id,
+			title: series.title,
+			bookCount: sql<number>`(SELECT COUNT(*) FROM bookseries WHERE bookseries.seriesId = ${series.id})`
+		})
+		.from(series)
+		.orderBy(series.title);
+
+	// Group by normalized title
+	const groups = new Map<string, Array<{ id: number; title: string; bookCount: number }>>();
+
+	for (const s of allSeries) {
+		// Normalize: lowercase, remove extra spaces, common variations
+		const normalized = s.title
+			.toLowerCase()
+			.replace(/\s+/g, ' ')
+			.replace(/[:.,-]/g, '')
+			.replace(/^the\s+/i, '')
+			.replace(/\s+series$/i, '')
+			.trim();
+
+		if (!groups.has(normalized)) {
+			groups.set(normalized, []);
+		}
+		groups.get(normalized)!.push(s);
+	}
+
+	// Return only groups with duplicates
+	const duplicates: Array<{
+		title: string;
+		series: { id: number; title: string; bookCount: number }[];
+	}> = [];
+
+	groups.forEach((seriesList, title) => {
+		if (seriesList.length > 1) {
+			duplicates.push({ title, series: seriesList });
+		}
+	});
+
+	return duplicates;
+}

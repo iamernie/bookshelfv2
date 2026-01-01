@@ -36,7 +36,8 @@
 		Activity,
 		Inbox,
 		LayoutDashboard,
-		ShoppingBag
+		ShoppingBag,
+		Merge
 	} from 'lucide-svelte';
 	import DynamicIcon from '$lib/components/ui/DynamicIcon.svelte';
 	import { APP_CONFIG } from '$lib/config/app';
@@ -365,6 +366,10 @@
 					<a href="/admin/diagnostics" class="sidebar-item text-sm" class:active={isActive('/admin/diagnostics')}>
 						<Activity class="w-4 h-4" />
 						<span>Diagnostics</span>
+					</a>
+					<a href="/admin/data-cleanup" class="sidebar-item text-sm" class:active={isActive('/admin/data-cleanup')}>
+						<Merge class="w-4 h-4" />
+						<span>Data Cleanup</span>
 					</a>
 					<a href="/admin/settings" class="sidebar-item text-sm" class:active={isActive('/admin/settings')}>
 						<Settings class="w-4 h-4" />
