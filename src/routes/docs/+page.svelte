@@ -7,9 +7,11 @@
 	onMount(async () => {
 		if (!browser) return;
 
-		// Dynamically import swagger-ui
+		// Dynamically import swagger-ui bundle and standalone preset
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const SwaggerUIBundle = (await import('swagger-ui-dist/swagger-ui-bundle.js' as any)).default;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const SwaggerUIStandalonePreset = (await import('swagger-ui-dist/swagger-ui-standalone-preset.js' as any)).default;
 
 		// Import the CSS
 		await import('swagger-ui-dist/swagger-ui.css');
@@ -20,7 +22,7 @@
 			deepLinking: true,
 			presets: [
 				SwaggerUIBundle.presets.apis,
-				SwaggerUIBundle.SwaggerUIStandalonePreset
+				SwaggerUIStandalonePreset
 			],
 			plugins: [
 				SwaggerUIBundle.plugins.DownloadUrl
