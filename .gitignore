@@ -5,6 +5,10 @@ node_modules/
 .svelte-kit/
 build/
 
+# VitePress
+docs/.vitepress/dist
+docs/.vitepress/cache
+
 # Environment
 .env
 .env.*
