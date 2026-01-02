@@ -19,9 +19,6 @@ yarn.lock
 *.swo
 *~
 
-# Claude Code
-.claude*
-
 # Environment files (users should set env vars in docker-compose or -e flags)
 .env
 .env.*
